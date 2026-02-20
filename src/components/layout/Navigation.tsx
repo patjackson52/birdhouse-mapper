@@ -1,0 +1,199 @@
+'use client';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useState } from 'react';
+
+const publicLinks = [
+  { href: '/', label: 'Map', icon: MapIcon },
+  { href: '/list', label: 'List', icon: ListIcon },
+  { href: '/birds', label: 'Birds', icon: BirdIcon },
+  { href: '/about', label: 'About', icon: InfoIcon },
+];
+
+export default function Navigation() {
+  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isManage = pathname.startsWith('/manage') || pathname.startsWith('/admin');
+
+  return (
+    <>
+      {/* Desktop top nav */}
+      <header className="hidden md:block bg-white border-b border-sage-light/60 sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="text-2xl">🏠</span>
+              <div>
+                <span className="font-heading font-semibold text-forest-dark text-lg leading-tight block">
+                  IslandWood Birdhouses
+                </span>
+                <span className="text-xs text-sage leading-tight">
+                  Eagle Scout Project
+                </span>
+              </div>
+            </Link>
+
+            <nav className="flex items-center gap-1">
+              {publicLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    pathname === link.href
+                      ? 'bg-sage-light text-forest-dark'
+                      : 'text-sage hover:text-forest-dark hover:bg-sage-light/50'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="w-px h-6 bg-sage-light mx-2" />
+              <Link
+                href="/manage"
+                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isManage
+                    ? 'bg-forest text-white'
+                    : 'text-sage hover:text-forest-dark hover:bg-sage-light/50'
+                }`}
+              >
+                Manage
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </header>
+
+      {/* Mobile top bar */}
+      <header className="md:hidden bg-white border-b border-sage-light/60 sticky top-0 z-30">
+        <div className="flex items-center justify-between h-14 px-4">
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-xl">🏠</span>
+            <span className="font-heading font-semibold text-forest-dark text-base">
+              IslandWood
+            </span>
+          </Link>
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="p-2 rounded-lg text-sage hover:bg-sage-light"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <CloseIcon /> : <MenuIcon />}
+          </button>
+        </div>
+        {mobileMenuOpen && (
+          <div className="border-t border-sage-light/60 bg-white animate-fade-in">
+            <nav className="px-4 py-2 space-y-1">
+              {publicLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    pathname === link.href
+                      ? 'bg-sage-light text-forest-dark'
+                      : 'text-sage hover:bg-sage-light/50'
+                  }`}
+                >
+                  <link.icon className="w-5 h-5" />
+                  {link.label}
+                </Link>
+              ))}
+              <Link
+                href="/manage"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isManage
+                    ? 'bg-forest text-white'
+                    : 'text-sage hover:bg-sage-light/50'
+                }`}
+              >
+                <SettingsIcon className="w-5 h-5" />
+                Manage
+              </Link>
+            </nav>
+          </div>
+        )}
+      </header>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-sage-light/60 z-30 safe-area-pb">
+        <div className="flex items-center justify-around h-16">
+          {publicLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`flex flex-col items-center justify-center gap-0.5 flex-1 h-full transition-colors ${
+                  isActive ? 'text-forest' : 'text-sage'
+                }`}
+              >
+                <link.icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium">{link.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
+  );
+}
+
+function MapIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+    </svg>
+  );
+}
+
+function ListIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+    </svg>
+  );
+}
+
+function BirdIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 3-3 4 4 8-8 3 3-11 11z" />
+    </svg>
+  );
+}
+
+function InfoIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function SettingsIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
