@@ -72,27 +72,44 @@ export interface Database {
         Row: Birdhouse;
         Insert: Omit<Birdhouse, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<Birdhouse, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       birdhouse_updates: {
         Row: BirdhouseUpdate;
         Insert: Omit<BirdhouseUpdate, 'id' | 'created_at'>;
         Update: Partial<Omit<BirdhouseUpdate, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       photos: {
         Row: Photo;
         Insert: Omit<Photo, 'id' | 'created_at'>;
         Update: Partial<Omit<Photo, 'id' | 'created_at'>>;
+        Relationships: [];
       };
       bird_species: {
         Row: BirdSpecies;
         Insert: Omit<BirdSpecies, 'id'>;
         Update: Partial<Omit<BirdSpecies, 'id'>>;
+        Relationships: [];
       };
       profiles: {
         Row: Profile;
         Insert: Omit<Profile, 'created_at'>;
         Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }
