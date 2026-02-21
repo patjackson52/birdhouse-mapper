@@ -1,5 +1,7 @@
 # IslandWood Birdhouses
 
+[![CI](https://github.com/patjackson52/birdhouse-mapper/actions/workflows/ci.yml/badge.svg)](https://github.com/patjackson52/birdhouse-mapper/actions/workflows/ci.yml) [![Deploy](https://github.com/patjackson52/birdhouse-mapper/actions/workflows/deploy.yml/badge.svg)](https://github.com/patjackson52/birdhouse-mapper/actions/workflows/deploy.yml)
+
 An Eagle Scout project website for tracking birdhouses built and installed at IslandWood camp on Bainbridge Island, Washington.
 
 ## Tech Stack
