@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: ['*']
+  workflow_dispatch:
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
