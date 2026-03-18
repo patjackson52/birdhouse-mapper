@@ -290,7 +290,7 @@ export default function SetupPage() {
                     onClick={() => setThemePreset(key)}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${
                       themePreset === key
-                        ? 'border-forest ring-2 ring-forest/20'
+                        ? 'border-forest ring-2 ring-sage-light'
                         : 'border-sage-light hover:border-sage'
                     }`}
                   >
@@ -343,7 +343,7 @@ export default function SetupPage() {
               </p>
               <div className="space-y-4">
                 {itemTypes.map((type, i) => (
-                  <div key={i} className="flex gap-3 items-start p-3 rounded-lg bg-sage-light/30">
+                  <div key={i} className="flex gap-3 items-start p-3 rounded-lg bg-sage-light">
                     <div className="flex-1 space-y-2">
                       <input
                         type="text"
@@ -377,7 +377,7 @@ export default function SetupPage() {
                             updated[i] = { ...updated[i], color: e.target.value };
                             setItemTypes(updated);
                           }}
-                          className="h-10 w-16 rounded border border-sage/30 cursor-pointer"
+                          className="h-10 w-16 rounded border border-sage-light cursor-pointer"
                         />
                       </div>
                     </div>

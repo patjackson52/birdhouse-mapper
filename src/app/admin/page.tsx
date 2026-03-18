@@ -116,7 +116,7 @@ export default function AdminPage() {
       {/* Users tab */}
       {activeTab === 'users' && (
         <div className="space-y-6">
-          <div className="card bg-sage-light/30">
+          <div className="card bg-sage-light">
             <h3 className="text-sm font-medium text-forest-dark mb-2">
               Invite a User
             </h3>
@@ -130,7 +130,7 @@ export default function AdminPage() {
           <div className="card overflow-hidden p-0">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-sage-light bg-sage-light/30">
+                <tr className="border-b border-sage-light bg-sage-light">
                   <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                     Name
                   </th>
@@ -145,7 +145,7 @@ export default function AdminPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sage-light/50">
+              <tbody className="divide-y divide-sage-light">
                 {profiles.map((p) => (
                   <tr key={p.id}>
                     <td className="px-4 py-3 text-sm text-forest-dark">
@@ -182,7 +182,7 @@ export default function AdminPage() {
         <div className="card overflow-hidden p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-sage-light bg-sage-light/30">
+              <tr className="border-b border-sage-light bg-sage-light">
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                   Name
                 </th>
@@ -194,9 +194,9 @@ export default function AdminPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sage-light/50">
+            <tbody className="divide-y divide-sage-light">
               {items.map((item) => (
-                <tr key={item.id} className="hover:bg-sage-light/20">
+                <tr key={item.id} className="hover:bg-sage-light">
                   <td className="px-4 py-3 text-sm font-medium text-forest-dark">
                     {item.name}
                   </td>
@@ -223,7 +223,7 @@ export default function AdminPage() {
         <div className="card overflow-hidden p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-sage-light bg-sage-light/30">
+              <tr className="border-b border-sage-light bg-sage-light">
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                   Item
                 </th>
@@ -241,9 +241,9 @@ export default function AdminPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sage-light/50">
+            <tbody className="divide-y divide-sage-light">
               {updates.map((u) => (
-                <tr key={u.id} className="hover:bg-sage-light/20">
+                <tr key={u.id} className="hover:bg-sage-light">
                   <td className="px-4 py-3 text-sm text-forest-dark">
                     {u.item_name || '—'}
                   </td>

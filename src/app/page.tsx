@@ -85,7 +85,7 @@ export default function HomePage() {
       {/* List view link */}
       <Link
         href="/list"
-        className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-sage-light/60 px-3 py-2 text-xs font-medium text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-4 right-4 z-10 bg-white backdrop-blur-sm rounded-lg shadow-lg border border-sage-light px-3 py-2 text-xs font-medium text-forest-dark hover:bg-sage-light transition-colors"
       >
         View as List
       </Link>

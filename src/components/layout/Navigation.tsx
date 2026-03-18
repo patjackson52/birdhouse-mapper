@@ -21,7 +21,7 @@ export default function Navigation() {
   return (
     <>
       {/* Desktop top nav */}
-      <header className="hidden md:block bg-white border-b border-sage-light/60 sticky top-0 z-30">
+      <header className="hidden md:block bg-white border-b border-sage-light sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2.5">
@@ -46,7 +46,7 @@ export default function Navigation() {
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     pathname === link.href
                       ? 'bg-sage-light text-forest-dark'
-                      : 'text-sage hover:text-forest-dark hover:bg-sage-light/50'
+                      : 'text-sage hover:text-forest-dark hover:bg-sage-light'
                   }`}
                 >
                   {link.label}
@@ -58,7 +58,7 @@ export default function Navigation() {
                 className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isManage
                     ? 'bg-forest text-white'
-                    : 'text-sage hover:text-forest-dark hover:bg-sage-light/50'
+                    : 'text-sage hover:text-forest-dark hover:bg-sage-light'
                 }`}
               >
                 Manage
@@ -69,7 +69,7 @@ export default function Navigation() {
       </header>
 
       {/* Mobile top bar */}
-      <header className="md:hidden bg-white border-b border-sage-light/60 sticky top-0 z-30">
+      <header className="md:hidden bg-white border-b border-sage-light sticky top-0 z-30">
         <div className="flex items-center justify-between h-14 px-4">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-xl">📍</span>
@@ -86,7 +86,7 @@ export default function Navigation() {
           </button>
         </div>
         {mobileMenuOpen && (
-          <div className="border-t border-sage-light/60 bg-white animate-fade-in">
+          <div className="border-t border-sage-light bg-white animate-fade-in">
             <nav className="px-4 py-2 space-y-1">
               {publicLinks.map((link) => (
                 <Link
@@ -96,7 +96,7 @@ export default function Navigation() {
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                     pathname === link.href
                       ? 'bg-sage-light text-forest-dark'
-                      : 'text-sage hover:bg-sage-light/50'
+                      : 'text-sage hover:bg-sage-light'
                   }`}
                 >
                   <link.icon className="w-5 h-5" />
@@ -109,7 +109,7 @@ export default function Navigation() {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isManage
                     ? 'bg-forest text-white'
-                    : 'text-sage hover:bg-sage-light/50'
+                    : 'text-sage hover:bg-sage-light'
                 }`}
               >
                 <SettingsIcon className="w-5 h-5" />
@@ -121,7 +121,7 @@ export default function Navigation() {
       </header>
 
       {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-sage-light/60 z-30 safe-area-pb">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-sage-light z-30 safe-area-pb">
         <div className="flex items-center justify-around h-16">
           {publicLinks.map((link) => {
             const isActive = pathname === link.href;

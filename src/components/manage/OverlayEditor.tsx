@@ -120,7 +120,7 @@ export default function OverlayEditor({ initialConfig, onSave, saving }: Overlay
               type="file"
               accept="image/png,image/jpeg,image/webp"
               onChange={handleFileUpload}
-              className="block w-full text-sm text-sage file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-sage-light file:text-forest-dark hover:file:bg-sage-light/70 file:cursor-pointer"
+              className="block w-full text-sm text-sage file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-sage-light file:text-forest-dark hover:file:bg-sage-light file:cursor-pointer"
             />
           </div>
 

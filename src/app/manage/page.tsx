@@ -84,7 +84,7 @@ export default function ManageDashboard() {
         <div className="card overflow-hidden p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-sage-light bg-sage-light/30">
+              <tr className="border-b border-sage-light bg-sage-light">
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase tracking-wider">
                   Name
                 </th>
@@ -96,9 +96,9 @@ export default function ManageDashboard() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sage-light/50">
+            <tbody className="divide-y divide-sage-light">
               {items.map((item) => (
-                <tr key={item.id} className="hover:bg-sage-light/20 transition-colors">
+                <tr key={item.id} className="hover:bg-sage-light transition-colors">
                   <td className="px-4 py-3">
                     <span className="text-sm font-medium text-forest-dark">
                       {item.name}

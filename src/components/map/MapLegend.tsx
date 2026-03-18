@@ -14,7 +14,7 @@ export default function MapLegend({ itemTypes }: MapLegendProps) {
   ];
 
   return (
-    <div className="absolute bottom-20 md:bottom-6 left-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-sage-light/60 px-3 py-2.5">
+    <div className="absolute bottom-20 md:bottom-6 left-4 z-10 bg-white backdrop-blur-sm rounded-lg shadow-lg border border-sage-light px-3 py-2.5">
       <h4 className="text-[10px] font-medium text-sage uppercase tracking-wider mb-1.5">
         Status
       </h4>
