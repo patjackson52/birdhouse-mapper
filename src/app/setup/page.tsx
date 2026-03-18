@@ -6,6 +6,7 @@ import {
   setupSaveConfig,
   setupCreateAdmin,
   setupCreateItemType,
+  setupClearItemTypes,
   setupComplete,
 } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
@@ -123,7 +124,8 @@ export default function SetupPage() {
       ]);
       if (configResult.error) throw new Error(configResult.error);
 
-      // 2. Create item types
+      // 2. Clear any item types from previous attempts, then create new ones
+      await setupClearItemTypes();
       for (let i = 0; i < itemTypes.length; i++) {
         const t = itemTypes[i];
         if (t.name.trim()) {

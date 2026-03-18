@@ -88,6 +88,30 @@ export async function setupCreateAdmin(email: string, password: string, displayN
 }
 
 /**
+ * Delete all item types that have no items referencing them.
+ * Called before creating item types to make setup retries idempotent.
+ */
+export async function setupClearItemTypes() {
+  const supabase = createServiceClient();
+
+  // Only delete types that have no items (safe for retry)
+  // The migrated "Bird Box" type has items pointing to it, so it won't be deleted
+  const { data: types } = await supabase.from('item_types').select('id');
+  if (!types) return;
+
+  for (const type of types) {
+    const { count } = await supabase
+      .from('items')
+      .select('id', { count: 'exact', head: true })
+      .eq('item_type_id', type.id);
+
+    if (count === 0) {
+      await supabase.from('item_types').delete().eq('id', type.id);
+    }
+  }
+}
+
+/**
  * Create an item type during setup.
  */
 export async function setupCreateItemType(
