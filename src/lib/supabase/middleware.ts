@@ -65,6 +65,13 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // --- Session refresh (all routes) ---
+  // Always call getUser() to keep Supabase session cookies fresh,
+  // per Supabase SSR docs recommendation.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // --- Auth checks (only for protected routes) ---
   const isProtectedRoute =
     pathname.startsWith('/manage') ||
@@ -73,10 +80,6 @@ export async function updateSession(request: NextRequest) {
   if (!isProtectedRoute) {
     return supabaseResponse;
   }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   if (!user) {
     const url = request.nextUrl.clone();

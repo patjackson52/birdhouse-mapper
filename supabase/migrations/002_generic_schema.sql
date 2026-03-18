@@ -395,4 +395,11 @@ create policy "Authenticated users can update own item photos"
 create policy "Admins can delete item photos from storage"
   on storage.objects for delete
   to authenticated
-  using (bucket_id = 'item-photos');
+  using (
+    bucket_id = 'item-photos'
+    and exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role = 'admin'
+    )
+  );
