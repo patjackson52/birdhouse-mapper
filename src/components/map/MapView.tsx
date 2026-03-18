@@ -1,7 +1,8 @@
 'use client';
 
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, ImageOverlay } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
+import type { LatLngBoundsExpression } from 'leaflet';
 import type { Item, ItemType } from '@/lib/types';
 import { useConfig, useTheme } from '@/lib/config/client';
 import ItemMarker from './ItemMarker';
@@ -34,6 +35,16 @@ export default function MapView({ items, itemTypes, onMarkerClick }: MapViewProp
           attribution={theme.tileAttribution}
           url={theme.tileUrl}
         />
+        {config.customMap && (
+          <ImageOverlay
+            url={config.customMap.url}
+            bounds={[
+              [config.customMap.bounds.southWest.lat, config.customMap.bounds.southWest.lng],
+              [config.customMap.bounds.northEast.lat, config.customMap.bounds.northEast.lng],
+            ] as LatLngBoundsExpression}
+            opacity={config.customMap.opacity}
+          />
+        )}
         {items.map((item) => (
           <ItemMarker
             key={item.id}
