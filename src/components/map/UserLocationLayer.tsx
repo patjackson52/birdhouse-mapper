@@ -7,7 +7,7 @@ import { useUserLocation } from '@/lib/location/provider';
 import { useConfig } from '@/lib/config/client';
 import { distanceBetween } from '@/lib/location/utils';
 
-const SMART_CENTER_RADIUS = 5000; // 5km
+const SMART_CENTER_RADIUS = 805; // ~0.5 miles
 
 export default function UserLocationLayer() {
   const map = useMap();
