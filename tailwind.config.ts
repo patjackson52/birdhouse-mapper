@@ -9,16 +9,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Theme-driven colors via CSS variables (set by ConfigProvider)
         forest: {
-          DEFAULT: '#5D7F3A',
-          dark: '#2C3E2D',
-          light: '#7F8C7A',
+          DEFAULT: 'var(--color-primary)',
+          dark: 'var(--color-primary-dark)',
+          light: 'var(--color-muted)',
         },
-        golden: '#D4A853',
-        parchment: '#FAFAF7',
+        golden: 'var(--color-accent)',
+        parchment: 'var(--color-background)',
         sage: {
-          DEFAULT: '#7F8C7A',
-          light: '#EEF2EA',
+          DEFAULT: 'var(--color-muted)',
+          light: 'var(--color-surface-light)',
         },
       },
       fontFamily: {

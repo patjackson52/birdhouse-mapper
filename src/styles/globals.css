@@ -4,6 +4,17 @@
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
+/* Default theme CSS variables (Forest preset).
+   These are overridden at runtime by the ConfigProvider via a style attribute on <html>. */
+:root {
+  --color-primary: #5D7F3A;
+  --color-primary-dark: #2C3E2D;
+  --color-accent: #D4A853;
+  --color-background: #FAFAF7;
+  --color-surface-light: #EEF2EA;
+  --color-muted: #7F8C7A;
+}
+
 @layer base {
   html {
     @apply font-body text-forest-dark;
@@ -61,41 +72,6 @@
   margin: 12px 16px;
   font-size: 14px;
   line-height: 1.5;
-}
-
-/* Custom marker styles */
-.birdhouse-marker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  border: 2px solid white;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.birdhouse-marker-inner {
-  transform: rotate(45deg);
-  font-size: 14px;
-  line-height: 1;
-}
-
-.birdhouse-marker--active {
-  background-color: #5D7F3A;
-}
-
-.birdhouse-marker--planned {
-  background-color: #9CA3AF;
-}
-
-.birdhouse-marker--damaged {
-  background-color: #D97706;
-}
-
-.birdhouse-marker--removed {
-  background-color: #6B7280;
 }
 
 /* Bottom sheet */
