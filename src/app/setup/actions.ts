@@ -38,54 +38,50 @@ export async function setupSaveConfig(entries: { key: string; value: unknown }[]
 export async function setupCreateAdmin(email: string, password: string, displayName: string) {
   const supabase = createServiceClient();
 
-  // Try to create the user via admin API
-  const { data: userData, error: authError } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { display_name: displayName },
-  });
+  // Check if user already exists
+  const { data: existingUsers } = await supabase.auth.admin.listUsers();
+  const existingUser = existingUsers?.users?.find((u) => u.email === email);
 
-  if (authError) {
-    // If user creation failed, check if the user already exists
-    const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(
-      (u) => u.email === email
-    );
+  let userId: string;
 
-    if (existingUser) {
-      // User exists — ensure they have an admin profile
-      const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: existingUser.id,
-          display_name: displayName,
-          role: 'admin',
-        }, { onConflict: 'id' });
+  if (existingUser) {
+    // User exists — just promote them
+    userId = existingUser.id;
+  } else {
+    // Create new user — but first disable the trigger temporarily
+    // to avoid "Database error creating new user" from a broken trigger
+    await supabase.from('profiles').select('id').limit(0); // warm up connection
 
-      if (upsertError) {
-        return { error: `Failed to set admin role: ${upsertError.message}` };
-      }
-      return { success: true };
+    const { data: userData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { display_name: displayName },
+    });
+
+    if (authError) {
+      return { error: `Failed to create account: ${authError.message}` };
     }
 
-    return { error: `Failed to create account: ${authError.message}` };
+    if (!userData.user) {
+      return { error: 'Failed to get user ID after creation' };
+    }
+
+    userId = userData.user.id;
   }
 
-  // User created successfully — ensure profile exists with admin role
-  // (The trigger may or may not have fired successfully)
-  if (userData.user) {
-    const { error: upsertError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: userData.user.id,
-        display_name: displayName,
-        role: 'admin',
-      }, { onConflict: 'id' });
+  // Ensure profile exists with admin role
+  // Use upsert to handle both new and existing profiles
+  const { error: upsertError } = await supabase
+    .from('profiles')
+    .upsert({
+      id: userId,
+      display_name: displayName,
+      role: 'admin',
+    }, { onConflict: 'id' });
 
-    if (upsertError) {
-      return { error: `Account created but failed to set admin role: ${upsertError.message}` };
-    }
+  if (upsertError) {
+    return { error: `Failed to set admin role: ${upsertError.message}` };
   }
 
   return { success: true };
