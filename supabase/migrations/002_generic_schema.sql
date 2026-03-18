@@ -366,6 +366,7 @@ insert into site_config (key, value) values
   ('footer_text', '"Built with Field Mapper"'::jsonb),
   ('footer_links', '[]'::jsonb),
   ('custom_map', 'null'::jsonb),
+  ('map_style', 'null'::jsonb),
   ('custom_nav_items', '[]'::jsonb),
   ('setup_complete', 'false'::jsonb);
 

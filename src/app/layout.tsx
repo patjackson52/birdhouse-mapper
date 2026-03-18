@@ -19,7 +19,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const config = await getConfig();
-  const theme = resolveTheme(config.theme);
+  const theme = resolveTheme(config.theme, config.mapStyle);
   const cssVars = themeToCssVars(theme);
 
   return (

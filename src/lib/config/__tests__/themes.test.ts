@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { THEME_PRESETS, resolveTheme, themeToCssVars } from '../themes';
+import { MAP_STYLES, THEME_DEFAULT_MAP_STYLE } from '../map-styles';
 
 describe('THEME_PRESETS', () => {
   it('has 6 preset themes', () => {
@@ -67,12 +68,21 @@ describe('resolveTheme', () => {
     expect(theme.colors.primary).toBe('#5D7F3A');
   });
 
-  it('uses the preset tile URL (not affected by overrides)', () => {
-    const theme = resolveTheme({
-      preset: 'ocean',
-      overrides: { primary: '#FF0000' },
-    });
-    expect(theme.tileUrl).toBe(THEME_PRESETS.ocean.tileUrl);
+  it('uses the theme default map style tile URL', () => {
+    const theme = resolveTheme({ preset: 'ocean' });
+    const expectedStyleId = THEME_DEFAULT_MAP_STYLE['ocean'];
+    expect(theme.tileUrl).toBe(MAP_STYLES[expectedStyleId].tileUrl);
+  });
+
+  it('uses explicit map style when provided', () => {
+    const theme = resolveTheme({ preset: 'forest' }, 'esri-imagery');
+    expect(theme.tileUrl).toBe(MAP_STYLES['esri-imagery'].tileUrl);
+  });
+
+  it('falls back to theme default when map style is null', () => {
+    const theme = resolveTheme({ preset: 'forest' }, null);
+    const expectedStyleId = THEME_DEFAULT_MAP_STYLE['forest'];
+    expect(theme.tileUrl).toBe(MAP_STYLES[expectedStyleId].tileUrl);
   });
 });
 

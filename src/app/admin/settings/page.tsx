@@ -6,6 +6,7 @@ import { useConfig } from '@/lib/config/client';
 import { useRouter } from 'next/navigation';
 import { saveConfig, saveConfigValue } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
+import { MAP_STYLES, MAP_STYLE_CATEGORIES, THEME_DEFAULT_MAP_STYLE } from '@/lib/config/map-styles';
 import OverlayEditor from '@/components/manage/OverlayEditor';
 
 const CenterPicker = dynamic(() => import('@/components/manage/CenterPicker'), {
@@ -201,18 +202,29 @@ function GeneralTab({ config, onSave, saving }: TabProps) {
 
 function AppearanceTab({ config, onSave, saving }: TabProps) {
   const [preset, setPreset] = useState(config.theme.preset);
+  const [mapStyleId, setMapStyleId] = useState(config.mapStyle || '');
+
+  const effectiveMapStyle = mapStyleId || THEME_DEFAULT_MAP_STYLE[preset] || 'osm';
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     onSave([
       { key: 'theme', value: { preset } },
+      { key: 'map_style', value: mapStyleId || null },
     ]);
   }
 
+  // Group map styles by category
+  const stylesByCategory = Object.entries(MAP_STYLES).reduce((acc, [id, style]) => {
+    if (!acc[style.category]) acc[style.category] = [];
+    acc[style.category].push({ id, ...style });
+    return acc;
+  }, {} as Record<string, (typeof MAP_STYLES[string] & { id: string })[]>);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-8">
       <div>
-        <label className="label">Theme Preset</label>
+        <label className="label">Color Theme</label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {Object.entries(THEME_PRESETS).map(([key, theme]) => (
             <button
@@ -239,6 +251,52 @@ function AppearanceTab({ config, onSave, saving }: TabProps) {
           ))}
         </div>
       </div>
+
+      <div>
+        <label className="label">Map Tile Style</label>
+        <p className="text-xs text-sage mb-3">
+          Choose a map background. Leave on &quot;Theme Default&quot; to automatically match the color theme.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {/* Theme default option */}
+          <button
+            type="button"
+            onClick={() => setMapStyleId('')}
+            className={`px-3 py-2.5 rounded-lg border-2 text-left text-sm transition-all ${
+              !mapStyleId
+                ? 'border-forest ring-2 ring-sage-light'
+                : 'border-sage-light hover:border-sage'
+            }`}
+          >
+            <span className="font-medium text-forest-dark">Theme Default</span>
+            <span className="text-xs text-sage ml-2">
+              ({MAP_STYLES[THEME_DEFAULT_MAP_STYLE[preset] || 'osm']?.name})
+            </span>
+          </button>
+
+          {/* Grouped map styles */}
+          {Object.entries(stylesByCategory).map(([category, styles]) => (
+            styles.map((style) => (
+              <button
+                key={style.id}
+                type="button"
+                onClick={() => setMapStyleId(style.id)}
+                className={`px-3 py-2.5 rounded-lg border-2 text-left text-sm transition-all ${
+                  mapStyleId === style.id
+                    ? 'border-forest ring-2 ring-sage-light'
+                    : 'border-sage-light hover:border-sage'
+                }`}
+              >
+                <span className="font-medium text-forest-dark">{style.name}</span>
+                <span className="text-xs text-sage ml-2">
+                  {MAP_STYLE_CATEGORIES[category]}
+                </span>
+              </button>
+            ))
+          ))}
+        </div>
+      </div>
+
       <button type="submit" disabled={saving} className="btn-primary">
         {saving ? 'Saving...' : 'Save Appearance'}
       </button>

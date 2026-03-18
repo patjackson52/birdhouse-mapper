@@ -23,6 +23,7 @@ export interface SiteConfig {
     };
     opacity: number;
   } | null;
+  mapStyle: string | null; // map tile source ID, null = use theme default
   customNavItems: { label: string; href: string }[];
   setupComplete: boolean;
 }
@@ -40,6 +41,7 @@ export const CONFIG_KEY_MAP: Record<string, keyof SiteConfig> = {
   footer_text: 'footerText',
   footer_links: 'footerLinks',
   custom_map: 'customMap',
+  map_style: 'mapStyle',
   custom_nav_items: 'customNavItems',
   setup_complete: 'setupComplete',
 };

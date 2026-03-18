@@ -1,3 +1,5 @@
+import { MAP_STYLES, THEME_DEFAULT_MAP_STYLE } from './map-styles';
+
 export interface ThemeColors {
   primary: string;
   'primary-dark': string;
@@ -103,10 +105,14 @@ export interface ResolvedTheme {
 
 /**
  * Resolves a theme config (preset name + optional overrides) to final colors and tile URL.
+ * If mapStyle is provided, it overrides the theme's default tile source.
  */
-export function resolveTheme(themeConfig: { preset: string; overrides?: Record<string, string> }): ResolvedTheme {
-  const preset = THEME_PRESETS[themeConfig.preset] || THEME_PRESETS.forest;
+export function resolveTheme(
+  themeConfig: { preset: string; overrides?: Record<string, string> },
+  mapStyleId?: string | null
+): ResolvedTheme {
 
+  const preset = THEME_PRESETS[themeConfig.preset] || THEME_PRESETS.forest;
   const colors = { ...preset.colors };
 
   // Apply overrides
@@ -118,10 +124,16 @@ export function resolveTheme(themeConfig: { preset: string; overrides?: Record<s
     }
   }
 
+  // Resolve map style: explicit setting > theme default > fallback
+  const styleId = mapStyleId
+    || THEME_DEFAULT_MAP_STYLE[themeConfig.preset]
+    || 'osm';
+  const mapStyle = MAP_STYLES[styleId] || MAP_STYLES['osm'];
+
   return {
     colors,
-    tileUrl: preset.tileUrl,
-    tileAttribution: preset.tileAttribution,
+    tileUrl: mapStyle.tileUrl,
+    tileAttribution: mapStyle.tileAttribution,
   };
 }
 

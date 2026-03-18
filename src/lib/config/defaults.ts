@@ -12,6 +12,7 @@ export const DEFAULT_CONFIG: SiteConfig = {
   footerText: 'Built with Field Mapper',
   footerLinks: [],
   customMap: null,
+  mapStyle: null,
   customNavItems: [],
   setupComplete: false,
 };
