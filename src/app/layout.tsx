@@ -1,30 +1,29 @@
-import type { Metadata } from 'next';
 import '@/styles/globals.css';
 import Navigation from '@/components/layout/Navigation';
+import { ConfigProvider } from '@/lib/config/client';
+import { getConfig } from '@/lib/config/server';
 
-export const metadata: Metadata = {
-  title: 'IslandWood Birdhouses — Eagle Scout Project',
-  description:
-    'Tracking birdhouses built and installed at IslandWood camp on Bainbridge Island, Washington. An Eagle Scout service project.',
-  keywords: [
-    'birdhouse',
-    'IslandWood',
-    'Bainbridge Island',
-    'Eagle Scout',
-    'bird conservation',
-  ],
+// Metadata will be made dynamic in Phase 3 (theming).
+// For now, use a simple default that doesn't reference IslandWood.
+export const metadata = {
+  title: 'Field Mapper',
+  description: 'Map and track points of interest',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const config = await getConfig();
+
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col">
-        <Navigation />
-        <main className="flex-1">{children}</main>
+        <ConfigProvider config={config}>
+          <Navigation />
+          <main className="flex-1">{children}</main>
+        </ConfigProvider>
       </body>
     </html>
   );
