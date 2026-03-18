@@ -3,6 +3,7 @@ import Navigation from '@/components/layout/Navigation';
 import { ConfigProvider } from '@/lib/config/client';
 import { getConfig } from '@/lib/config/server';
 import { resolveTheme, themeToCssVars } from '@/lib/config/themes';
+import { UserLocationProvider } from '@/lib/location/provider';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -29,8 +30,10 @@ export default async function RootLayout({
       </head>
       <body className="min-h-screen flex flex-col">
         <ConfigProvider config={config} theme={theme}>
-          <Navigation />
-          <main className="flex-1">{children}</main>
+          <UserLocationProvider>
+            <Navigation />
+            <main className="flex-1">{children}</main>
+          </UserLocationProvider>
         </ConfigProvider>
       </body>
     </html>
