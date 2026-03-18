@@ -210,7 +210,7 @@ export default function SetupPage() {
                   value={siteName}
                   onChange={(e) => setSiteName(e.target.value)}
                   className="input-field"
-                  placeholder="e.g., IslandWood Birdhouses"
+                  placeholder="e.g., Springbrook Creek Preserve"
                 />
               </div>
               <div>
