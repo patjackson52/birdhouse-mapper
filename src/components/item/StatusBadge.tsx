@@ -1,7 +1,7 @@
-import type { BirdhouseStatus } from '@/lib/types';
+import type { ItemStatus } from '@/lib/types';
 import { statusLabels } from '@/lib/utils';
 
-const badgeStyles: Record<BirdhouseStatus, string> = {
+const badgeStyles: Record<ItemStatus, string> = {
   active: 'bg-forest/10 text-forest border-forest/20',
   planned: 'bg-gray-100 text-gray-600 border-gray-200',
   damaged: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -9,7 +9,7 @@ const badgeStyles: Record<BirdhouseStatus, string> = {
 };
 
 interface StatusBadgeProps {
-  status: BirdhouseStatus;
+  status: ItemStatus;
 }
 
 export default function StatusBadge({ status }: StatusBadgeProps) {

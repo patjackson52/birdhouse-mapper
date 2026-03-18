@@ -1,8 +1,8 @@
-import type { BirdhouseUpdate, Photo } from '@/lib/types';
-import { formatShortDate, updateTypeLabels, updateTypeIcons } from '@/lib/utils';
+import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo } from '@/lib/types';
+import { formatShortDate } from '@/lib/utils';
 
 interface UpdateTimelineProps {
-  updates: (BirdhouseUpdate & { photos?: Photo[] })[];
+  updates: (ItemUpdate & { update_type?: UpdateTypeRecord; photos?: Photo[] })[];
 }
 
 export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
@@ -26,13 +26,13 @@ export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
           )}
           {/* Timeline dot */}
           <div className="absolute left-0 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-sage-light text-sm">
-            {updateTypeIcons[update.update_type]}
+            {update.update_type?.icon || '📝'}
           </div>
           {/* Content */}
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-medium text-forest">
-                {updateTypeLabels[update.update_type]}
+                {update.update_type?.name || 'Update'}
               </span>
               <span className="text-xs text-sage">
                 {formatShortDate(update.update_date)}
