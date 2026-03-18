@@ -1,32 +1,63 @@
-export type BirdhouseStatus = 'active' | 'planned' | 'damaged' | 'removed';
+// ======================
+// Enums / Union types
+// ======================
 
-export type UpdateType =
-  | 'installation'
-  | 'observation'
-  | 'maintenance'
-  | 'damage'
-  | 'sighting';
+export type ItemStatus = 'active' | 'planned' | 'damaged' | 'removed';
+
+export type FieldType = 'text' | 'number' | 'dropdown' | 'date';
 
 export type UserRole = 'admin' | 'editor';
 
-export interface Birdhouse {
+// ======================
+// Table interfaces
+// ======================
+
+export interface Item {
   id: string;
   name: string;
   description: string | null;
   latitude: number;
   longitude: number;
-  species_target: string | null;
-  status: BirdhouseStatus;
-  installed_date: string | null;
+  item_type_id: string;
+  custom_field_values: Record<string, unknown>;
+  status: ItemStatus;
   created_at: string;
   updated_at: string;
   created_by: string | null;
 }
 
-export interface BirdhouseUpdate {
+export interface ItemType {
   id: string;
-  birdhouse_id: string;
-  update_type: UpdateType;
+  name: string;
+  icon: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface CustomField {
+  id: string;
+  item_type_id: string;
+  name: string;
+  field_type: FieldType;
+  options: string[] | null;
+  required: boolean;
+  sort_order: number;
+}
+
+export interface UpdateType {
+  id: string;
+  name: string;
+  icon: string;
+  is_global: boolean;
+  item_type_id: string | null;
+  sort_order: number;
+}
+
+export interface ItemUpdate {
+  id: string;
+  item_id: string;
+  update_type_id: string;
   content: string | null;
   update_date: string;
   created_at: string;
@@ -35,22 +66,12 @@ export interface BirdhouseUpdate {
 
 export interface Photo {
   id: string;
-  birdhouse_id: string | null;
+  item_id: string | null;
   update_id: string | null;
   storage_path: string;
   caption: string | null;
   is_primary: boolean;
   created_at: string;
-}
-
-export interface BirdSpecies {
-  id: string;
-  common_name: string;
-  scientific_name: string | null;
-  description: string | null;
-  habitat: string | null;
-  likelihood: string | null;
-  image_url: string | null;
 }
 
 export interface Profile {
@@ -60,24 +81,58 @@ export interface Profile {
   created_at: string;
 }
 
-export interface BirdhouseWithDetails extends Birdhouse {
-  updates: (BirdhouseUpdate & { photos: Photo[] })[];
-  photos: Photo[];
+export interface SiteConfigRow {
+  key: string;
+  value: unknown;
+  updated_at: string;
 }
+
+// ======================
+// Composite types
+// ======================
+
+export interface ItemWithDetails extends Item {
+  item_type: ItemType;
+  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[] })[];
+  photos: Photo[];
+  custom_fields: CustomField[]; // field definitions for this item's type
+}
+
+// ======================
+// Database schema type (for Supabase client)
+// ======================
 
 export interface Database {
   public: {
     Tables: {
-      birdhouses: {
-        Row: Birdhouse;
-        Insert: Omit<Birdhouse, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Birdhouse, 'id' | 'created_at'>>;
+      items: {
+        Row: Item;
+        Insert: Omit<Item, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Item, 'id' | 'created_at'>>;
         Relationships: [];
       };
-      birdhouse_updates: {
-        Row: BirdhouseUpdate;
-        Insert: Omit<BirdhouseUpdate, 'id' | 'created_at'>;
-        Update: Partial<Omit<BirdhouseUpdate, 'id' | 'created_at'>>;
+      item_types: {
+        Row: ItemType;
+        Insert: Omit<ItemType, 'id' | 'created_at'>;
+        Update: Partial<Omit<ItemType, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      custom_fields: {
+        Row: CustomField;
+        Insert: Omit<CustomField, 'id'>;
+        Update: Partial<Omit<CustomField, 'id'>>;
+        Relationships: [];
+      };
+      update_types: {
+        Row: UpdateType;
+        Insert: Omit<UpdateType, 'id'>;
+        Update: Partial<Omit<UpdateType, 'id'>>;
+        Relationships: [];
+      };
+      item_updates: {
+        Row: ItemUpdate;
+        Insert: Omit<ItemUpdate, 'id' | 'created_at'>;
+        Update: Partial<Omit<ItemUpdate, 'id' | 'created_at'>>;
         Relationships: [];
       };
       photos: {
@@ -86,16 +141,16 @@ export interface Database {
         Update: Partial<Omit<Photo, 'id' | 'created_at'>>;
         Relationships: [];
       };
-      bird_species: {
-        Row: BirdSpecies;
-        Insert: Omit<BirdSpecies, 'id'>;
-        Update: Partial<Omit<BirdSpecies, 'id'>>;
-        Relationships: [];
-      };
       profiles: {
         Row: Profile;
         Insert: Omit<Profile, 'created_at'>;
         Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      site_config: {
+        Row: SiteConfigRow;
+        Insert: Omit<SiteConfigRow, 'updated_at'>;
+        Update: Partial<Omit<SiteConfigRow, 'key'>>;
         Relationships: [];
       };
     };
