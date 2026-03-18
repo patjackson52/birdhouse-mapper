@@ -5,8 +5,9 @@ import { useConfig } from '@/lib/config/client';
 import { useRouter } from 'next/navigation';
 import { saveConfig, saveConfigValue } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
+import OverlayEditor from '@/components/manage/OverlayEditor';
 
-type SettingsTab = 'general' | 'appearance' | 'about' | 'footer';
+type SettingsTab = 'general' | 'appearance' | 'custommap' | 'about' | 'footer';
 
 export default function SettingsPage() {
   const config = useConfig();
@@ -18,6 +19,7 @@ export default function SettingsPage() {
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'appearance', label: 'Appearance' },
+    { id: 'custommap', label: 'Custom Map' },
     { id: 'about', label: 'About Page' },
     { id: 'footer', label: 'Footer' },
   ];
@@ -76,6 +78,24 @@ export default function SettingsPage() {
       )}
       {activeTab === 'appearance' && (
         <AppearanceTab config={config} onSave={handleSave} saving={saving} />
+      )}
+      {activeTab === 'custommap' && (
+        <div>
+          <h2 className="font-heading text-xl font-semibold text-forest-dark mb-4">
+            Custom Map Overlay
+          </h2>
+          <p className="text-sm text-sage mb-6">
+            Upload an image (park map, trail map, facility diagram) to overlay on the base map.
+            Click the map to place the southwest and northeast corners of your overlay.
+          </p>
+          <OverlayEditor
+            initialConfig={config.customMap}
+            onSave={async (overlayConfig) => {
+              await handleSave([{ key: 'custom_map', value: overlayConfig }]);
+            }}
+            saving={saving}
+          />
+        </div>
       )}
       {activeTab === 'about' && (
         <AboutTab config={config} onSave={handleSave} saving={saving} />
