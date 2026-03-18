@@ -11,6 +11,11 @@ export async function setupSaveConfig(entries: { key: string; value: unknown }[]
   const supabase = createServiceClient();
 
   for (const entry of entries) {
+    // Supabase sends JS null as SQL NULL, but site_config.value is NOT NULL jsonb.
+    // JSONB null (the literal) is a valid non-null value, so we need to handle this:
+    // when value is JS null, we skip the update (the DB already has jsonb null from seed).
+    if (entry.value === null || entry.value === undefined) continue;
+
     const { error } = await supabase
       .from('site_config')
       .update({ value: entry.value as never })
