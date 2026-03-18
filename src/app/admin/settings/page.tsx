@@ -1,11 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useConfig } from '@/lib/config/client';
 import { useRouter } from 'next/navigation';
 import { saveConfig, saveConfigValue } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
 import OverlayEditor from '@/components/manage/OverlayEditor';
+
+const CenterPicker = dynamic(() => import('@/components/manage/CenterPicker'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 bg-sage-light rounded-lg flex items-center justify-center text-sm text-sage">
+      Loading map...
+    </div>
+  ),
+});
 
 type SettingsTab = 'general' | 'appearance' | 'custommap' | 'about' | 'footer';
 
@@ -115,9 +125,9 @@ function GeneralTab({ config, onSave, saving }: TabProps) {
   const [siteName, setSiteName] = useState(config.siteName);
   const [tagline, setTagline] = useState(config.tagline);
   const [locationName, setLocationName] = useState(config.locationName);
-  const [lat, setLat] = useState(String(config.mapCenter.lat));
-  const [lng, setLng] = useState(String(config.mapCenter.lng));
-  const [zoom, setZoom] = useState(String(config.mapCenter.zoom));
+  const [lat, setLat] = useState(config.mapCenter.lat);
+  const [lng, setLng] = useState(config.mapCenter.lng);
+  const [zoom, setZoom] = useState(config.mapCenter.zoom);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -125,7 +135,7 @@ function GeneralTab({ config, onSave, saving }: TabProps) {
       { key: 'site_name', value: siteName },
       { key: 'tagline', value: tagline },
       { key: 'location_name', value: locationName },
-      { key: 'map_center', value: { lat: Number(lat), lng: Number(lng), zoom: Number(zoom) } },
+      { key: 'map_center', value: { lat, lng, zoom } },
     ]);
   }
 
@@ -162,41 +172,21 @@ function GeneralTab({ config, onSave, saving }: TabProps) {
           placeholder="e.g., Bainbridge Island, WA"
         />
       </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div>
-          <label htmlFor="lat" className="label">Latitude</label>
-          <input
-            id="lat"
-            type="number"
-            step="any"
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            className="input-field"
-          />
-        </div>
-        <div>
-          <label htmlFor="lng" className="label">Longitude</label>
-          <input
-            id="lng"
-            type="number"
-            step="any"
-            value={lng}
-            onChange={(e) => setLng(e.target.value)}
-            className="input-field"
-          />
-        </div>
-        <div>
-          <label htmlFor="zoom" className="label">Zoom Level</label>
-          <input
-            id="zoom"
-            type="number"
-            min="1"
-            max="20"
-            value={zoom}
-            onChange={(e) => setZoom(e.target.value)}
-            className="input-field"
-          />
-        </div>
+      <div>
+        <label className="label">Default Map View</label>
+        <p className="text-xs text-sage mb-2">
+          Pan, zoom, and click to set the default location shown when the map first loads.
+        </p>
+        <CenterPicker
+          lat={lat}
+          lng={lng}
+          zoom={zoom}
+          onChange={(newLat, newLng, newZoom) => {
+            setLat(newLat);
+            setLng(newLng);
+            setZoom(newZoom);
+          }}
+        />
       </div>
       <button type="submit" disabled={saving} className="btn-primary">
         {saving ? 'Saving...' : 'Save General Settings'}
@@ -231,7 +221,7 @@ function AppearanceTab({ config, onSave, saving }: TabProps) {
               onClick={() => setPreset(key)}
               className={`p-3 rounded-lg border-2 transition-all text-left ${
                 preset === key
-                  ? 'border-forest ring-2 ring-forest/20'
+                  ? 'border-forest ring-2 ring-sage-light'
                   : 'border-sage-light hover:border-sage'
               }`}
             >
