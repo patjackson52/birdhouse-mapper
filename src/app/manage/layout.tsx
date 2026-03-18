@@ -21,7 +21,7 @@ export default function ManageLayout({
 
   const tabs = [
     { href: '/manage', label: 'Dashboard' },
-    { href: '/manage/add', label: 'Add Birdhouse' },
+    { href: '/manage/add', label: 'Add Item' },
     { href: '/manage/update', label: 'Add Update' },
   ];
 

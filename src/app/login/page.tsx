@@ -33,19 +33,19 @@ function LoginForm() {
       return;
     }
 
-    router.push(redirect);
-    router.refresh();
+    // Full page navigation to ensure middleware picks up the new session cookies
+    window.location.href = redirect;
   }
 
   return (
     <div className="w-full max-w-sm">
       <div className="text-center mb-8">
-        <span className="text-4xl mb-3 block">🏠</span>
+        <span className="text-4xl mb-3 block">📍</span>
         <h1 className="font-heading text-2xl font-semibold text-forest-dark">
           Sign In
         </h1>
         <p className="text-sm text-sage mt-1">
-          Access the birdhouse management portal
+          Access the management portal
         </p>
       </div>
 

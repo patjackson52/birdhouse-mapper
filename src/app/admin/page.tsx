@@ -1,40 +1,40 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Birdhouse, BirdhouseUpdate, Profile } from '@/lib/types';
+import type { Item, ItemUpdate, UpdateType, Profile } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import StatusBadge from '@/components/birdhouse/StatusBadge';
+import StatusBadge from '@/components/item/StatusBadge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { formatShortDate, updateTypeLabels } from '@/lib/utils';
+import { formatShortDate } from '@/lib/utils';
 
 export default function AdminPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [birdhouses, setBirdhouses] = useState<Birdhouse[]>([]);
-  const [updates, setUpdates] = useState<(BirdhouseUpdate & { birdhouse_name?: string })[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [updates, setUpdates] = useState<(ItemUpdate & { item_name?: string; update_type_name?: string })[]>([]);
+  const [updateTypes, setUpdateTypes] = useState<UpdateType[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'birdhouses' | 'updates'>('birdhouses');
-
-  // Invite form
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'editor' | 'admin'>('editor');
-  const [inviteMessage, setInviteMessage] = useState('');
+  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'updates'>('items');
 
   useEffect(() => {
     async function fetchData() {
       const supabase = createClient();
 
-      const [profileRes, birdhouseRes, updateRes] = await Promise.all([
+      const [profileRes, itemRes, updateRes, typeRes] = await Promise.all([
         supabase.from('profiles').select('*').order('created_at', { ascending: true }),
-        supabase.from('birdhouses').select('*').order('name', { ascending: true }),
-        supabase.from('birdhouse_updates').select('*').order('update_date', { ascending: false }),
+        supabase.from('items').select('*').order('name', { ascending: true }),
+        supabase.from('item_updates').select('*').order('update_date', { ascending: false }),
+        supabase.from('update_types').select('*').order('sort_order', { ascending: true }),
       ]);
 
       if (profileRes.data) setProfiles(profileRes.data);
-      if (birdhouseRes.data) setBirdhouses(birdhouseRes.data);
+      if (itemRes.data) setItems(itemRes.data);
+      if (typeRes.data) setUpdateTypes(typeRes.data);
       if (updateRes.data) {
+        const typeMap = new Map((typeRes.data || []).map((t) => [t.id, t]));
         const enriched = updateRes.data.map((u) => ({
           ...u,
-          birdhouse_name: birdhouseRes.data?.find((b) => b.id === u.birdhouse_id)?.name,
+          item_name: itemRes.data?.find((b) => b.id === u.item_id)?.name,
+          update_type_name: typeMap.get(u.update_type_id)?.name,
         }));
         setUpdates(enriched);
       }
@@ -45,15 +45,15 @@ export default function AdminPage() {
     fetchData();
   }, []);
 
-  async function handleDeleteBirdhouse(id: string) {
-    if (!confirm('Delete this birdhouse and all its updates? This cannot be undone.')) return;
+  async function handleDeleteItem(id: string) {
+    if (!confirm('Delete this item and all its updates? This cannot be undone.')) return;
 
     const supabase = createClient();
-    const { error } = await supabase.from('birdhouses').delete().eq('id', id);
+    const { error } = await supabase.from('items').delete().eq('id', id);
 
     if (!error) {
-      setBirdhouses((prev) => prev.filter((b) => b.id !== id));
-      setUpdates((prev) => prev.filter((u) => u.birdhouse_id !== id));
+      setItems((prev) => prev.filter((b) => b.id !== id));
+      setUpdates((prev) => prev.filter((u) => u.item_id !== id));
     }
   }
 
@@ -61,7 +61,7 @@ export default function AdminPage() {
     if (!confirm('Delete this update?')) return;
 
     const supabase = createClient();
-    const { error } = await supabase.from('birdhouse_updates').delete().eq('id', id);
+    const { error } = await supabase.from('item_updates').delete().eq('id', id);
 
     if (!error) {
       setUpdates((prev) => prev.filter((u) => u.id !== id));
@@ -94,7 +94,7 @@ export default function AdminPage() {
 
       {/* Tab nav */}
       <div className="flex gap-1 mb-6 border-b border-sage-light">
-        {(['birdhouses', 'updates', 'users'] as const).map((tab) => (
+        {(['items', 'updates', 'users'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -104,8 +104,8 @@ export default function AdminPage() {
                 : 'border-transparent text-sage hover:text-forest-dark'
             }`}
           >
-            {tab === 'birdhouses'
-              ? `Birdhouses (${birdhouses.length})`
+            {tab === 'items'
+              ? `Items (${items.length})`
               : tab === 'updates'
               ? `Updates (${updates.length})`
               : `Users (${profiles.length})`}
@@ -116,8 +116,7 @@ export default function AdminPage() {
       {/* Users tab */}
       {activeTab === 'users' && (
         <div className="space-y-6">
-          {/* Invite form note */}
-          <div className="card bg-sage-light/30">
+          <div className="card bg-sage-light">
             <h3 className="text-sm font-medium text-forest-dark mb-2">
               Invite a User
             </h3>
@@ -131,7 +130,7 @@ export default function AdminPage() {
           <div className="card overflow-hidden p-0">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-sage-light bg-sage-light/30">
+                <tr className="border-b border-sage-light bg-sage-light">
                   <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                     Name
                   </th>
@@ -146,7 +145,7 @@ export default function AdminPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sage-light/50">
+              <tbody className="divide-y divide-sage-light">
                 {profiles.map((p) => (
                   <tr key={p.id}>
                     <td className="px-4 py-3 text-sm text-forest-dark">
@@ -178,17 +177,14 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Birdhouses tab */}
-      {activeTab === 'birdhouses' && (
+      {/* Items tab */}
+      {activeTab === 'items' && (
         <div className="card overflow-hidden p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-sage-light bg-sage-light/30">
+              <tr className="border-b border-sage-light bg-sage-light">
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                   Name
-                </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase hidden sm:table-cell">
-                  Species
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                   Status
@@ -198,21 +194,18 @@ export default function AdminPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sage-light/50">
-              {birdhouses.map((bh) => (
-                <tr key={bh.id} className="hover:bg-sage-light/20">
+            <tbody className="divide-y divide-sage-light">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-sage-light">
                   <td className="px-4 py-3 text-sm font-medium text-forest-dark">
-                    {bh.name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-sage hidden sm:table-cell">
-                    {bh.species_target || '—'}
+                    {item.name}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={bh.status} />
+                    <StatusBadge status={item.status} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => handleDeleteBirdhouse(bh.id)}
+                      onClick={() => handleDeleteItem(item.id)}
                       className="text-xs text-red-600 hover:text-red-800 transition-colors"
                     >
                       Delete
@@ -230,9 +223,9 @@ export default function AdminPage() {
         <div className="card overflow-hidden p-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-sage-light bg-sage-light/30">
+              <tr className="border-b border-sage-light bg-sage-light">
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
-                  Birdhouse
+                  Item
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                   Type
@@ -248,14 +241,14 @@ export default function AdminPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sage-light/50">
+            <tbody className="divide-y divide-sage-light">
               {updates.map((u) => (
-                <tr key={u.id} className="hover:bg-sage-light/20">
+                <tr key={u.id} className="hover:bg-sage-light">
                   <td className="px-4 py-3 text-sm text-forest-dark">
-                    {u.birdhouse_name || '—'}
+                    {u.item_name || '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-sage">
-                    {updateTypeLabels[u.update_type]}
+                    {u.update_type_name || '—'}
                   </td>
                   <td className="px-4 py-3 text-sm text-sage hidden sm:table-cell">
                     {formatShortDate(u.update_date)}

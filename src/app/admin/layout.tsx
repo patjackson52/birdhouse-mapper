@@ -27,10 +27,30 @@ export default function AdminLayout({
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium">Admin Panel</span>
               <Link
+                href="/admin"
+                className={`text-sm transition-colors ${
+                  pathname === '/admin'
+                    ? 'text-white font-medium'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Data
+              </Link>
+              <Link
+                href="/admin/settings"
+                className={`text-sm transition-colors ${
+                  pathname.startsWith('/admin/settings')
+                    ? 'text-white font-medium'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Settings
+              </Link>
+              <Link
                 href="/manage"
                 className="text-white/60 hover:text-white text-sm transition-colors"
               >
-                &larr; Back to Manage
+                &larr; Back
               </Link>
             </div>
             <button

@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import type { Birdhouse, BirdhouseWithDetails } from '@/lib/types';
+import type { Item, ItemWithDetails, ItemType, CustomField, UpdateType } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import DetailPanel from '@/components/birdhouse/DetailPanel';
+import DetailPanel from '@/components/item/DetailPanel';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
-const BirdMap = dynamic(() => import('@/components/map/BirdMap'), {
+const MapView = dynamic(() => import('@/components/map/MapView'), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-sage-light">
@@ -18,47 +18,55 @@ const BirdMap = dynamic(() => import('@/components/map/BirdMap'), {
 });
 
 export default function HomePage() {
-  const [birdhouses, setBirdhouses] = useState<Birdhouse[]>([]);
-  const [selectedBirdhouse, setSelectedBirdhouse] = useState<BirdhouseWithDetails | null>(null);
+  const [items, setItems] = useState<Item[]>([]);
+  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [selectedItem, setSelectedItem] = useState<ItemWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchBirdhouses() {
+    async function fetchData() {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('birdhouses')
-        .select('*')
-        .neq('status', 'removed')
-        .order('created_at', { ascending: true });
 
-      if (!error && data) {
-        setBirdhouses(data);
-      }
+      const [itemRes, typeRes, fieldRes] = await Promise.all([
+        supabase.from('items').select('*').neq('status', 'removed').order('created_at', { ascending: true }),
+        supabase.from('item_types').select('*').order('sort_order', { ascending: true }),
+        supabase.from('custom_fields').select('*').order('sort_order', { ascending: true }),
+      ]);
+
+      if (itemRes.data) setItems(itemRes.data);
+      if (typeRes.data) setItemTypes(typeRes.data);
+      if (fieldRes.data) setCustomFields(fieldRes.data);
       setLoading(false);
     }
 
-    fetchBirdhouses();
+    fetchData();
   }, []);
 
-  async function handleMarkerClick(birdhouse: Birdhouse) {
+  async function handleMarkerClick(item: Item) {
     const supabase = createClient();
 
-    // Fetch updates with photos
-    const { data: updates } = await supabase
-      .from('birdhouse_updates')
-      .select('*')
-      .eq('birdhouse_id', birdhouse.id)
-      .order('update_date', { ascending: false });
+    const [updateRes, photoRes, updateTypeRes] = await Promise.all([
+      supabase.from('item_updates').select('*').eq('item_id', item.id).order('update_date', { ascending: false }),
+      supabase.from('photos').select('*').eq('item_id', item.id),
+      supabase.from('update_types').select('*').order('sort_order', { ascending: true }),
+    ]);
 
-    const { data: photos } = await supabase
-      .from('photos')
-      .select('*')
-      .eq('birdhouse_id', birdhouse.id);
+    const updateTypes = updateTypeRes.data || [];
+    const typeMap = new Map(updateTypes.map((t) => [t.id, t]));
+    const itemType = itemTypes.find((t) => t.id === item.item_type_id);
+    const fields = customFields.filter((f) => f.item_type_id === item.item_type_id);
 
-    setSelectedBirdhouse({
-      ...birdhouse,
-      updates: (updates || []).map((u) => ({ ...u, photos: [] })),
-      photos: photos || [],
+    setSelectedItem({
+      ...item,
+      item_type: itemType!,
+      updates: (updateRes.data || []).map((u) => ({
+        ...u,
+        update_type: typeMap.get(u.update_type_id)!,
+        photos: [],
+      })),
+      photos: photoRes.data || [],
+      custom_fields: fields,
     });
   }
 
@@ -72,20 +80,20 @@ export default function HomePage() {
 
   return (
     <div className="relative h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)]">
-      <BirdMap birdhouses={birdhouses} onMarkerClick={handleMarkerClick} />
+      <MapView items={items} itemTypes={itemTypes} onMarkerClick={handleMarkerClick} />
 
       {/* List view link */}
       <Link
         href="/list"
-        className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-sm rounded-lg shadow-lg border border-sage-light/60 px-3 py-2 text-xs font-medium text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-4 right-4 z-10 bg-white backdrop-blur-sm rounded-lg shadow-lg border border-sage-light px-3 py-2 text-xs font-medium text-forest-dark hover:bg-sage-light transition-colors"
       >
         View as List
       </Link>
 
       {/* Detail panel */}
       <DetailPanel
-        birdhouse={selectedBirdhouse}
-        onClose={() => setSelectedBirdhouse(null)}
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
       />
     </div>
   );

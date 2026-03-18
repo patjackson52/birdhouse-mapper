@@ -29,23 +29,67 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // --- Setup complete check ---
+  const pathname = request.nextUrl.pathname;
+  const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/');
+  const isAuthCallback = pathname.startsWith('/api/auth/');
+  const isStaticAsset = pathname.startsWith('/_next/');
+
+  if (!isSetupRoute && !isAuthCallback && !isStaticAsset) {
+    const setupDoneCookie = request.cookies.get('setup_done');
+
+    if (!setupDoneCookie) {
+      // Check database for setup_complete
+      const { data } = await supabase
+        .from('site_config')
+        .select('value')
+        .eq('key', 'setup_complete')
+        .single();
+
+      const setupComplete = data?.value === true;
+
+      if (setupComplete) {
+        // Set cookie so we don't check DB on every request
+        supabaseResponse.cookies.set('setup_done', 'true', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 365, // 1 year
+        });
+      } else {
+        // Redirect to setup
+        const url = request.nextUrl.clone();
+        url.pathname = '/setup';
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
+  // --- Session refresh (all routes) ---
+  // Always call getUser() to keep Supabase session cookies fresh,
+  // per Supabase SSR docs recommendation.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // --- Auth checks (only for protected routes) ---
   const isProtectedRoute =
-    request.nextUrl.pathname.startsWith('/manage') ||
-    request.nextUrl.pathname.startsWith('/admin');
+    pathname.startsWith('/manage') ||
+    pathname.startsWith('/admin');
 
-  if (isProtectedRoute && !user) {
+  if (!isProtectedRoute) {
+    return supabaseResponse;
+  }
+
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirect', request.nextUrl.pathname);
+    url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
   }
 
   // Check admin role for /admin routes
-  if (request.nextUrl.pathname.startsWith('/admin') && user) {
+  if (pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
