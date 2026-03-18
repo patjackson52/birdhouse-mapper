@@ -9,10 +9,20 @@ import {
   setupComplete,
 } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
+import dynamic from 'next/dynamic';
 
-type Step = 'welcome' | 'name' | 'theme' | 'items' | 'about' | 'admin' | 'review';
+const OverlayEditor = dynamic(() => import('@/components/manage/OverlayEditor'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-64 bg-sage-light rounded-lg flex items-center justify-center text-sm text-sage">
+      Loading overlay editor...
+    </div>
+  ),
+});
 
-const STEPS: Step[] = ['welcome', 'name', 'theme', 'items', 'about', 'admin', 'review'];
+type Step = 'welcome' | 'name' | 'theme' | 'custommap' | 'items' | 'about' | 'admin' | 'review';
+
+const STEPS: Step[] = ['welcome', 'name', 'theme', 'custommap', 'items', 'about', 'admin', 'review'];
 
 interface ItemTypeEntry {
   name: string;
@@ -37,6 +47,12 @@ export default function SetupPage() {
   const [itemTypes, setItemTypes] = useState<ItemTypeEntry[]>([
     { name: 'Bird Box', icon: '🏠', color: '#5D7F3A' },
   ]);
+  const [overlayConfig, setOverlayConfig] = useState<{
+    url: string;
+    bounds: { southWest: { lat: number; lng: number }; northEast: { lat: number; lng: number } };
+    rotation: number;
+    opacity: number;
+  } | null>(null);
   const [aboutContent, setAboutContent] = useState('# About\n\nDescribe your project here.');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -103,6 +119,7 @@ export default function SetupPage() {
         }},
         { key: 'theme', value: { preset: themePreset } },
         { key: 'about_content', value: aboutContent },
+        { key: 'custom_map', value: overlayConfig },
       ]);
       if (configResult.error) throw new Error(configResult.error);
 
@@ -293,6 +310,28 @@ export default function SetupPage() {
             </div>
           )}
 
+          {step === 'custommap' && (
+            <div className="space-y-6">
+              <h2 className="font-heading text-xl font-semibold text-forest-dark">
+                Custom Map Overlay
+              </h2>
+              <p className="text-sm text-sage">
+                Optionally upload a park map, trail map, or facility diagram to overlay on the base map.
+                You can skip this step and add one later in settings.
+              </p>
+              <OverlayEditor
+                initialConfig={overlayConfig}
+                onSave={(config) => setOverlayConfig(config)}
+                saving={false}
+              />
+              {overlayConfig && (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+                  Overlay configured! Click Next to continue.
+                </div>
+              )}
+            </div>
+          )}
+
           {step === 'items' && (
             <div className="space-y-6">
               <h2 className="font-heading text-xl font-semibold text-forest-dark">
@@ -449,6 +488,10 @@ export default function SetupPage() {
                 <div className="flex justify-between py-2 border-b border-sage-light">
                   <span className="text-sage">Theme</span>
                   <span className="text-forest-dark capitalize">{themePreset}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-sage-light">
+                  <span className="text-sage">Custom Map</span>
+                  <span className="text-forest-dark">{overlayConfig ? 'Configured' : 'None'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-sage-light">
                   <span className="text-sage">Item Types</span>
