@@ -18,6 +18,8 @@ interface CenterPickerProps {
   lng: number;
   zoom: number;
   onChange: (lat: number, lng: number, zoom: number) => void;
+  tileUrl?: string;
+  tileAttribution?: string;
 }
 
 function MapEvents({ onChange }: { onChange: (lat: number, lng: number, zoom: number) => void }) {
@@ -46,8 +48,10 @@ function MapResizer({ expanded }: { expanded: boolean }) {
   return null;
 }
 
-export default function CenterPicker({ lat, lng, zoom, onChange }: CenterPickerProps) {
+export default function CenterPicker({ lat, lng, zoom, onChange, tileUrl, tileAttribution }: CenterPickerProps) {
   const theme = useTheme();
+  const activeTileUrl = tileUrl || theme.tileUrl;
+  const activeTileAttribution = tileAttribution || theme.tileAttribution;
   const [expanded, setExpanded] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
 
@@ -111,8 +115,8 @@ export default function CenterPicker({ lat, lng, zoom, onChange }: CenterPickerP
           <MapResizer expanded={expanded} />
           <MapEvents onChange={onChange} />
           <TileLayer
-            attribution={theme.tileAttribution}
-            url={theme.tileUrl}
+            attribution={activeTileAttribution}
+            url={activeTileUrl}
           />
           <Marker position={[lat, lng]} icon={crosshairIcon} />
         </MapContainer>
