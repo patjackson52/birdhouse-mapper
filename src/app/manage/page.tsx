@@ -2,25 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Birdhouse } from '@/lib/types';
+import type { Item } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
-import StatusBadge from '@/components/birdhouse/StatusBadge';
+import StatusBadge from '@/components/item/StatusBadge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { formatShortDate } from '@/lib/utils';
 
 export default function ManageDashboard() {
-  const [birdhouses, setBirdhouses] = useState<Birdhouse[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       const supabase = createClient();
       const { data } = await supabase
-        .from('birdhouses')
+        .from('items')
         .select('*')
         .order('name', { ascending: true });
 
-      if (data) setBirdhouses(data);
+      if (data) setItems(data);
       setLoading(false);
     }
 
@@ -28,10 +27,10 @@ export default function ManageDashboard() {
   }, []);
 
   const stats = {
-    total: birdhouses.length,
-    active: birdhouses.filter((b) => b.status === 'active').length,
-    planned: birdhouses.filter((b) => b.status === 'planned').length,
-    damaged: birdhouses.filter((b) => b.status === 'damaged').length,
+    total: items.length,
+    active: items.filter((b) => b.status === 'active').length,
+    planned: items.filter((b) => b.status === 'planned').length,
+    damaged: items.filter((b) => b.status === 'damaged').length,
   };
 
   return (
@@ -42,7 +41,7 @@ export default function ManageDashboard() {
         </h1>
         <div className="flex gap-2">
           <Link href="/manage/add" className="btn-primary text-sm">
-            Add Birdhouse
+            Add Item
           </Link>
           <Link href="/manage/update" className="btn-secondary text-sm">
             Add Update
@@ -78,7 +77,7 @@ export default function ManageDashboard() {
         </div>
       </div>
 
-      {/* Birdhouse list */}
+      {/* Item list */}
       {loading ? (
         <LoadingSpinner className="py-12" />
       ) : (
@@ -89,46 +88,36 @@ export default function ManageDashboard() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase tracking-wider">
                   Name
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase tracking-wider hidden sm:table-cell">
-                  Species
-                </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase tracking-wider">
                   Status
                 </th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase tracking-wider hidden md:table-cell">
-                  Installed
+                  Created
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-sage-light/50">
-              {birdhouses.map((bh) => (
-                <tr key={bh.id} className="hover:bg-sage-light/20 transition-colors">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-sage-light/20 transition-colors">
                   <td className="px-4 py-3">
                     <span className="text-sm font-medium text-forest-dark">
-                      {bh.name}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell">
-                    <span className="text-sm text-sage">
-                      {bh.species_target || '—'}
+                      {item.name}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={bh.status} />
+                    <StatusBadge status={item.status} />
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     <span className="text-sm text-sage">
-                      {bh.installed_date
-                        ? formatShortDate(bh.installed_date)
-                        : '—'}
+                      {new Date(item.created_at).toLocaleDateString()}
                     </span>
                   </td>
                 </tr>
               ))}
-              {birdhouses.length === 0 && (
+              {items.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-sm text-sage">
-                    No birdhouses yet. Add your first one!
+                  <td colSpan={3} className="px-4 py-8 text-center text-sm text-sage">
+                    No items yet. Add your first one!
                   </td>
                 </tr>
               )}
