@@ -34,11 +34,12 @@ export default function UserLocationLayer() {
     }
 
     const latlng: L.LatLngExpression = [position.lat, position.lng];
+    const radius = accuracy || 100; // GPS accuracy in meters, fallback 100m
 
-    // Accuracy ring
+    // Accuracy ring — always shown to communicate uncertainty
     if (!ringRef.current) {
       ringRef.current = L.circle(latlng, {
-        radius: accuracy || 50,
+        radius,
         color: 'transparent',
         fillColor: 'rgba(66, 133, 244, 0.15)',
         fillOpacity: 1,
@@ -46,11 +47,14 @@ export default function UserLocationLayer() {
       }).addTo(map);
     } else {
       ringRef.current.setLatLng(latlng);
-      if (accuracy) ringRef.current.setRadius(accuracy);
+      ringRef.current.setRadius(radius);
     }
 
-    // Blue dot
-    if (!dotRef.current) {
+    // Blue dot — only show when accuracy is reasonable (< 500m)
+    // When GPS is very inaccurate the dot jumps around misleadingly
+    if (radius > 500) {
+      if (dotRef.current) { dotRef.current.remove(); dotRef.current = null; }
+    } else if (!dotRef.current) {
       dotRef.current = L.circleMarker(latlng, {
         radius: 8,
         color: '#ffffff',
