@@ -1,4 +1,4 @@
-import type { BirdhouseStatus, UpdateType } from './types';
+import type { ItemStatus } from './types';
 
 /**
  * Resize an image file to a maximum width, returning a Blob.
@@ -58,32 +58,16 @@ export function formatShortDate(dateString: string): string {
   });
 }
 
-export const statusColors: Record<BirdhouseStatus, string> = {
+export const statusColors: Record<ItemStatus, string> = {
   active: '#5D7F3A',
   planned: '#9CA3AF',
   damaged: '#D97706',
   removed: '#6B7280',
 };
 
-export const statusLabels: Record<BirdhouseStatus, string> = {
+export const statusLabels: Record<ItemStatus, string> = {
   active: 'Active',
   planned: 'Planned',
   damaged: 'Needs Repair',
   removed: 'Removed',
-};
-
-export const updateTypeLabels: Record<UpdateType, string> = {
-  installation: 'Installation',
-  observation: 'Observation',
-  maintenance: 'Maintenance',
-  damage: 'Damage Report',
-  sighting: 'Bird Sighting',
-};
-
-export const updateTypeIcons: Record<UpdateType, string> = {
-  installation: '🏠',
-  observation: '👀',
-  maintenance: '🔧',
-  damage: '⚠️',
-  sighting: '🐦',
 };
