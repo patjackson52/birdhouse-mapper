@@ -1,17 +1,21 @@
+'use client';
+
 import Link from 'next/link';
+import { useConfig } from '@/lib/config/client';
 
 export default function Footer() {
+  const config = useConfig();
+
   return (
     <footer className="bg-forest-dark text-white/70 py-8 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h3 className="font-heading font-semibold text-white text-lg mb-2">
-              IslandWood Birdhouses
+              {config.siteName}
             </h3>
             <p className="text-sm">
-              An Eagle Scout service project dedicated to building and
-              monitoring birdhouses at IslandWood camp on Bainbridge Island, WA.
+              {config.tagline}
             </p>
           </div>
           <div>
@@ -24,40 +28,31 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/list" className="hover:text-golden transition-colors">
-                  Birdhouse List
-                </Link>
-              </li>
-              <li>
-                <Link href="/birds" className="hover:text-golden transition-colors">
-                  Birds of IslandWood
+                  List View
                 </Link>
               </li>
               <li>
                 <Link href="/about" className="hover:text-golden transition-colors">
-                  About the Project
+                  About
                 </Link>
               </li>
+              {config.footerLinks.map((link) => (
+                <li key={link.url}>
+                  <a
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-golden transition-colors"
+                  >
+                    {link.label} &rarr;
+                  </a>
+                </li>
+              ))}
             </ul>
-          </div>
-          <div>
-            <h4 className="font-medium text-white mb-2">IslandWood</h4>
-            <p className="text-sm">
-              IslandWood is an outdoor learning center on Bainbridge Island,
-              Washington, inspiring lifelong environmental and community
-              stewardship.
-            </p>
-            <a
-              href="https://islandwood.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block mt-2 text-sm text-golden hover:text-golden/80 transition-colors"
-            >
-              Visit islandwood.org &rarr;
-            </a>
           </div>
         </div>
         <div className="border-t border-white/10 mt-6 pt-6 text-center text-xs">
-          <p>&copy; {new Date().getFullYear()} IslandWood Birdhouse Project. Built with care for conservation.</p>
+          <p>&copy; {new Date().getFullYear()} {config.footerText}</p>
         </div>
       </div>
     </footer>

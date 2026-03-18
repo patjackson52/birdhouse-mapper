@@ -3,16 +3,17 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useConfig } from '@/lib/config/client';
 
 const publicLinks = [
   { href: '/', label: 'Map', icon: MapIcon },
   { href: '/list', label: 'List', icon: ListIcon },
-  { href: '/birds', label: 'Birds', icon: BirdIcon },
   { href: '/about', label: 'About', icon: InfoIcon },
 ];
 
 export default function Navigation() {
   const pathname = usePathname();
+  const config = useConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isManage = pathname.startsWith('/manage') || pathname.startsWith('/admin');
@@ -24,14 +25,16 @@ export default function Navigation() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="text-2xl">🏠</span>
+              <span className="text-2xl">📍</span>
               <div>
                 <span className="font-heading font-semibold text-forest-dark text-lg leading-tight block">
-                  IslandWood Birdhouses
+                  {config.siteName}
                 </span>
-                <span className="text-xs text-sage leading-tight">
-                  Eagle Scout Project
-                </span>
+                {config.tagline && (
+                  <span className="text-xs text-sage leading-tight">
+                    {config.tagline}
+                  </span>
+                )}
               </div>
             </Link>
 
@@ -69,9 +72,9 @@ export default function Navigation() {
       <header className="md:hidden bg-white border-b border-sage-light/60 sticky top-0 z-30">
         <div className="flex items-center justify-between h-14 px-4">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl">🏠</span>
+            <span className="text-xl">📍</span>
             <span className="font-heading font-semibold text-forest-dark text-base">
-              IslandWood
+              {config.siteName}
             </span>
           </Link>
           <button
@@ -153,14 +156,6 @@ function ListIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-    </svg>
-  );
-}
-
-function BirdIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l-7-7 3-3 4 4 8-8 3 3-11 11z" />
     </svg>
   );
 }
