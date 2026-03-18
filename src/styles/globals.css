@@ -37,11 +37,11 @@
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-lg border border-forest/20 bg-white px-4 py-2.5 text-sm font-medium text-forest-dark transition-colors hover:bg-sage-light focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2;
+    @apply inline-flex items-center justify-center rounded-lg border border-sage-light bg-white px-4 py-2.5 text-sm font-medium text-forest-dark transition-colors hover:bg-sage-light focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2;
   }
 
   .btn-golden {
-    @apply inline-flex items-center justify-center rounded-lg bg-golden px-4 py-2.5 text-sm font-medium text-forest-dark transition-colors hover:bg-golden/90 focus:outline-none focus:ring-2 focus:ring-golden focus:ring-offset-2;
+    @apply inline-flex items-center justify-center rounded-lg bg-golden px-4 py-2.5 text-sm font-medium text-forest-dark transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-golden focus:ring-offset-2;
   }
 
   .card {
@@ -49,7 +49,9 @@
   }
 
   .input-field {
-    @apply w-full rounded-lg border border-sage/30 bg-white px-3 py-2.5 text-sm text-forest-dark placeholder:text-sage transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-forest/20;
+    @apply w-full rounded-lg border border-sage-light bg-white px-3 py-2.5 text-sm text-forest-dark placeholder:text-sage transition-colors focus:border-forest focus:outline-none focus:ring-2 focus:ring-offset-2;
+    --tw-ring-color: var(--color-primary);
+    --tw-ring-opacity: 0.2;
   }
 
   .label {
@@ -85,7 +87,7 @@
 }
 
 .bottom-sheet-handle {
-  @apply mx-auto mt-3 mb-2 h-1 w-10 rounded-full bg-sage/40;
+  @apply mx-auto mt-3 mb-2 h-1 w-10 rounded-full bg-sage-light;
 }
 
 /* Animations */
