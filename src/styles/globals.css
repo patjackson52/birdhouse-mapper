@@ -118,13 +118,13 @@
   animation: slideInRight 0.3s ease-out;
 }
 
-/* User location blue dot pulse */
+/* User location blue dot pulse — opacity only to avoid drift from scale transform */
 @keyframes locationPulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.4); }
-  100% { opacity: 1; transform: scale(1); }
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 .location-dot-pulse {
-  animation: locationPulse 2s ease-in-out infinite;
+  animation: locationPulse 3s ease-in-out infinite;
 }
