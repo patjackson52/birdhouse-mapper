@@ -8,11 +8,26 @@ import type { Item, ItemType } from '@/lib/types';
 import { useConfig, useTheme } from '@/lib/config/client';
 import ItemMarker from './ItemMarker';
 import MapLegend from './MapLegend';
+import UserLocationLayer from './UserLocationLayer';
+import LocateButton from './LocateButton';
+import { useUserLocation } from '@/lib/location/provider';
 
 interface MapViewProps {
   items: Item[];
   itemTypes: ItemType[];
   onMarkerClick: (item: Item) => void;
+}
+
+/** Flies map to user position when trigger increments */
+function FlyToUser({ trigger }: { trigger: number }) {
+  const map = useMap();
+  const { position } = useUserLocation();
+  useEffect(() => {
+    if (trigger > 0 && position) {
+      map.flyTo([position.lat, position.lng], map.getZoom(), { duration: 1 });
+    }
+  }, [trigger, position, map]);
+  return null;
 }
 
 /** Invalidates map size when fullscreen changes */
@@ -30,6 +45,7 @@ export default function MapView({ items, itemTypes, onMarkerClick }: MapViewProp
   const center: [number, number] = [config.mapCenter.lat, config.mapCenter.lng];
   const zoom = config.mapCenter.zoom;
   const [fullscreen, setFullscreen] = useState(false);
+  const [flyToUserTrigger, setFlyToUserTrigger] = useState(0);
 
   // Build a lookup map for item types
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
@@ -82,6 +98,8 @@ export default function MapView({ items, itemTypes, onMarkerClick }: MapViewProp
             onClick={onMarkerClick}
           />
         ))}
+        <UserLocationLayer />
+        <FlyToUser trigger={flyToUserTrigger} />
       </MapContainer>
 
       {/* Fullscreen toggle */}
@@ -102,6 +120,7 @@ export default function MapView({ items, itemTypes, onMarkerClick }: MapViewProp
         )}
       </button>
 
+      <LocateButton onLocate={() => setFlyToUserTrigger((n) => n + 1)} />
       <MapLegend itemTypes={itemTypes} />
     </div>
   );
