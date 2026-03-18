@@ -58,7 +58,7 @@ Defines what kinds of things are tracked.
 |--------|------|-------|
 | id | uuid (PK) | |
 | name | text | e.g., "Bird Box" |
-| icon | text | Icon identifier for map marker |
+| icon | text | Emoji character used as map marker and in UI labels (e.g., "🏠", "🦇", "ℹ️") |
 | color | text | Hex color for map marker |
 | sort_order | int | Display ordering |
 | created_at | timestamptz | |
@@ -85,9 +85,9 @@ Configurable update/log types.
 |--------|------|-------|
 | id | uuid (PK) | |
 | name | text | e.g., "Observation" |
-| icon | text | Emoji or icon identifier |
+| icon | text | Emoji character (e.g., "🔧", "👀", "📝") |
 | is_global | boolean | Available for all item types |
-| item_type_id | uuid (FK → item_types, nullable) | If not global, which type |
+| item_type_id | uuid (FK → item_types, nullable) | If not global, which type. CHECK: `(is_global = true AND item_type_id IS NULL) OR (is_global = false AND item_type_id IS NOT NULL)` |
 | sort_order | int | |
 
 ### Modified Existing Tables
@@ -96,6 +96,40 @@ Configurable update/log types.
 - **`birdhouse_updates` → `item_updates`**: replace `update_type` enum with `update_type_id` (FK → `update_types`)
 - **`photos`**: rename `birdhouse_id` → `item_id`
 - **`bird_species`** → removed (replaced by custom fields with dropdown type)
+
+### Row Level Security
+
+All new tables need RLS policies:
+
+- **`site_config`**: SELECT for anonymous (public site must read config to render). INSERT/UPDATE/DELETE for admin role only.
+- **`item_types`**: SELECT for anonymous. INSERT/UPDATE/DELETE for admin role only.
+- **`custom_fields`**: SELECT for anonymous. INSERT/UPDATE/DELETE for admin role only.
+- **`update_types`**: SELECT for anonymous. INSERT/UPDATE/DELETE for admin role only.
+- **`items`** (renamed from `birdhouses`): SELECT for anonymous. INSERT/UPDATE for editor+ role. DELETE for admin only.
+- **`item_updates`** (renamed from `birdhouse_updates`): SELECT for anonymous. INSERT/UPDATE for editor+ role. DELETE for admin only.
+- **`photos`**: SELECT for anonymous. INSERT for editor+ role. DELETE for admin only.
+
+**Setup wizard exception:** The setup wizard runs before any admin account exists. The initial migration seeds a `setup_complete = false` row in `site_config`. The `/setup` route uses the Supabase service role key (server-side only, never exposed to client) to write config during setup. Once the admin account is created in step 8, subsequent config writes go through normal RLS.
+
+### Standard Fields on `items`
+
+The `items` table retains these columns from `birdhouses`: `id`, `name`, `description`, `latitude`, `longitude`, `status`, `created_at`, `updated_at`, `created_by`. Added: `item_type_id`, `custom_field_values` (jsonb).
+
+The `status` column retains the check constraint (`active`, `planned`, `damaged`, `removed`) as a fixed set across all item types — these are generic enough for any POI tracking use case.
+
+Removed columns:
+- `species_target` → migrated to a custom dropdown field on the "Bird Box" item type
+- `installed_date` → migrated to a custom date field (not all item types need an installation date)
+
+### Storage Bucket
+
+The existing `birdhouse-photos` storage bucket is renamed to `item-photos`. This requires a server-side script (not a SQL migration) that copies objects via the Supabase storage API, updates `storage_path` values in the `photos` table, and deletes the old bucket. Included as a standalone migration script in the repo.
+
+### Deletion Behavior
+
+- **Deleting an item type:** Blocked if items of that type exist. Admin must reassign or delete items first. UI shows count of affected items and prevents accidental deletion.
+- **Deleting a custom field:** The field definition is removed from `custom_fields`. Existing `custom_field_values` JSONB entries retain orphaned keys (harmless) — they are ignored since the field metadata no longer exists to render them.
+- **Deleting an update type:** Blocked if updates of that type exist. Admin must reassign existing updates first.
 
 ### Migration Path
 
@@ -131,7 +165,20 @@ interface SiteConfig {
   faviconUrl: string | null;
   footerText: string;
   footerLinks: { label: string; url: string }[];
-  customMap: { url: string; bounds: object; opacity: number } | null;
+  customMap: {
+    url: string;
+    bounds: {
+      southWest: { lat: number; lng: number };
+      northEast: { lat: number; lng: number };
+    };
+    rotation: number; // degrees, 0 = no rotation
+    corners?: { // for rotated overlays (3-corner representation)
+      topLeft: { lat: number; lng: number };
+      topRight: { lat: number; lng: number };
+      bottomLeft: { lat: number; lng: number };
+    };
+    opacity: number;
+  } | null;
   customNavItems: { label: string; href: string }[];
   setupComplete: boolean;
 }
@@ -189,7 +236,13 @@ Allows overlaying a custom image (park map, trail map, facility diagram) on top 
 
 ### Technical Implementation
 
-Anchor points used to compute affine transformation → Leaflet `L.imageOverlay` bounds (SW and NE corners).
+**Coordinate computation:** Two anchor points (image pixel coordinates + real-world lat/lng pairs) define a similarity transformation (translation, uniform scale, rotation). Compute scale factor from the ratio of real-world distance to pixel distance between anchors, and rotation from the angle difference. Apply this transform to the image's corner pixels to get lat/lng bounds. A third anchor enables affine transformation (non-uniform scale + skew) for better accuracy.
+
+**Rotation handling:** Leaflet's `L.imageOverlay` only supports axis-aligned rectangular bounds. If rotation is minimal (< 2 degrees), use `L.imageOverlay` directly with axis-aligned bounding box. For significant rotation, use the `leaflet-imageoverlay-rotated` plugin which accepts three corner coordinates and renders rotated/skewed overlays via CSS transforms.
+
+**PDF conversion:** Use the `pdfjs-dist` library (Mozilla's PDF.js) client-side to render the first page of a PDF to a canvas, then export as PNG. No server-side conversion needed. Limit: single-page PDFs only; if multi-page, prompt user to select which page. Max file size: 10MB.
+
+**Stored result:** The computed bounds (`southWest` and `northEast` lat/lng, plus optional rotation angle) are saved to `site_config` under the `custom_map` key.
 
 ---
 
@@ -232,7 +285,7 @@ Each theme defines CSS custom properties and a matching map tile layer.
 - `ConfigProvider` resolves final colors and injects CSS custom properties on `<html>`
 - Tailwind references CSS variables: `primary: 'var(--color-primary)'`
 - Map component reads tile URL from resolved theme
-- Font pairings fixed (one heading + one body font)
+- Font pairings fixed: Playfair Display (headings) + DM Sans (body), loaded via Google Fonts in `layout.tsx`
 
 ### Override Flow (Admin)
 
@@ -252,7 +305,17 @@ Each theme defines CSS custom properties and a matching map tile layer.
 | `BirdhouseCard` | `ItemCard` |
 | `BirdhouseMarker` | `ItemMarker` |
 | `BirdhouseForm` | `ItemForm` |
+| `BirdMap` | `MapView` |
+| `BirdCard` | removed (species become custom field dropdowns) |
 | `DetailPanel` | `DetailPanel` (unchanged) |
+| `MapLegend` | `MapLegend` (unchanged, auto-generates from item types) |
+| `UpdateTimeline` | `UpdateTimeline` (unchanged) |
+| `UpdateForm` | `UpdateForm` (unchanged, reads update types from config) |
+| `StatusBadge` | `StatusBadge` (unchanged) |
+| `LocationPicker` | `LocationPicker` (unchanged, reused in setup wizard) |
+| `PhotoUploader` | `PhotoUploader` (unchanged) |
+| `Navigation` | `Navigation` (unchanged, reads config for app name/logo/custom nav) |
+| `Footer` | `Footer` (unchanged, reads config for text/links) |
 
 ### How Item Types Drive the UI
 
@@ -298,7 +361,7 @@ JSONB on `items` row: `{"field_uuid_1": "Chickadee", "field_uuid_2": 12, "field_
 
 ### Middleware
 
-- If `setup_complete` is false, redirect all routes to `/setup`
+- **Setup redirect:** Middleware runs on Edge runtime and cannot use `unstable_cache`. On first request, middleware makes a lightweight Supabase REST query for the `setup_complete` key from `site_config`. Once setup is complete, a `setup_done=true` cookie is set so subsequent requests skip the DB check entirely. If the cookie is absent and `setup_complete` is false (or the key doesn't exist), redirect to `/setup`.
 - Existing auth/role protection unchanged
 
 ---
@@ -324,3 +387,16 @@ Developers can add new Supabase tables and migrations alongside the existing sch
 ### Documentation
 
 `TEMPLATE.md` in repo root: how to fork, how config works, how to add pages, how to customize components, how to run setup wizard.
+
+---
+
+## Implementation Phasing
+
+This spec covers a large refactor. Recommended implementation order:
+
+1. **Phase 1: Data model + config provider** — new tables, migration, `getConfig()`, `ConfigProvider`, `useConfig()` hook. This is the foundation everything else depends on.
+2. **Phase 2: Generic item system** — rename tables/components, item types, custom fields, update types. Core app functionality becomes generic.
+3. **Phase 3: Theming system** — CSS variables, preset themes, Tailwind integration. Visual identity becomes configurable.
+4. **Phase 4: Admin settings UI** — tabbed settings pages for all configurable values.
+5. **Phase 5: Setup wizard** — first-run experience, middleware redirect.
+6. **Phase 6: Custom map overlay** — upload, anchor alignment, overlay rendering. Most complex standalone feature.
