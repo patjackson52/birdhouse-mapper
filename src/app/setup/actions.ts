@@ -33,11 +33,12 @@ export async function setupSaveConfig(entries: { key: string; value: unknown }[]
 /**
  * Create the first admin account during setup.
  * Signs up a user and sets their profile role to 'admin'.
+ * If the user already exists, promotes them to admin.
  */
 export async function setupCreateAdmin(email: string, password: string, displayName: string) {
   const supabase = createServiceClient();
 
-  // Create the user via admin API
+  // Try to create the user via admin API
   const { data: userData, error: authError } = await supabase.auth.admin.createUser({
     email,
     password,
@@ -46,19 +47,44 @@ export async function setupCreateAdmin(email: string, password: string, displayN
   });
 
   if (authError) {
+    // If user creation failed, check if the user already exists
+    const { data: existingUsers } = await supabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(
+      (u) => u.email === email
+    );
+
+    if (existingUser) {
+      // User exists — ensure they have an admin profile
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: existingUser.id,
+          display_name: displayName,
+          role: 'admin',
+        }, { onConflict: 'id' });
+
+      if (upsertError) {
+        return { error: `Failed to set admin role: ${upsertError.message}` };
+      }
+      return { success: true };
+    }
+
     return { error: `Failed to create account: ${authError.message}` };
   }
 
-  // Update their profile to admin role
-  // (The trigger auto-creates a profile with 'editor' role)
+  // User created successfully — ensure profile exists with admin role
+  // (The trigger may or may not have fired successfully)
   if (userData.user) {
-    const { error: profileError } = await supabase
+    const { error: upsertError } = await supabase
       .from('profiles')
-      .update({ role: 'admin', display_name: displayName })
-      .eq('id', userData.user.id);
+      .upsert({
+        id: userData.user.id,
+        display_name: displayName,
+        role: 'admin',
+      }, { onConflict: 'id' });
 
-    if (profileError) {
-      return { error: `Account created but failed to set admin role: ${profileError.message}` };
+    if (upsertError) {
+      return { error: `Account created but failed to set admin role: ${upsertError.message}` };
     }
   }
 
