@@ -3,26 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Birdhouse, UpdateType } from '@/lib/types';
-import { updateTypeLabels } from '@/lib/utils';
+import type { Item, UpdateType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
-
-const UPDATE_TYPES: UpdateType[] = [
-  'installation',
-  'observation',
-  'maintenance',
-  'damage',
-  'sighting',
-];
 
 export default function UpdateForm() {
   const router = useRouter();
-  const [birdhouses, setBirdhouses] = useState<Birdhouse[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
+  const [updateTypes, setUpdateTypes] = useState<UpdateType[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const [birdhouseId, setBirdhouseId] = useState('');
-  const [updateType, setUpdateType] = useState<UpdateType>('observation');
+  const [itemId, setItemId] = useState('');
+  const [updateTypeId, setUpdateTypeId] = useState('');
   const [content, setContent] = useState('');
   const [updateDate, setUpdateDate] = useState(
     new Date().toISOString().split('T')[0]
@@ -30,24 +22,47 @@ export default function UpdateForm() {
   const [photos, setPhotos] = useState<File[]>([]);
 
   useEffect(() => {
-    async function fetchBirdhouses() {
+    async function fetchData() {
       const supabase = createClient();
-      const { data } = await supabase
-        .from('birdhouses')
+
+      const { data: itemData } = await supabase
+        .from('items')
         .select('*')
         .neq('status', 'removed')
         .order('name', { ascending: true });
 
-      if (data) setBirdhouses(data);
+      if (itemData) setItems(itemData);
+
+      const { data: typeData } = await supabase
+        .from('update_types')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (typeData) {
+        setUpdateTypes(typeData);
+        // Default to first global type
+        const firstGlobal = typeData.find((t) => t.is_global);
+        if (firstGlobal) setUpdateTypeId(firstGlobal.id);
+      }
     }
 
-    fetchBirdhouses();
+    fetchData();
   }, []);
+
+  // Filter update types: show global ones + ones specific to the selected item's type
+  const selectedItem = items.find((i) => i.id === itemId);
+  const availableUpdateTypes = updateTypes.filter(
+    (t) => t.is_global || (selectedItem && t.item_type_id === selectedItem.item_type_id)
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!birdhouseId) {
-      setError('Please select a birdhouse.');
+    if (!itemId) {
+      setError('Please select an item.');
+      return;
+    }
+    if (!updateTypeId) {
+      setError('Please select an update type.');
       return;
     }
 
@@ -58,10 +73,10 @@ export default function UpdateForm() {
       const supabase = createClient();
 
       const { data: update, error: insertError } = await supabase
-        .from('birdhouse_updates')
+        .from('item_updates')
         .insert({
-          birdhouse_id: birdhouseId,
-          update_type: updateType,
+          item_id: itemId,
+          update_type_id: updateTypeId,
           content: content || null,
           update_date: updateDate,
         })
@@ -73,15 +88,15 @@ export default function UpdateForm() {
       // Upload photos
       for (let i = 0; i < photos.length; i++) {
         const file = photos[i];
-        const path = `${birdhouseId}/updates/${update.id}/${Date.now()}_${i}.jpg`;
+        const path = `${itemId}/updates/${update.id}/${Date.now()}_${i}.jpg`;
 
         const { error: uploadError } = await supabase.storage
-          .from('birdhouse-photos')
+          .from('item-photos')
           .upload(path, file);
 
         if (!uploadError) {
           await supabase.from('photos').insert({
-            birdhouse_id: birdhouseId,
+            item_id: itemId,
             update_id: update.id,
             storage_path: path,
           });
@@ -105,20 +120,20 @@ export default function UpdateForm() {
       )}
 
       <div>
-        <label htmlFor="birdhouse" className="label">
-          Birdhouse *
+        <label htmlFor="item" className="label">
+          Item *
         </label>
         <select
-          id="birdhouse"
-          value={birdhouseId}
-          onChange={(e) => setBirdhouseId(e.target.value)}
+          id="item"
+          value={itemId}
+          onChange={(e) => setItemId(e.target.value)}
           className="input-field"
           required
         >
-          <option value="">Select a birdhouse...</option>
-          {birdhouses.map((bh) => (
-            <option key={bh.id} value={bh.id}>
-              {bh.name}
+          <option value="">Select an item...</option>
+          {items.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
             </option>
           ))}
         </select>
@@ -131,13 +146,15 @@ export default function UpdateForm() {
           </label>
           <select
             id="type"
-            value={updateType}
-            onChange={(e) => setUpdateType(e.target.value as UpdateType)}
+            value={updateTypeId}
+            onChange={(e) => setUpdateTypeId(e.target.value)}
             className="input-field"
+            required
           >
-            {UPDATE_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {updateTypeLabels[t]}
+            <option value="">Select type...</option>
+            {availableUpdateTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.icon} {t.name}
               </option>
             ))}
           </select>
