@@ -6,6 +6,8 @@ import UpdateTimeline from './UpdateTimeline';
 import BottomSheet from '@/components/ui/BottomSheet';
 import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { useUserLocation } from '@/lib/location/provider';
+import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
@@ -22,7 +24,11 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const { position } = useUserLocation();
+
   if (!item) return null;
+
+  const distance = getDistanceToItem(position, item);
 
   const content = (
     <div>
@@ -34,7 +40,14 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
               {item.name}
             </h2>
           </div>
-          <StatusBadge status={item.status} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={item.status} />
+            {distance != null && (
+              <span className="text-xs text-forest">
+                {formatDistance(distance)} away
+              </span>
+            )}
+          </div>
         </div>
         {!isMobile && (
           <button
