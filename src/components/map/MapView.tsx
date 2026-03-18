@@ -3,7 +3,7 @@
 import { MapContainer, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Item, ItemType } from '@/lib/types';
-import { useConfig } from '@/lib/config/client';
+import { useConfig, useTheme } from '@/lib/config/client';
 import ItemMarker from './ItemMarker';
 import MapLegend from './MapLegend';
 
@@ -15,6 +15,7 @@ interface MapViewProps {
 
 export default function MapView({ items, itemTypes, onMarkerClick }: MapViewProps) {
   const config = useConfig();
+  const theme = useTheme();
   const center: [number, number] = [config.mapCenter.lat, config.mapCenter.lng];
   const zoom = config.mapCenter.zoom;
 
@@ -30,8 +31,8 @@ export default function MapView({ items, itemTypes, onMarkerClick }: MapViewProp
         zoomControl={false}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution={theme.tileAttribution}
+          url={theme.tileUrl}
         />
         {items.map((item) => (
           <ItemMarker
