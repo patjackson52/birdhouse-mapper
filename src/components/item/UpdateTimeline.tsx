@@ -1,8 +1,8 @@
-import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo } from '@/lib/types';
+import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo, Species } from '@/lib/types';
 import { formatShortDate } from '@/lib/utils';
 
 interface UpdateTimelineProps {
-  updates: (ItemUpdate & { update_type?: UpdateTypeRecord; photos?: Photo[] })[];
+  updates: (ItemUpdate & { update_type?: UpdateTypeRecord; photos?: Photo[]; species?: Species[] })[];
 }
 
 export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
@@ -42,6 +42,15 @@ export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
               <p className="text-sm text-forest-dark/80 leading-relaxed">
                 {update.content}
               </p>
+            )}
+            {update.species && update.species.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {update.species.map((s) => (
+                  <span key={s.id} className="inline-flex items-center bg-forest/10 text-forest-dark text-[10px] px-1.5 py-0.5 rounded-full">
+                    {s.name}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
         </div>
