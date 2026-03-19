@@ -29,8 +29,31 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // --- Setup complete check ---
   const pathname = request.nextUrl.pathname;
+
+  // --- QR code redirect handler ---
+  if (pathname.startsWith('/go/')) {
+    const slug = pathname.slice(4); // strip "/go/"
+    if (slug) {
+      const { data } = await supabase
+        .from('redirects')
+        .select('destination_url')
+        .eq('slug', slug)
+        .single();
+
+      if (data?.destination_url) {
+        // Increment scan count in the background (fire-and-forget)
+        supabase.rpc('increment_scan_count', { slug_param: slug });
+        return NextResponse.redirect(data.destination_url, 302);
+      }
+    }
+    // Slug not found — return 404
+    const url = request.nextUrl.clone();
+    url.pathname = '/not-found';
+    return NextResponse.rewrite(url);
+  }
+
+  // --- Setup complete check ---
   const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/');
   const isAuthCallback = pathname.startsWith('/api/auth/');
   const isStaticAsset = pathname.startsWith('/_next/');
