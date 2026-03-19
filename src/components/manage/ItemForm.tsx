@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { ItemStatus, ItemType, CustomField } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
+import SpeciesSelect from './SpeciesSelect';
 
 const LocationPicker = dynamic(() => import('./LocationPicker'), {
   ssr: false,
@@ -33,6 +34,7 @@ export default function ItemForm() {
   const [status, setStatus] = useState<ItemStatus>('planned');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [photos, setPhotos] = useState<File[]>([]);
+  const [selectedSpeciesIds, setSelectedSpeciesIds] = useState<string[]>([]);
 
   // Fetch item types and custom fields
   useEffect(() => {
@@ -130,6 +132,13 @@ export default function ItemForm() {
             is_primary: i === 0,
           });
         }
+      }
+
+      // Save species associations (batch insert)
+      if (selectedSpeciesIds.length > 0) {
+        await supabase.from('item_species').insert(
+          selectedSpeciesIds.map((speciesId) => ({ item_id: item.id, species_id: speciesId }))
+        );
       }
 
       router.push('/manage');
@@ -293,6 +302,11 @@ export default function ItemForm() {
       <div>
         <label className="label">Photos</label>
         <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} />
+      </div>
+
+      <div>
+        <label className="label">Species</label>
+        <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
       </div>
 
       <div className="flex gap-3">
