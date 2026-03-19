@@ -87,15 +87,40 @@ export interface SiteConfigRow {
   updated_at: string;
 }
 
+export interface Species {
+  id: string;
+  name: string;
+  scientific_name: string | null;
+  description: string | null;
+  photo_path: string | null;
+  conservation_status: string | null;
+  category: string | null;
+  external_link: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemSpecies {
+  item_id: string;
+  species_id: string;
+}
+
+export interface UpdateSpecies {
+  update_id: string;
+  species_id: string;
+}
+
 // ======================
 // Composite types
 // ======================
 
 export interface ItemWithDetails extends Item {
   item_type: ItemType;
-  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[] })[];
+  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[]; species: Species[] })[];
   photos: Photo[];
-  custom_fields: CustomField[]; // field definitions for this item's type
+  custom_fields: CustomField[];
+  species: Species[];
 }
 
 // ======================
@@ -151,6 +176,24 @@ export interface Database {
         Row: SiteConfigRow;
         Insert: Omit<SiteConfigRow, 'updated_at'>;
         Update: Partial<Omit<SiteConfigRow, 'key'>>;
+        Relationships: [];
+      };
+      species: {
+        Row: Species;
+        Insert: Omit<Species, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Species, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      item_species: {
+        Row: ItemSpecies;
+        Insert: ItemSpecies;
+        Update: never;
+        Relationships: [];
+      };
+      update_species: {
+        Row: UpdateSpecies;
+        Insert: UpdateSpecies;
+        Update: never;
         Relationships: [];
       };
     };

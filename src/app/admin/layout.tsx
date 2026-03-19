@@ -47,6 +47,26 @@ export default function AdminLayout({
                 Settings
               </Link>
               <Link
+                href="/admin/types"
+                className={`text-sm transition-colors ${
+                  pathname.startsWith('/admin/types')
+                    ? 'text-white font-medium'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Types
+              </Link>
+              <Link
+                href="/admin/species"
+                className={`text-sm transition-colors ${
+                  pathname.startsWith('/admin/species')
+                    ? 'text-white font-medium'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Species
+              </Link>
+              <Link
                 href="/manage"
                 className="text-white/60 hover:text-white text-sm transition-colors"
               >

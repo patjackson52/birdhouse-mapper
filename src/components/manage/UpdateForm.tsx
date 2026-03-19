@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Item, UpdateType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
+import SpeciesSelect from './SpeciesSelect';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem } from '@/lib/location/utils';
 
@@ -26,6 +27,7 @@ export default function UpdateForm() {
     new Date().toISOString().split('T')[0]
   );
   const [photos, setPhotos] = useState<File[]>([]);
+  const [selectedSpeciesIds, setSelectedSpeciesIds] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -133,6 +135,13 @@ export default function UpdateForm() {
         }
       }
 
+      // Save species associations (batch insert)
+      if (selectedSpeciesIds.length > 0) {
+        await supabase.from('update_species').insert(
+          selectedSpeciesIds.map((speciesId) => ({ update_id: update.id, species_id: speciesId }))
+        );
+      }
+
       router.push('/manage');
       router.refresh();
     } catch (err) {
@@ -225,6 +234,11 @@ export default function UpdateForm() {
       <div>
         <label className="label">Photos</label>
         <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} />
+      </div>
+
+      <div>
+        <label className="label">Species Observed</label>
+        <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
       </div>
 
       <div className="flex gap-3">

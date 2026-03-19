@@ -82,6 +82,22 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
         </div>
       )}
 
+      {/* Species */}
+      {item.species && item.species.length > 0 && (
+        <div className="mb-3">
+          <span className="text-xs font-medium text-sage uppercase tracking-wide">
+            Species
+          </span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {item.species.map((s) => (
+              <span key={s.id} className="inline-flex items-center gap-1 bg-forest/10 text-forest-dark text-xs px-2 py-1 rounded-full">
+                {s.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {item.description && (
         <div className="mb-4">
           <span className="text-xs font-medium text-sage uppercase tracking-wide">

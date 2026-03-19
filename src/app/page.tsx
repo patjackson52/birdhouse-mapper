@@ -10,6 +10,7 @@ import type {
   ItemType,
   CustomField,
   UpdateType,
+  Species,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import DetailPanel from "@/components/item/DetailPanel";
@@ -93,7 +94,7 @@ function HomePageContent() {
   async function handleMarkerClick(item: Item) {
     const supabase = createClient();
 
-    const [updateRes, photoRes, updateTypeRes] = await Promise.all([
+    const [updateRes, photoRes, updateTypeRes, itemSpeciesRes] = await Promise.all([
       supabase
         .from("item_updates")
         .select("*")
@@ -104,6 +105,10 @@ function HomePageContent() {
         .from("update_types")
         .select("*")
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("item_species")
+        .select("species_id, species(*)")
+        .eq("item_id", item.id),
     ]);
 
     const updateTypes = updateTypeRes.data || [];
@@ -113,6 +118,25 @@ function HomePageContent() {
       (f) => f.item_type_id === item.item_type_id,
     );
 
+    const itemSpecies: Species[] = ((itemSpeciesRes.data || []) as unknown as { species_id: string; species: Species }[]).map(
+      (row) => row.species
+    );
+
+    // Fetch species for each update
+    const updateIds = (updateRes.data || []).map((u) => u.id);
+    const updateSpeciesRes = updateIds.length > 0
+      ? await supabase
+          .from('update_species')
+          .select('update_id, species_id, species(*)')
+          .in('update_id', updateIds)
+      : { data: [] };
+
+    const updateSpeciesMap = new Map<string, Species[]>();
+    for (const row of ((updateSpeciesRes.data || []) as unknown as { update_id: string; species_id: string; species: Species }[])) {
+      if (!updateSpeciesMap.has(row.update_id)) updateSpeciesMap.set(row.update_id, []);
+      updateSpeciesMap.get(row.update_id)!.push(row.species);
+    }
+
     setSelectedItem({
       ...item,
       item_type: itemType!,
@@ -120,9 +144,11 @@ function HomePageContent() {
         ...u,
         update_type: typeMap.get(u.update_type_id)!,
         photos: [],
+        species: updateSpeciesMap.get(u.id) || [],
       })),
       photos: photoRes.data || [],
       custom_fields: fields,
+      species: itemSpecies,
     });
   }
 
