@@ -68,8 +68,8 @@ export default function SpeciesPage() {
     }
   }
 
-  const categories = [...new Set(speciesList.map((s) => s.category).filter(Boolean))] as string[];
-  const statuses = [...new Set(speciesList.map((s) => s.conservation_status).filter(Boolean))] as string[];
+  const categories = Array.from(new Set(speciesList.map((s) => s.category).filter(Boolean))) as string[];
+  const statuses = Array.from(new Set(speciesList.map((s) => s.conservation_status).filter(Boolean))) as string[];
 
   const filtered = speciesList.filter((s) => {
     if (search) {

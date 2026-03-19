@@ -118,8 +118,8 @@ function HomePageContent() {
       (f) => f.item_type_id === item.item_type_id,
     );
 
-    const itemSpecies: Species[] = (itemSpeciesRes.data || []).map(
-      (row: { species_id: string; species: Species }) => row.species
+    const itemSpecies: Species[] = ((itemSpeciesRes.data || []) as unknown as { species_id: string; species: Species }[]).map(
+      (row) => row.species
     );
 
     // Fetch species for each update
@@ -132,7 +132,7 @@ function HomePageContent() {
       : { data: [] };
 
     const updateSpeciesMap = new Map<string, Species[]>();
-    for (const row of (updateSpeciesRes.data || []) as { update_id: string; species_id: string; species: Species }[]) {
+    for (const row of ((updateSpeciesRes.data || []) as unknown as { update_id: string; species_id: string; species: Species }[])) {
       if (!updateSpeciesMap.has(row.update_id)) updateSpeciesMap.set(row.update_id, []);
       updateSpeciesMap.get(row.update_id)!.push(row.species);
     }
