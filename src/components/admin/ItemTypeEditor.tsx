@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import type { ItemType } from '@/lib/types';
+import CustomFieldEditor from './CustomFieldEditor';
+import UpdateTypeEditor from './UpdateTypeEditor';
 
 interface ItemTypeEditorProps {
   itemType: ItemType;
@@ -120,6 +122,11 @@ export default function ItemTypeEditor({
             <button onClick={handleDelete} className="text-sm text-red-600 hover:text-red-800 px-3 py-2">
               Delete Type
             </button>
+          </div>
+
+          <div className="space-y-6 pt-4 border-t border-sage-light">
+            <CustomFieldEditor itemTypeId={itemType.id} />
+            <UpdateTypeEditor itemTypeId={itemType.id} />
           </div>
         </div>
       )}
