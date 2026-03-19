@@ -1,7 +1,8 @@
-import type { Item, ItemType, CustomField } from '@/lib/types';
-import StatusBadge from './StatusBadge';
-import { formatShortDate } from '@/lib/utils';
-import { formatDistance } from '@/lib/location/utils';
+import Link from "next/link";
+import type { Item, ItemType, CustomField } from "@/lib/types";
+import StatusBadge from "./StatusBadge";
+import { formatShortDate } from "@/lib/utils";
+import { formatDistance } from "@/lib/location/utils";
 
 interface ItemCardProps {
   item: Item;
@@ -10,9 +11,17 @@ interface ItemCardProps {
   distance?: number | null;
 }
 
-export default function ItemCard({ item, itemType, customFields, distance }: ItemCardProps) {
+export default function ItemCard({
+  item,
+  itemType,
+  customFields,
+  distance,
+}: ItemCardProps) {
   return (
-    <div className="card hover:shadow-md transition-shadow">
+    <Link
+      href={`/?item=${item.id}`}
+      className="card hover:shadow-md transition-shadow block"
+    >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           {itemType && <span className="text-lg">{itemType.icon}</span>}
@@ -44,13 +53,15 @@ export default function ItemCard({ item, itemType, customFields, distance }: Ite
         {itemType && <span>{itemType.name}</span>}
         <div className="flex items-center gap-2">
           {distance != null && (
-            <span className="text-forest font-medium">{formatDistance(distance)}</span>
+            <span className="text-forest font-medium">
+              {formatDistance(distance)}
+            </span>
           )}
           <span>
             {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

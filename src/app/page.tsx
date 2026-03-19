@@ -1,14 +1,21 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
-import Link from 'next/link';
-import type { Item, ItemWithDetails, ItemType, CustomField, UpdateType } from '@/lib/types';
-import { createClient } from '@/lib/supabase/client';
-import DetailPanel from '@/components/item/DetailPanel';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useEffect, useState, useRef } from "react";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import type {
+  Item,
+  ItemWithDetails,
+  ItemType,
+  CustomField,
+  UpdateType,
+} from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import DetailPanel from "@/components/item/DetailPanel";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
-const MapView = dynamic(() => import('@/components/map/MapView'), {
+const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-sage-light">
@@ -21,17 +28,31 @@ export default function HomePage() {
   const [items, setItems] = useState<Item[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
-  const [selectedItem, setSelectedItem] = useState<ItemWithDetails | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ItemWithDetails | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const deepLinkedRef = useRef(false);
 
   useEffect(() => {
     async function fetchData() {
       const supabase = createClient();
 
       const [itemRes, typeRes, fieldRes] = await Promise.all([
-        supabase.from('items').select('*').neq('status', 'removed').order('created_at', { ascending: true }),
-        supabase.from('item_types').select('*').order('sort_order', { ascending: true }),
-        supabase.from('custom_fields').select('*').order('sort_order', { ascending: true }),
+        supabase
+          .from("items")
+          .select("*")
+          .neq("status", "removed")
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("item_types")
+          .select("*")
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("custom_fields")
+          .select("*")
+          .order("sort_order", { ascending: true }),
       ]);
 
       if (itemRes.data) setItems(itemRes.data);
@@ -43,19 +64,40 @@ export default function HomePage() {
     fetchData();
   }, []);
 
+  // Auto-open detail panel when navigating with ?item=id
+  useEffect(() => {
+    if (loading || deepLinkedRef.current) return;
+    const itemId = searchParams.get("item");
+    if (!itemId) return;
+    const item = items.find((i) => i.id === itemId);
+    if (item) {
+      deepLinkedRef.current = true;
+      handleMarkerClick(item);
+    }
+  }, [loading, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
   async function handleMarkerClick(item: Item) {
     const supabase = createClient();
 
     const [updateRes, photoRes, updateTypeRes] = await Promise.all([
-      supabase.from('item_updates').select('*').eq('item_id', item.id).order('update_date', { ascending: false }),
-      supabase.from('photos').select('*').eq('item_id', item.id),
-      supabase.from('update_types').select('*').order('sort_order', { ascending: true }),
+      supabase
+        .from("item_updates")
+        .select("*")
+        .eq("item_id", item.id)
+        .order("update_date", { ascending: false }),
+      supabase.from("photos").select("*").eq("item_id", item.id),
+      supabase
+        .from("update_types")
+        .select("*")
+        .order("sort_order", { ascending: true }),
     ]);
 
     const updateTypes = updateTypeRes.data || [];
     const typeMap = new Map(updateTypes.map((t) => [t.id, t]));
     const itemType = itemTypes.find((t) => t.id === item.item_type_id);
-    const fields = customFields.filter((f) => f.item_type_id === item.item_type_id);
+    const fields = customFields.filter(
+      (f) => f.item_type_id === item.item_type_id,
+    );
 
     setSelectedItem({
       ...item,
@@ -80,7 +122,11 @@ export default function HomePage() {
 
   return (
     <div className="relative h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)]">
-      <MapView items={items} itemTypes={itemTypes} onMarkerClick={handleMarkerClick} />
+      <MapView
+        items={items}
+        itemTypes={itemTypes}
+        onMarkerClick={handleMarkerClick}
+      />
 
       {/* List view link */}
       <Link
@@ -91,10 +137,7 @@ export default function HomePage() {
       </Link>
 
       {/* Detail panel */}
-      <DetailPanel
-        item={selectedItem}
-        onClose={() => setSelectedItem(null)}
-      />
+      <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
     </div>
   );
 }
