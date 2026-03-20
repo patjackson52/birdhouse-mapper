@@ -126,12 +126,14 @@ If the visitor already has an active Supabase session (permanent user or active 
 
 The entire claim action runs as a **service role server action**. This is necessary because: (a) the `invites` table has admin-only RLS, (b) profile creation for anonymous users requires bypassing the normal trigger, and (c) the anonymous user's session is not established until after `signInAnonymously()` completes. The service role is safe here because the server action validates the token before performing any writes.
 
-On "Get Started" click, server action:
-1. Re-validate the token via service role (prevent race conditions)
-2. Call `supabase.auth.signInAnonymously()` — this creates the auth user but the modified trigger skips profile creation for anonymous users
-3. Insert profile row via service role: `is_temporary = true`, `session_expires_at` from invite, `role = 'editor'`, `display_name` from form or invite, `invite_id` set
-4. Update invite via service role: set `claimed_by` and `claimed_at`
+On "Get Started" click:
+1. **Server action (service role):** Re-validate the token (prevent race conditions)
+2. **Client-side (SSR client):** Call `supabase.auth.signInAnonymously()` — this creates the auth user and sets session cookies via the SSR client's cookie adapter. The modified trigger skips profile creation for anonymous users.
+3. **Server action (service role):** Insert profile row: `is_temporary = true`, `session_expires_at` from invite, `role = 'editor'`, `display_name` from form or invite, `invite_id` set
+4. **Server action (service role):** Update invite: set `claimed_by` and `claimed_at`
 5. Redirect to `/manage`
+
+Note: Step 2 must happen via the SSR client (not pure server) so that session cookies are properly set on the response. Steps 1, 3, and 4 use the service role client.
 
 **Error states:**
 - **Expired invite:** "This invite link is no longer valid. Ask your organizer for a new one."
@@ -202,7 +204,7 @@ Admins can revoke an active (claimed, not-yet-expired) temp session from `/admin
 ### Cron Job (Supabase Edge Function or pg_cron, runs hourly)
 
 1. Delete unclaimed invites where `expires_at < now()`
-2. Find profiles where `is_temporary = true AND session_expires_at < now() AND deleted_at IS NULL` and not pending conversion (i.e., the linked invite is either not convertible, or conversion window has passed)
+2. Find profiles where `is_temporary = true AND session_expires_at < now() AND deleted_at IS NULL` and not pending conversion (i.e., the linked invite is either not convertible, or the 7-day conversion window has passed: `session_expires_at + interval '7 days' < now()`)
 3. Set `profiles.deleted_at = now()` on those rows (preserves attribution)
 4. Call `auth.admin.deleteUser(id)` for those anonymous auth users (safe because FK cascade has been removed)
 
