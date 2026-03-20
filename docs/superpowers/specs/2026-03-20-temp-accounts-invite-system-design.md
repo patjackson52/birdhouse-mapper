@@ -225,6 +225,12 @@ Admins can revoke an active (claimed, not-yet-expired) temp session from `/admin
 - No RLS changes needed for temp users to read/write items, updates, photos
 - `invites` table restricted to admin access; claim uses service role
 
+### Anonymous Auth Abuse Prevention
+- Supabase warns that anonymous users get the `authenticated` role. This is safe because all write RLS policies require a matching `profiles` row with `role in ('admin', 'editor')`. Anonymous users without a profile (i.e., those who didn't go through the invite claim flow) are denied all writes.
+- The `handle_new_user` trigger skips profile creation for anonymous users, so only the invite claim server action (via service role) can create profiles for them.
+- **CAPTCHA:** Not enabled for now. The attack surface for `signInAnonymously()` abuse is limited — the claim form only renders after server-side token validation, so an attacker would need to hit Supabase's auth API directly. If unexpected MAU spikes occur, enable hCaptcha in Supabase Dashboard (Authentication > Settings > Bot Protection). This will add a captcha challenge to the claim flow.
+- **Orphaned anonymous users:** If `signInAnonymously()` succeeds but the claim fails, the server action deletes the orphaned auth user. Anonymous users who bypass the app entirely (direct API calls) won't have profiles and won't be caught by the cleanup cron — monitor Supabase Dashboard auth user counts periodically.
+
 ### Session Security
 - Anonymous auth sessions use standard Supabase JWT + httpOnly cookies
 - Middleware enforces expiry on every request — no stale sessions
