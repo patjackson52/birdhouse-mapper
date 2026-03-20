@@ -114,6 +114,36 @@ All config is stored in the `site_config` Supabase table and editable via `/admi
 - **About Page** — markdown content
 - **Footer** — footer text and links
 
+## Google OAuth (optional)
+
+Users can sign in with Google in addition to email/password. To enable it:
+
+### 1. Get Google OAuth credentials
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create an **OAuth 2.0 Client ID** (Web application)
+3. Add an **Authorized redirect URI**:
+   ```
+   https://your-project.supabase.co/auth/v1/callback
+   ```
+
+### 2. Configure Supabase
+
+1. **Supabase Dashboard → Authentication → Providers → Google**
+   - Enable the Google provider
+   - Paste your Client ID and Client Secret
+
+2. **Supabase Dashboard → Authentication → URL Configuration → Redirect URLs**
+   - Add your app callback URL(s):
+     ```
+     http://localhost:3000/api/auth/callback
+     https://your-app.vercel.app/api/auth/callback
+     ```
+
+No additional environment variables are needed in `.env.local` — credentials live in Supabase.
+
+New users who sign in with Google are automatically assigned the `editor` role via the database trigger. An admin can promote them to `admin` via `/admin`.
+
 ## Deployment
 
 1. Push to GitHub

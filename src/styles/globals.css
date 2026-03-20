@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Playfair+Display:wght@400;500;600;700&display=swap');
 
 /* Default theme CSS variables (Forest preset).
    These are overridden at runtime by the ConfigProvider via a style attribute on <html>. */
@@ -116,4 +116,15 @@
 
 .animate-slide-in-right {
   animation: slideInRight 0.3s ease-out;
+}
+
+/* User location blue dot pulse — opacity only to avoid drift from scale transform */
+@keyframes locationPulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.location-dot-pulse {
+  animation: locationPulse 3s ease-in-out infinite;
 }

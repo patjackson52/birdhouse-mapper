@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type {
   Item, ItemType, CustomField, UpdateType, ItemUpdate,
   ItemWithDetails, Photo, ItemStatus, FieldType,
+  Species, ItemSpecies, UpdateSpecies,
 } from '../types';
 
 describe('Item type structure', () => {
@@ -140,6 +141,7 @@ describe('ItemWithDetails composite type', () => {
           created_by: null,
           update_type: updateType,
           photos: [],
+          species: [],
         },
       ],
       photos: [],
@@ -149,11 +151,104 @@ describe('ItemWithDetails composite type', () => {
           field_type: 'dropdown', options: ['Chickadee'], required: false, sort_order: 0,
         },
       ],
+      species: [],
     };
 
     expect(detailed.item_type.name).toBe('Bird Box');
     expect(detailed.updates).toHaveLength(1);
     expect(detailed.updates[0].update_type.icon).toBe('👀');
     expect(detailed.custom_fields).toHaveLength(1);
+  });
+});
+
+describe('Species structure', () => {
+  it('accepts a valid Species object', () => {
+    const species: Species = {
+      id: 'sp-1',
+      name: 'Black-capped Chickadee',
+      scientific_name: 'Poecile atricapillus',
+      description: 'Small songbird',
+      photo_path: 'species/sp-1/1710720000000.jpg',
+      conservation_status: 'Least Concern',
+      category: 'Songbirds',
+      external_link: 'https://example.com/chickadee',
+      sort_order: 0,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    };
+    expect(species.name).toBe('Black-capped Chickadee');
+    expect(species.scientific_name).toBe('Poecile atricapillus');
+  });
+
+  it('accepts nullable fields as null', () => {
+    const species: Species = {
+      id: 'sp-2',
+      name: 'Unknown Bird',
+      scientific_name: null,
+      description: null,
+      photo_path: null,
+      conservation_status: null,
+      category: null,
+      external_link: null,
+      sort_order: 0,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    };
+    expect(species.scientific_name).toBeNull();
+  });
+});
+
+describe('Join table structures', () => {
+  it('accepts ItemSpecies', () => {
+    const is: ItemSpecies = { item_id: 'item-1', species_id: 'sp-1' };
+    expect(is.item_id).toBe('item-1');
+  });
+
+  it('accepts UpdateSpecies', () => {
+    const us: UpdateSpecies = { update_id: 'upd-1', species_id: 'sp-1' };
+    expect(us.update_id).toBe('upd-1');
+  });
+});
+
+describe('ItemWithDetails with species', () => {
+  it('includes species on item and on updates', () => {
+    const species: Species = {
+      id: 'sp-1', name: 'Chickadee', scientific_name: null,
+      description: null, photo_path: null, conservation_status: null,
+      category: null, external_link: null, sort_order: 0,
+      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
+    };
+
+    const itemType: ItemType = {
+      id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
+      sort_order: 0, created_at: '2025-01-01T00:00:00Z',
+    };
+
+    const updateType: UpdateType = {
+      id: 'ut-1', name: 'Observation', icon: '👀',
+      is_global: true, item_type_id: null, sort_order: 0,
+    };
+
+    const detailed: ItemWithDetails = {
+      id: '123', name: 'Meadow Box', description: null,
+      latitude: 47.6, longitude: -122.5, item_type_id: 'type-1',
+      custom_field_values: {}, status: 'active',
+      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
+      created_by: null,
+      item_type: itemType,
+      updates: [{
+        id: 'upd-1', item_id: '123', update_type_id: 'ut-1',
+        content: 'Saw a bird', update_date: '2025-04-01',
+        created_at: '2025-04-01T00:00:00Z', created_by: null,
+        update_type: updateType, photos: [], species: [species],
+      }],
+      photos: [],
+      custom_fields: [],
+      species: [species],
+    };
+
+    expect(detailed.species).toHaveLength(1);
+    expect(detailed.species[0].name).toBe('Chickadee');
+    expect(detailed.updates[0].species).toHaveLength(1);
   });
 });

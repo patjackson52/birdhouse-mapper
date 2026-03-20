@@ -7,8 +7,10 @@ import { createClient } from '@/lib/supabase/client';
 import ItemCard from '@/components/item/ItemCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Footer from '@/components/layout/Footer';
+import { useUserLocation } from '@/lib/location/provider';
+import { getDistanceToItem } from '@/lib/location/utils';
 
-type SortOption = 'name' | 'date' | 'status';
+type SortOption = 'name' | 'date' | 'status' | 'distance';
 
 export default function ListPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -17,6 +19,7 @@ export default function ListPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<ItemStatus | 'all'>('all');
   const [sort, setSort] = useState<SortOption>('name');
+  const { position } = useUserLocation();
 
   useEffect(() => {
     async function fetchData() {
@@ -51,6 +54,12 @@ export default function ListPage() {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'status':
         return a.status.localeCompare(b.status);
+      case 'distance': {
+        if (!position) return 0;
+        const dA = getDistanceToItem(position, a) ?? Infinity;
+        const dB = getDistanceToItem(position, b) ?? Infinity;
+        return dA - dB;
+      }
       default:
         return 0;
     }
@@ -109,6 +118,7 @@ export default function ListPage() {
               <option value="name">Name</option>
               <option value="date">Date</option>
               <option value="status">Status</option>
+              {position && <option value="distance">Distance</option>}
             </select>
           </div>
         </div>
@@ -131,6 +141,7 @@ export default function ListPage() {
                 item={item}
                 itemType={typeMap.get(item.item_type_id)}
                 customFields={customFields.filter((f) => f.item_type_id === item.item_type_id)}
+                distance={getDistanceToItem(position, item)}
               />
             ))}
           </div>

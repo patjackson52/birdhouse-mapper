@@ -6,6 +6,8 @@ import UpdateTimeline from './UpdateTimeline';
 import BottomSheet from '@/components/ui/BottomSheet';
 import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { useUserLocation } from '@/lib/location/provider';
+import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
@@ -22,7 +24,11 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  const { position } = useUserLocation();
+
   if (!item) return null;
+
+  const distance = getDistanceToItem(position, item);
 
   const content = (
     <div>
@@ -34,7 +40,14 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
               {item.name}
             </h2>
           </div>
-          <StatusBadge status={item.status} />
+          <div className="flex items-center gap-2">
+            <StatusBadge status={item.status} />
+            {distance != null && (
+              <span className="text-xs text-forest">
+                {formatDistance(distance)} away
+              </span>
+            )}
+          </div>
         </div>
         {!isMobile && (
           <button
@@ -66,6 +79,22 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
                 </p>
               </div>
             ))}
+        </div>
+      )}
+
+      {/* Species */}
+      {item.species && item.species.length > 0 && (
+        <div className="mb-3">
+          <span className="text-xs font-medium text-sage uppercase tracking-wide">
+            Species
+          </span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {item.species.map((s) => (
+              <span key={s.id} className="inline-flex items-center gap-1 bg-forest/10 text-forest-dark text-xs px-2 py-1 rounded-full">
+                {s.name}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

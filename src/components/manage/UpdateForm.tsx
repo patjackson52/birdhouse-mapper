@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { Item, UpdateType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
+import SpeciesSelect from './SpeciesSelect';
+import { useUserLocation } from '@/lib/location/provider';
+import { getDistanceToItem } from '@/lib/location/utils';
 
 export default function UpdateForm() {
   const router = useRouter();
@@ -13,6 +16,10 @@ export default function UpdateForm() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const { position } = useUserLocation();
+  const [autoSelected, setAutoSelected] = useState(false);
+  const hasAttemptedAutoSelect = useRef(false);
+
   const [itemId, setItemId] = useState('');
   const [updateTypeId, setUpdateTypeId] = useState('');
   const [content, setContent] = useState('');
@@ -20,6 +27,7 @@ export default function UpdateForm() {
     new Date().toISOString().split('T')[0]
   );
   const [photos, setPhotos] = useState<File[]>([]);
+  const [selectedSpeciesIds, setSelectedSpeciesIds] = useState<string[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -48,6 +56,30 @@ export default function UpdateForm() {
 
     fetchData();
   }, []);
+
+  // Auto-select nearest item if within 100m
+  useEffect(() => {
+    if (hasAttemptedAutoSelect.current) return;
+    if (!position || items.length === 0) return;
+
+    hasAttemptedAutoSelect.current = true;
+    const AUTO_SELECT_RADIUS = 100; // meters
+
+    let nearest: { id: string; distance: number } | null = null;
+    for (const item of items) {
+      const d = getDistanceToItem(position, item);
+      if (d !== null && d <= AUTO_SELECT_RADIUS) {
+        if (!nearest || d < nearest.distance) {
+          nearest = { id: item.id, distance: d };
+        }
+      }
+    }
+
+    if (nearest) {
+      setItemId(nearest.id);
+      setAutoSelected(true);
+    }
+  }, [position, items]);
 
   // Filter update types: show global ones + ones specific to the selected item's type
   const selectedItem = items.find((i) => i.id === itemId);
@@ -103,6 +135,13 @@ export default function UpdateForm() {
         }
       }
 
+      // Save species associations (batch insert)
+      if (selectedSpeciesIds.length > 0) {
+        await supabase.from('update_species').insert(
+          selectedSpeciesIds.map((speciesId) => ({ update_id: update.id, species_id: speciesId }))
+        );
+      }
+
       router.push('/manage');
       router.refresh();
     } catch (err) {
@@ -126,7 +165,7 @@ export default function UpdateForm() {
         <select
           id="item"
           value={itemId}
-          onChange={(e) => setItemId(e.target.value)}
+          onChange={(e) => { setItemId(e.target.value); setAutoSelected(false); }}
           className="input-field"
           required
         >
@@ -137,6 +176,11 @@ export default function UpdateForm() {
             </option>
           ))}
         </select>
+        {autoSelected && (
+          <p className="text-xs text-forest mt-1">
+            Auto-selected — you appear to be near this item
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -190,6 +234,11 @@ export default function UpdateForm() {
       <div>
         <label className="label">Photos</label>
         <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} />
+      </div>
+
+      <div>
+        <label className="label">Species Observed</label>
+        <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
       </div>
 
       <div className="flex gap-3">
