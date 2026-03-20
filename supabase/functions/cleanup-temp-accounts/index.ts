@@ -1,19 +1,19 @@
-import { NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
-import { CONVERSION_WINDOW_DAYS } from '@/lib/invites/constants';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-/**
- * Cron job to clean up expired temporary accounts.
- * Called by Vercel Cron on schedule defined in vercel.json.
- */
-export async function GET(request: Request) {
-  // Verify the request is from Vercel Cron
-  const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const CONVERSION_WINDOW_DAYS = 7;
+
+Deno.serve(async (req) => {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response('Unauthorized', { status: 401 });
   }
 
-  const supabase = createServiceClient();
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
   const now = new Date().toISOString();
   const conversionCutoff = new Date(
     Date.now() - CONVERSION_WINDOW_DAYS * 24 * 60 * 60 * 1000
@@ -40,7 +40,9 @@ export async function GET(request: Request) {
 
   if (profilesError) {
     console.error('Failed to fetch expired profiles:', profilesError);
-    return NextResponse.json({ error: profilesError.message }, { status: 500 });
+    return new Response(JSON.stringify({ error: profilesError.message }), {
+      status: 500,
+    });
   }
 
   let cleaned = 0;
@@ -79,7 +81,10 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({
-    message: `Cleanup complete. Cleaned ${cleaned} expired temp accounts.`,
-  });
-}
+  return new Response(
+    JSON.stringify({
+      message: `Cleanup complete. Cleaned ${cleaned} expired temp accounts.`,
+    }),
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+});

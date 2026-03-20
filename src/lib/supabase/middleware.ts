@@ -29,8 +29,31 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // --- Setup complete check ---
   const pathname = request.nextUrl.pathname;
+
+  // --- QR code redirect handler ---
+  if (pathname.startsWith('/go/')) {
+    const slug = pathname.slice(4); // strip "/go/"
+    if (slug) {
+      const { data } = await supabase
+        .from('redirects')
+        .select('destination_url')
+        .eq('slug', slug)
+        .single();
+
+      if (data?.destination_url) {
+        // Increment scan count in the background (fire-and-forget)
+        supabase.rpc('increment_scan_count', { slug_param: slug });
+        return NextResponse.redirect(data.destination_url, 302);
+      }
+    }
+    // Slug not found — return 404
+    const url = request.nextUrl.clone();
+    url.pathname = '/not-found';
+    return NextResponse.rewrite(url);
+  }
+
+  // --- Setup complete check ---
   const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/');
   const isAuthCallback = pathname.startsWith('/api/auth/');
   const isStaticAsset = pathname.startsWith('/_next/');
@@ -88,19 +111,49 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Check admin role for /admin routes
-  if (pathname.startsWith('/admin')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
+  // Single combined profile query for role + temp status
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, is_temporary, session_expires_at, invite_id')
+    .eq('id', user.id)
+    .single();
 
-    if (!profile || profile.role !== 'admin') {
-      const url = request.nextUrl.clone();
-      url.pathname = '/manage';
-      return NextResponse.redirect(url);
+  // Temp user session expired — sign out and redirect
+  if (
+    profile?.is_temporary &&
+    profile.session_expires_at &&
+    new Date(profile.session_expires_at) < new Date()
+  ) {
+    // Check if invite was convertible (for session-expired page message)
+    let convertible = false;
+    if (profile.invite_id) {
+      const { data: invite } = await supabase
+        .from('invites')
+        .select('convertible')
+        .eq('id', profile.invite_id)
+        .single();
+      convertible = invite?.convertible ?? false;
     }
+
+    await supabase.auth.signOut();
+    const url = request.nextUrl.clone();
+    url.pathname = '/session-expired';
+    if (convertible) url.searchParams.set('convertible', 'true');
+    return NextResponse.redirect(url);
+  }
+
+  // Temp users cannot access admin routes
+  if (profile?.is_temporary && pathname.startsWith('/admin')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/manage';
+    return NextResponse.redirect(url);
+  }
+
+  // Non-admin users cannot access admin routes
+  if (pathname.startsWith('/admin') && (!profile || profile.role !== 'admin')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/manage';
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;
