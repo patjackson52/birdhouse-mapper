@@ -18,6 +18,8 @@ An invite system where admins generate short-lived invite links (shareable via Q
 
 **Architecture:** Supabase Anonymous Auth + invite tokens stored in a new `invites` table. Temp users are real Supabase anonymous auth users, meaning existing RLS policies work without modification.
 
+**Prerequisite:** Anonymous sign-ins must be enabled in the Supabase Dashboard under Authentication > Settings. This is disabled by default.
+
 ## Data Model
 
 ### New Table: `invites`
@@ -38,13 +40,33 @@ An invite system where admins generate short-lived invite links (shareable via Q
 
 ### Modified Table: `profiles`
 
-Three new columns:
+Four new columns:
 
 | Column | Type | Description |
 |--------|------|-------------|
 | `is_temporary` | boolean (default false) | Whether this is a temp/guest account |
 | `session_expires_at` | timestamptz (nullable) | When the temp user's access ends |
 | `invite_id` | uuid (FK → invites.id, nullable) | Which invite created this profile |
+| `deleted_at` | timestamptz (nullable) | Set during cleanup when the anonymous auth user is removed; profile row kept for attribution |
+
+### Migration: Update `handle_new_user` Trigger
+
+The existing `handle_new_user` trigger fires `AFTER INSERT ON auth.users` and creates a profile row. For anonymous users, this trigger must be updated to **skip profile creation**. The claim server action will create the profile row instead (via service role), ensuring `is_temporary`, `session_expires_at`, `invite_id`, and `display_name` are set correctly from the start.
+
+Detection: check `NEW.is_anonymous = true` in the trigger function and `RETURN NEW` early without inserting a profile.
+
+### Migration: Update `profiles` Foreign Key
+
+The existing `profiles.id` references `auth.users(id) ON DELETE CASCADE`. This must be changed to `ON DELETE SET NULL` (or the FK must be dropped) so that deleting an anonymous auth user during cleanup does **not** cascade-delete the profile row. The profile must survive for attribution history.
+
+Since `profiles.id` is the primary key and cannot be set to NULL, the approach is:
+- During cleanup, set `profiles.deleted_at` to `now()` **before** removing the auth user
+- Drop the existing FK constraint and re-add it as `ON DELETE SET NULL` on a new nullable column `profiles.auth_user_id`, OR simply remove the FK and rely on `deleted_at` as the indicator that the auth user no longer exists
+- Recommended: keep `profiles.id` as the primary key (UUID value preserved), drop the CASCADE FK, and use `deleted_at` as the soft-delete marker. The cleanup cron sets `deleted_at`, then calls `auth.admin.deleteUser()`.
+
+### Existing Types: No Changes to `UserRole`
+
+The existing `UserRole` type (`'admin' | 'editor'`) and the DB check constraint remain unchanged. Temp users receive `role = 'editor'`. A dedicated `'guest'` role was considered but rejected — temp users need the same write permissions as editors, and the `is_temporary` flag is sufficient to distinguish them. This avoids RLS policy changes.
 
 ### RLS Policies for `invites`
 
@@ -96,13 +118,19 @@ If valid, render landing page:
 - If no pre-filled name: text input for the user to enter their name
 - "Get Started" button
 
+**Step 1a: Already-authenticated user visits invite link**
+
+If the visitor already has an active Supabase session (permanent user or active temp user), show a message: "You're already signed in as [name]. Go to dashboard." with a link to `/manage`. Do not allow claiming the invite — one invite = one anonymous user.
+
 **Step 2: Claim action**
 
+The entire claim action runs as a **service role server action**. This is necessary because: (a) the `invites` table has admin-only RLS, (b) profile creation for anonymous users requires bypassing the normal trigger, and (c) the anonymous user's session is not established until after `signInAnonymously()` completes. The service role is safe here because the server action validates the token before performing any writes.
+
 On "Get Started" click, server action:
-1. Re-validate the token (prevent race conditions)
-2. Call `supabase.auth.signInAnonymously()`
-3. Create profile row: `is_temporary = true`, `session_expires_at` from invite, `role = 'editor'`, `display_name` from form or invite, `invite_id` set
-4. Update invite: set `claimed_by` and `claimed_at`
+1. Re-validate the token via service role (prevent race conditions)
+2. Call `supabase.auth.signInAnonymously()` — this creates the auth user but the modified trigger skips profile creation for anonymous users
+3. Insert profile row via service role: `is_temporary = true`, `session_expires_at` from invite, `role = 'editor'`, `display_name` from form or invite, `invite_id` set
+4. Update invite via service role: set `claimed_by` and `claimed_at`
 5. Redirect to `/manage`
 
 **Error states:**
@@ -113,11 +141,15 @@ On "Get Started" click, server action:
 
 ### Middleware Changes (`src/lib/supabase/middleware.ts`)
 
-For every protected route, after existing auth checks:
+The existing middleware already queries the `profiles` table for admin route checks. To avoid adding a third DB query per request, **combine the profile lookup into a single query** that fetches `role`, `is_temporary`, and `session_expires_at` for all protected routes.
 
-1. Query profile for `is_temporary` and `session_expires_at`
+For every protected route, after auth session check:
+
+1. Single query: `SELECT role, is_temporary, session_expires_at FROM profiles WHERE id = auth.uid()`
 2. If `is_temporary = true` and `session_expires_at < now()`: call `supabase.auth.signOut()`, redirect to `/session-expired`
-3. If active: pass through normally (temp users have same access as editors)
+3. If `is_temporary = true` and route starts with `/admin`: redirect to `/manage` (temp users are always blocked from admin, regardless of role value)
+4. If route starts with `/admin` and `role !== 'admin'`: redirect to `/manage` (existing behavior)
+5. Otherwise: pass through normally
 
 ### Guest Badge in Navigation
 
@@ -156,21 +188,30 @@ In `/admin/invites`, active temp users whose invite is marked `convertible` show
 - Anonymous auth user cleaned up by cron
 - Profile row remains as historical record
 
+## Invite Revocation
+
+Admins can revoke an active (claimed, not-yet-expired) temp session from `/admin/invites`:
+
+- "Revoke Access" button appears next to active temp users
+- Server action sets `session_expires_at = now()` on the profile
+- On the temp user's next request, middleware detects expiry and signs them out
+- No immediate push — revocation takes effect on next page navigation
+
 ## Cleanup
 
 ### Cron Job (Supabase Edge Function or pg_cron, runs hourly)
 
 1. Delete unclaimed invites where `expires_at < now()`
-2. Find profiles where `is_temporary = true AND session_expires_at < now()` and not pending conversion
-3. Call `auth.admin.deleteUser(id)` for those anonymous auth users
-4. Set `deleted_at` timestamp on the profile row (keep for attribution history)
+2. Find profiles where `is_temporary = true AND session_expires_at < now() AND deleted_at IS NULL` and not pending conversion (i.e., the linked invite is either not convertible, or conversion window has passed)
+3. Set `profiles.deleted_at = now()` on those rows (preserves attribution)
+4. Call `auth.admin.deleteUser(id)` for those anonymous auth users (safe because FK cascade has been removed)
 
 ## Security
 
 ### Token Security
 - 32-byte cryptographically random tokens (base64url encoded)
 - Stored hashed (SHA-256) — raw token only exists in the URL
-- 15-minute expiry window — scan-it-now model
+- 15-minute invite link expiry — hardcoded, intentionally not configurable (admin can always generate a new one; keeping this simple reduces misconfiguration risk)
 - Single-use — once claimed, cannot be reused
 
 ### Rate Limiting
