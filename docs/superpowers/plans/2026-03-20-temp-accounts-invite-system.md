@@ -75,6 +75,9 @@ create index idx_invites_token on invites (token);
 -- Index for admin listing
 create index idx_invites_created_by on invites (created_by, created_at desc);
 
+-- Prevent double-claims at the database level
+create unique index idx_invites_claimed_by on invites (claimed_by) where claimed_by is not null;
+
 alter table invites enable row level security;
 
 -- RLS: Admin only for all operations
@@ -117,6 +120,11 @@ create policy "Admins can delete invites"
       and profiles.role = 'admin'
     )
   );
+
+-- Allow temp users to read their own invite (needed by middleware for convertible check)
+create policy "Users can view their own claimed invite"
+  on invites for select
+  using (claimed_by = auth.uid());
 
 -- ======================
 -- Profiles: add temp account columns
@@ -706,6 +714,12 @@ export async function completeInviteClaim(
 ) {
   const service = createServiceClient();
   const tokenHash = hashToken(rawToken);
+
+  // Verify the userId belongs to an anonymous auth user
+  const { data: authUser, error: authUserError } = await service.auth.admin.getUserById(userId);
+  if (authUserError || !authUser?.user?.is_anonymous) {
+    return { error: 'Invalid session. Please try again.' };
+  }
 
   // Re-validate token (prevent race conditions)
   const { data: invite, error: inviteError } = await service
