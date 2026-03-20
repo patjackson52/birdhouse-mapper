@@ -2,7 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import GuestBadge from '@/components/manage/GuestBadge';
 
 export default function ManageLayout({
   children,
@@ -11,6 +13,27 @@ export default function ManageLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const [guestExpiresAt, setGuestExpiresAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function checkTempStatus() {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_temporary, session_expires_at')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.is_temporary && profile.session_expires_at) {
+        setGuestExpiresAt(profile.session_expires_at);
+      }
+    }
+
+    checkTempStatus();
+  }, []);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -45,12 +68,15 @@ export default function ManageLayout({
                 </Link>
               ))}
             </div>
-            <button
-              onClick={handleSignOut}
-              className="text-white/60 hover:text-white text-sm transition-colors"
-            >
-              Sign Out
-            </button>
+            <div className="flex items-center gap-3">
+              {guestExpiresAt && <GuestBadge expiresAt={guestExpiresAt} />}
+              <button
+                onClick={handleSignOut}
+                className="text-white/60 hover:text-white text-sm transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -79,6 +79,24 @@ export interface Profile {
   display_name: string | null;
   role: UserRole;
   created_at: string;
+  is_temporary: boolean;
+  session_expires_at: string | null;
+  invite_id: string | null;
+  deleted_at: string | null;
+}
+
+export interface Invite {
+  id: string;
+  token: string;
+  created_by: string;
+  display_name: string | null;
+  role: UserRole;
+  convertible: boolean;
+  session_expires_at: string;
+  expires_at: string;
+  claimed_by: string | null;
+  claimed_at: string | null;
+  created_at: string;
 }
 
 export interface SiteConfigRow {
@@ -168,8 +186,14 @@ export interface Database {
       };
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, 'created_at'>;
+        Insert: Omit<Profile, 'created_at' | 'is_temporary' | 'session_expires_at' | 'invite_id' | 'deleted_at'> & Partial<Pick<Profile, 'is_temporary' | 'session_expires_at' | 'invite_id' | 'deleted_at'>>;
         Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      invites: {
+        Row: Invite;
+        Insert: Omit<Invite, 'id' | 'created_at' | 'claimed_by' | 'claimed_at'>;
+        Update: Partial<Omit<Invite, 'id' | 'created_at'>>;
         Relationships: [];
       };
       site_config: {

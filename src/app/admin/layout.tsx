@@ -67,6 +67,16 @@ export default function AdminLayout({
                 Species
               </Link>
               <Link
+                href="/admin/invites"
+                className={`text-sm transition-colors ${
+                  pathname.startsWith('/admin/invites')
+                    ? 'text-white font-medium'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Invites
+              </Link>
+              <Link
                 href="/manage"
                 className="text-white/60 hover:text-white text-sm transition-colors"
               >
