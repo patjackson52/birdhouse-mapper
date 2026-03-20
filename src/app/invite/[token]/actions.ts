@@ -1,6 +1,5 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { hashToken } from '@/lib/invites/tokens';
 
@@ -95,6 +94,8 @@ export async function completeInviteClaim(
     });
 
   if (profileError) {
+    // Clean up orphaned anonymous auth user
+    await service.auth.admin.deleteUser(userId);
     return { error: 'Failed to create profile. Please try again.' };
   }
 
@@ -108,6 +109,9 @@ export async function completeInviteClaim(
     .eq('id', invite.id);
 
   if (claimError) {
+    // Clean up orphaned anonymous auth user and profile
+    await service.from('profiles').delete().eq('id', userId);
+    await service.auth.admin.deleteUser(userId);
     return { error: 'Failed to complete invite claim.' };
   }
 

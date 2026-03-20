@@ -136,6 +136,29 @@ export async function convertAccount(opts: {
     return { error: 'Admin access required' };
   }
 
+  // Verify target user is temporary and their invite is convertible
+  const { data: targetProfile } = await service
+    .from('profiles')
+    .select('is_temporary, invite_id')
+    .eq('id', opts.userId)
+    .single();
+
+  if (!targetProfile?.is_temporary) {
+    return { error: 'User is not a temporary account' };
+  }
+
+  if (targetProfile.invite_id) {
+    const { data: invite } = await service
+      .from('invites')
+      .select('convertible')
+      .eq('id', targetProfile.invite_id)
+      .single();
+
+    if (!invite?.convertible) {
+      return { error: 'This invite does not allow conversion to permanent account' };
+    }
+  }
+
   const { error: updateError } = await service.auth.admin.updateUserById(
     opts.userId,
     { email: opts.email, password: opts.password }
@@ -180,7 +203,8 @@ export async function revokeAccess(userId: string) {
   const { error } = await service
     .from('profiles')
     .update({ session_expires_at: new Date().toISOString() })
-    .eq('id', userId);
+    .eq('id', userId)
+    .eq('is_temporary', true);
 
   if (error) {
     return { error: `Failed to revoke access: ${error.message}` };
