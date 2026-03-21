@@ -129,6 +129,15 @@ export interface UpdateSpecies {
   species_id: string;
 }
 
+export interface LocationHistory {
+  id: string;
+  item_id: string;
+  latitude: number;
+  longitude: number;
+  created_by: string;
+  created_at: string;
+}
+
 // ======================
 // Composite types
 // ======================
@@ -217,6 +226,12 @@ export interface Database {
       update_species: {
         Row: UpdateSpecies;
         Insert: UpdateSpecies;
+        Update: never;
+        Relationships: [];
+      };
+      location_history: {
+        Row: LocationHistory;
+        Insert: Omit<LocationHistory, 'id' | 'created_at'>;
         Update: never;
         Relationships: [];
       };
