@@ -42,6 +42,20 @@ interface LandingPageConfig {
   enabled: boolean;
   blocks: LandingBlock[];
   generatedFrom?: string; // original prompt, for re-generation
+  assets: LandingAsset[];  // uploaded context files and images
+}
+
+// -- Assets: files uploaded as context for AI generation & for use in blocks --
+
+interface LandingAsset {
+  id: string;           // uuid
+  storagePath: string;  // Supabase Storage path (landing-assets/...)
+  publicUrl: string;    // resolved public URL for serving
+  fileName: string;     // original file name
+  mimeType: string;     // e.g. "image/jpeg", "application/pdf"
+  category: 'image' | 'document'; // determines how AI + blocks can use it
+  description?: string; // admin-provided label (used as AI context + alt text)
+  uploadedAt: string;   // ISO timestamp
 }
 
 type LandingBlock =
@@ -120,11 +134,20 @@ interface SpacerBlock extends BlockBase {
 
 | What | Where |
 |---|---|
-| Block JSON | `site_config` table, key `landing_page`, value is `LandingPageConfig` |
-| Uploaded images | Supabase Storage `landing` bucket, referenced by path in block data |
+| Block JSON + asset metadata | `site_config` table, key `landing_page`, value is `LandingPageConfig` |
+| Uploaded images (for blocks) | Supabase Storage `landing-assets/images/` prefix |
+| Uploaded documents (context) | Supabase Storage `landing-assets/documents/` prefix |
 | Config caching | Existing `getConfig()` 60s cache + `revalidateTag('site-config')` on save |
 
-No new DB tables. No new storage buckets beyond a folder prefix. The existing `site_config` JSONB column handles the block array.
+No new DB tables. A single `landing-assets` Supabase Storage bucket with `images/` and `documents/` prefixes. The existing `site_config` JSONB column handles the block array + asset metadata.
+
+#### Asset Storage Details
+
+- **Images** (jpeg, png, webp, gif, svg): Stored and served publicly via Supabase Storage CDN. Can be referenced directly in Image/Hero/Gallery blocks via their `publicUrl`. Also sent to Claude as image content blocks during AI generation.
+- **Documents** (pdf, txt, md, docx): Stored for AI context only. During generation, text-extractable files (txt, md) have their content read and included in the prompt. PDFs have their text extracted server-side. These are NOT rendered on the public landing page, but their content informs what the AI writes.
+- **Links** (URLs provided by admin): Stored as part of the generation prompt context. Not fetched — just passed as text for the AI to reference and incorporate into link/text blocks.
+- **Max file size**: 10MB per file (images resized to 2000px max dimension before upload, reusing existing `resizeImage()` util)
+- **RLS**: Public SELECT on `landing-assets` bucket (images need to be publicly viewable). INSERT/DELETE restricted to admin role.
 
 ---
 
@@ -185,40 +208,144 @@ Add `react-markdown` + `remark-gfm` for rendering TextBlock markdown. This also 
 
 ### Admin UI: `/admin/landing`
 
-1. Admin sees a text area: "Describe your landing page"
-2. Example placeholder: *"Landing page for Springbrook Creek Preserve birdhouse project by Boy Scout Troop 1564, in collaboration with BI Land Trust. Include hero with project title, description of the preserve and wildlife, and a button to view the map."*
+The admin editor has three sections above the block list:
+
+#### 1. Context Attachments (top section)
+
+Before or during generation, the admin can attach context that informs what the AI generates:
+
+- **Images**: Upload photos (hero shots, logos, wildlife photos, team photos). These are:
+  - Stored in Supabase Storage (`landing-assets/images/`)
+  - Sent to Claude as **image content blocks** so the AI can see them and write relevant descriptions
+  - Available in a picker when editing Image/Hero/Gallery blocks (no re-upload needed)
+  - Admin adds an optional description per image (e.g., "Troop 1564 installing birdhouse #4")
+- **Documents**: Upload PDFs, text files, markdown files. These are:
+  - Stored in Supabase Storage (`landing-assets/documents/`)
+  - Text content extracted and included in the AI prompt as context
+  - NOT rendered on the public page — just used to inform AI-generated text
+  - Useful for: project proposals, species lists, grant descriptions, org bylaws
+- **Links**: Add reference URLs with labels. These are:
+  - Passed as text in the AI prompt (e.g., "Partner org: BI Land Trust — https://bilandtrust.org")
+  - AI incorporates them into LinksBlock items or inline markdown links
+  - NOT fetched/scraped — just provided as-is for the AI to reference
+
+All attachments persist across regenerations (stored in `LandingPageConfig.assets`). The admin can add/remove attachments and regenerate to get updated output.
+
+#### 2. Prompt (middle section)
+
+Text area: "Describe your landing page"
+
+Example placeholder: *"Landing page for Springbrook Creek Preserve birdhouse project by Boy Scout Troop 1564, in collaboration with BI Land Trust. Include hero with project title, description of the preserve and wildlife, and a button to view the map."*
+
+**Generate** button (or **Regenerate** if blocks exist, with confirmation).
+
+#### 3. Block Editor (below)
+
+After generation, the block list appears for editing (see Per-Block Edit Forms below).
+
+### Generation Flow
+
+1. Admin uploads context attachments (images, documents, links) — optional but recommended
+2. Admin writes a text prompt describing the desired landing page
 3. Admin clicks **Generate**
-4. Server action calls Claude API with:
-   - The user's prompt
-   - The site's current config (siteName, tagline, locationName, item types, species count, etc.) for context
-   - The block schema (as a JSON schema / TypeScript types)
-   - Instruction to output valid `LandingBlock[]` JSON
-5. Claude returns structured block JSON
-6. Blocks render in a live preview
-7. Admin can then **edit individual blocks**, **reorder**, **add/remove blocks**, **upload images**, and **re-generate**
+4. Server action:
+   a. Reads site config (siteName, tagline, locationName, item types, species, etc.)
+   b. Reads uploaded image assets → converts to Claude image content blocks
+   c. Reads uploaded document assets → extracts text content
+   d. Collects reference links
+   e. Calls Claude API with all context + prompt + block schema
+5. Claude returns structured block JSON, with image blocks referencing uploaded asset IDs
+6. Blocks render in live preview
+7. Admin edits blocks, uploads replacement images, tweaks text, reorders
+8. Admin clicks **Save / Publish**
 
 ### Claude API Prompt Structure
 
 ```typescript
 // Server action: src/app/admin/landing/actions.ts
 
-async function generateLandingPage(userPrompt: string) {
+async function generateLandingPage(
+  userPrompt: string,
+  assets: LandingAsset[],
+  referenceLinks: { label: string; url: string }[]
+) {
   const config = await getConfig();
   const supabase = createServiceClient();
 
-  // Gather site context for the AI
+  // Gather site context
   const [itemCount, typeRes, speciesCount] = await Promise.all([
     supabase.from('items').select('id', { count: 'exact', head: true }),
     supabase.from('item_types').select('name'),
     supabase.from('species').select('id', { count: 'exact', head: true }),
   ]);
 
+  // --- Build context from attachments ---
+
+  // Images: download from storage and convert to base64 for Claude vision
+  const imageAssets = assets.filter(a => a.category === 'image');
+  const imageContentBlocks = [];
+  for (const img of imageAssets) {
+    const { data } = await supabase.storage
+      .from('landing-assets')
+      .download(img.storagePath);
+    if (data) {
+      const base64 = Buffer.from(await data.arrayBuffer()).toString('base64');
+      imageContentBlocks.push({
+        type: 'image' as const,
+        source: {
+          type: 'base64' as const,
+          media_type: img.mimeType,
+          data: base64,
+        },
+      });
+      // Add description as text context right after the image
+      if (img.description) {
+        imageContentBlocks.push({
+          type: 'text' as const,
+          text: `[Image above: ${img.description}] (asset id: ${img.id})`,
+        });
+      }
+    }
+  }
+
+  // Documents: extract text content for context
+  const docAssets = assets.filter(a => a.category === 'document');
+  let documentContext = '';
+  for (const doc of docAssets) {
+    const { data } = await supabase.storage
+      .from('landing-assets')
+      .download(doc.storagePath);
+    if (data) {
+      if (doc.mimeType === 'text/plain' || doc.mimeType === 'text/markdown') {
+        const text = await data.text();
+        documentContext += `\n--- Document: ${doc.fileName} ---\n${text}\n`;
+      }
+      // PDF text extraction would use a lightweight lib (pdf-parse) or
+      // skip for MVP and just note the filename
+    }
+  }
+
+  // Reference links
+  const linkContext = referenceLinks.length > 0
+    ? '\nReference links:\n' + referenceLinks
+        .map(l => `- ${l.label}: ${l.url}`)
+        .join('\n')
+    : '';
+
   const systemPrompt = `You are a landing page designer for a field mapping application.
 Generate a JSON array of content blocks for a landing page.
-The site is called "${config.siteName}" located at "${config.locationName}".
-Tagline: "${config.tagline}"
-The site tracks ${itemCount.count} items across types: ${typeRes.data?.map(t => t.name).join(', ')}.
-${speciesCount.count} species are tracked.
+
+SITE CONTEXT:
+- Name: "${config.siteName}"
+- Location: "${config.locationName}"
+- Tagline: "${config.tagline}"
+- Tracks ${itemCount.count} items across types: ${typeRes.data?.map(t => t.name).join(', ')}
+- ${speciesCount.count} species tracked
+${linkContext}
+${documentContext ? '\nDOCUMENT CONTEXT:\n' + documentContext : ''}
+
+AVAILABLE IMAGES (use these asset IDs in image/hero/gallery blocks):
+${imageAssets.map(img => `- id: "${img.id}" — ${img.description || img.fileName}`).join('\n') || '(none uploaded)'}
 
 Output ONLY a valid JSON array of blocks matching this schema:
 ${BLOCK_SCHEMA_JSON}
@@ -229,18 +356,52 @@ Guidelines:
 - Add a prominent button block linking to "/map"
 - Use a stats block with source:"auto" to show live project numbers
 - Keep it concise: 4-8 blocks total
-- For image blocks, use url:"placeholder" (admin will upload real images later)`;
+- For image/hero/gallery blocks, set url to the asset ID from AVAILABLE IMAGES above
+  (the system will resolve these to public URLs). If no images are available,
+  use url:"placeholder" and the admin will upload later.
+- Incorporate reference links naturally into links blocks or inline markdown
+- Use document context to write accurate, detailed descriptions`;
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
     system: systemPrompt,
-    messages: [{ role: 'user', content: userPrompt }],
+    messages: [{
+      role: 'user',
+      content: [
+        // Send images first so Claude can see them
+        ...imageContentBlocks,
+        // Then the user's prompt
+        { type: 'text', text: userPrompt },
+      ],
+    }],
   });
 
-  // Parse and validate the block array
+  // Parse, validate, and resolve asset IDs to public URLs
   const blocks = JSON.parse(extractJSON(response.content[0].text));
-  return addBlockIds(blocks); // ensure each block has a uuid
+  return resolveAssetUrls(addBlockIds(blocks), assets);
+}
+
+/** Replace asset IDs in block urls with actual Supabase public URLs */
+function resolveAssetUrls(blocks: LandingBlock[], assets: LandingAsset[]): LandingBlock[] {
+  const assetMap = new Map(assets.map(a => [a.id, a.publicUrl]));
+  return blocks.map(block => {
+    if ('url' in block && assetMap.has(block.url)) {
+      return { ...block, url: assetMap.get(block.url)! };
+    }
+    if (block.type === 'hero' && block.backgroundImageUrl && assetMap.has(block.backgroundImageUrl)) {
+      return { ...block, backgroundImageUrl: assetMap.get(block.backgroundImageUrl)! };
+    }
+    if (block.type === 'gallery') {
+      return {
+        ...block,
+        images: block.images.map(img =>
+          assetMap.has(img.url) ? { ...img, url: assetMap.get(img.url)! } : img
+        ),
+      };
+    }
+    return block;
+  });
 }
 ```
 
@@ -272,14 +433,23 @@ Layout: **Two-column on desktop** — editor panel (left), live preview (right).
 
 | Block Type | Editable Fields |
 |---|---|
-| Hero | title (text input), subtitle (text input), background image (file upload), overlay toggle |
+| Hero | title (text input), subtitle (text input), background image (**asset picker** or new upload), overlay toggle |
 | Text | content (textarea with markdown preview) |
-| Image | file upload or URL input, alt text, caption, width select |
+| Image | **asset picker** (choose from uploaded assets) or new upload or URL input, alt text, caption, width select |
 | Button | label, href, style select (primary/outline), size select |
 | Links | add/remove link items, each with label + URL + optional description |
 | Stats | toggle auto/manual, manual items editor |
-| Gallery | multi-image upload, captions, column count select |
+| Gallery | **multi-asset picker** or multi-upload, captions, column count select |
 | Spacer | size select (small/medium/large) |
+
+#### Asset Picker Component
+
+When editing Image/Hero/Gallery blocks, an **asset picker** modal shows all uploaded image assets as a thumbnail grid. The admin can:
+- Select an existing asset (one click to use it)
+- Upload a new image (added to assets and immediately selected)
+- Enter an external URL instead
+
+This means images uploaded as AI context are directly reusable in blocks — no re-uploading.
 
 #### Live Preview
 
@@ -295,16 +465,18 @@ Right column renders `<LandingRenderer blocks={blocks} />` in real-time as the a
 
 | Task | Files |
 |---|---|
-| Add `LandingPageConfig` types | `src/lib/config/types.ts` |
+| Add `LandingPageConfig` + `LandingAsset` types | `src/lib/config/types.ts` |
 | Add `landing_page` to config key map + defaults | `src/lib/config/types.ts`, `src/lib/config/defaults.ts` |
+| Create `landing-assets` Supabase Storage bucket + RLS | SQL migration |
 | Block renderer components (8 blocks) | `src/components/landing/*.tsx` |
 | Landing page route (`/`) with conditional rendering | `src/app/page.tsx` (refactor) |
 | Move map to `/map` | `src/app/map/page.tsx` (move existing logic) |
 | Update navigation links | `src/components/layout/Navigation.tsx` |
-| AI generation server action | `src/app/admin/landing/actions.ts` |
-| Admin editor page (generate + edit blocks) | `src/app/admin/landing/page.tsx` + sub-components |
+| Asset upload UI (images + documents + reference links) | `src/components/admin/landing/AssetManager.tsx` |
+| Asset picker component for block editing | `src/components/admin/landing/AssetPicker.tsx` |
+| AI generation server action (with attachment context) | `src/app/admin/landing/actions.ts` |
+| Admin editor page (attachments + generate + edit blocks) | `src/app/admin/landing/page.tsx` + sub-components |
 | Block reorder with up/down buttons | Built into editor |
-| Image upload to Supabase Storage | Reuse existing `PhotoUploader` pattern |
 | Upgrade `/about` page to use `react-markdown` | `src/app/about/page.tsx` |
 
 ### Phase 2: Polish
@@ -324,12 +496,22 @@ Right column renders `<LandingRenderer blocks={blocks} />` in real-time as the a
 
 ---
 
-## Fairbanks Eagle Project — Expected Output
+## Fairbanks Eagle Project — Expected Workflow
 
-Given a prompt like:
-> "Landing page for Springbrook Creek Preserve birdhouse monitoring project by Fairbanks Jackson Boy Scout Troop 1564 in collaboration with Bainbridge Island Land Trust. Include project description, link to troop website, and button to view the map."
+### Step 1: Upload Context Attachments
 
-The AI would generate blocks roughly like:
+The admin uploads:
+- **Images**: Photo of Fairbanks with birdhouse, Springbrook Creek Preserve landscape, Troop 1564 logo, BI Land Trust logo
+- **Documents**: A short text file describing the preserve's ecology and the eagle scout project goals
+- **Links**: `https://troop1564.org` (labeled "Troop 1564"), `https://bilandtrust.org` (labeled "BI Land Trust")
+
+### Step 2: Write Prompt
+
+> "Landing page for Springbrook Creek Preserve birdhouse monitoring project by Fairbanks Jackson Boy Scout Troop 1564 in collaboration with Bainbridge Island Land Trust. Use the preserve photo as hero background. Include project description based on the uploaded document, partner links, and a big button to view the map."
+
+### Step 3: AI Generates Blocks
+
+Claude sees the uploaded images, reads the document text, and knows about the reference links. It generates:
 
 ```json
 [
@@ -370,7 +552,13 @@ The AI would generate blocks roughly like:
 ]
 ```
 
-The admin then uploads the real hero image, tweaks text, and publishes.
+### Step 4: Admin Edits
+
+- The hero background was auto-set to the preserve landscape photo (from uploaded assets)
+- The text block content is based on the uploaded ecology document — admin tweaks wording
+- The links block already has the correct URLs from the reference links
+- Admin adds the Troop 1564 logo to a gallery block using the asset picker
+- Admin reorders blocks, adjusts spacing, and publishes
 
 ---
 
