@@ -135,7 +135,8 @@ No new DB tables. A single `landing-assets` Supabase Storage bucket with `images
 - **Images** (jpeg, png, webp, gif, svg): Stored and served publicly via Supabase Storage CDN. Referenced directly in Image/Hero/Gallery blocks via `publicUrl`. Sent to Claude as image content blocks during AI generation.
 - **Documents** (pdf, txt, md): Stored for AI context only. Text-extractable files have content read and included in the prompt. NOT rendered on the public landing page.
 - **Links** (URLs provided by admin): Stored as part of generation prompt context. Not fetched — passed as text for AI to reference and incorporate.
-- **Max file size**: 10MB per file (images resized to 2000px max dimension before upload, reusing existing `resizeImage()` util)
+- **Max file size**: 10MB per file, images resized to 2000px max dimension client-side before upload (reusing existing `resizeImage()` util from `src/lib/utils.ts` which uses browser Canvas API). No server-side image resizing needed — images are uploaded at final size.
+- **Limits**: Max 50 blocks per landing page, max 20 assets. These are soft limits enforced in the admin UI to keep the `site_config` JSONB value reasonable.
 - **RLS**: Public SELECT on `landing-assets` bucket. INSERT/DELETE restricted to admin role.
 
 #### Asset Deletion Behavior
@@ -167,12 +168,12 @@ This is controlled by `landingPage.enabled` and surfaced in the admin UI as a cl
 
 ### Implementation
 
-**`src/app/page.tsx`** — New landing page renderer:
-1. If URL has `?item=` param → redirect to `/map?item=...` (preserves deep links)
-2. If `landingPage.enabled` is true → render `LandingRenderer` with blocks
-3. If `landingPage` is null/disabled → render map inline (current behavior)
+**`src/app/page.tsx`** — New **server component** landing page renderer:
+1. If URL has any query params (e.g., `?item=123&zoom=15`) → redirect to `/map?...` with all params preserved (uses `searchParams` prop from Next.js page, not `useSearchParams()` hook)
+2. If `landingPage.enabled` is true → render `LandingRenderer` with blocks (server component, no client JS)
+3. If `landingPage` is null/disabled → render map via a **client component wrapper** (the existing map logic uses `useSearchParams()`, dynamic imports, and client state — this moves to a `HomeMapView` client component imported by the server page)
 
-**`src/app/map/page.tsx`** — Receives current `page.tsx` map logic.
+**`src/app/map/page.tsx`** — Receives current `page.tsx` map logic as a client component page. Same structure as current home page.
 
 **Navigation** — When landing page is enabled: **Home** (/) | **Map** (/map) | **List** (/list) | **About** (/about). When disabled: **Map** (/) | **List** (/list) | **About** (/about) — same as today. Admin sidebar gets **Landing Page** link.
 
@@ -198,12 +199,13 @@ src/components/landing/
 
 ### Theme Integration
 
-All block components use the existing CSS variable classes (`text-forest-dark`, `bg-forest-dark`, etc.). Blocks automatically match whatever theme preset the admin selected. No per-block color configuration needed. If the admin changes the site theme, the landing page updates instantly.
+All block components use the **theme-agnostic CSS variable classes** defined in `tailwind.config.ts` — e.g., `text-primary`, `text-primary-dark`, `bg-accent`, `bg-parchment`, `text-sage`. These map to CSS variables (`var(--color-primary)`, etc.) that resolve to different colors per theme preset. Do NOT use preset-specific class names like `text-forest-dark` — use `text-primary-dark` instead. This ensures blocks work correctly across all theme presets (forest, ocean, desert, urban, arctic, meadow). No per-block color configuration needed. If the admin changes the site theme, the landing page updates instantly.
 
 ### StatsBlock Auto Mode — Smart Filtering
 
-When `source: "auto"`, the StatsBlock fetches live counts from the database:
-- Total items, item types count, total updates, species count
+When `source: "auto"`, the StatsBlock is a **server component** that fetches live counts directly from the database via Supabase queries (not via `getConfig()` — these are DB aggregates, not config values). Counts are cached with a 60-second `unstable_cache` using a `'landing-stats'` tag, revalidated alongside site config on admin saves.
+
+Counts fetched: total items, item types count, total updates, species count.
 - **Only shows stats where count > 0**
 - **If fewer than 2 stats qualify, the block is hidden on the public page** (still visible in editor with a note)
 - This prevents new/small sites from showing underwhelming numbers
@@ -225,9 +227,9 @@ Uses the Vercel AI SDK (`ai` + `@ai-sdk/anthropic`) instead of the direct Anthro
 1. **Gather site context** — siteName, tagline, locationName, item counts, species count, item types
 2. **Process attachments**:
    - Images → download from storage → base64 → image content parts for Claude
-   - Documents → download → extract text (txt/md directly, PDF via pdf-parse)
+   - Documents → download → extract text (txt/md directly; PDFs: skip text extraction for MVP, include filename as context only)
    - Links → format as text context
-3. **Build prompt** — system prompt with site context, document text, image asset IDs, block Zod schema, guidelines. User message with image content parts + admin's text prompt.
+3. **Build prompt** — system prompt with site context, document text, image asset IDs, block Zod schema, guidelines (including: generate descriptive alt text for all image blocks for accessibility). User message with image content parts + admin's text prompt.
 4. **Call `generateObject()`** — claude-sonnet-4-6, Zod schema for block array, max_tokens: 2000
 5. **Post-process** — add UUIDs to blocks, resolve asset IDs → public URLs
 
@@ -244,7 +246,10 @@ No AI call needed. Created during the setup wizard using existing config values:
 ]
 ```
 
-For existing sites (already set up), the default landing page config is backfilled on the next `getConfig()` call if `landingPage` is null — lazy init with `enabled: false` so existing sites are not disrupted.
+#### New Sites vs. Existing Sites
+
+- **New sites**: Default landing page is created during the setup wizard alongside other initial config. `enabled: true` — the landing page is immediately active.
+- **Existing sites (migration path)**: When `getConfig()` returns a config where `landingPage` is null (site was set up before this feature), it backfills with a default landing page config with `enabled: false`. This means existing sites continue showing the map at `/` with no disruption. The admin can visit `/admin/landing` to enable and customize it.
 
 ### Regeneration Behavior
 
@@ -325,7 +330,7 @@ Right column renders `<LandingRenderer blocks={blocks} />` in real-time as the a
 
 - Landing page is server-rendered (Next.js RSC) — fast initial load
 - No client-side JS needed for public landing page (all blocks are static/presentational)
-- StatsBlock `auto` mode fetches counts server-side, cached via `getConfig()` pattern
+- StatsBlock `auto` mode fetches counts server-side via own `unstable_cache` (60s, `'landing-stats'` tag)
 - Images served from Supabase Storage CDN
 - `react-markdown` adds ~14kb gzipped to pages that use it
 - `ai` + `@ai-sdk/anthropic` are server-only — zero client bundle impact
@@ -343,6 +348,17 @@ Right column renders `<LandingRenderer blocks={blocks} />` in real-time as the a
 
 `zod` is likely already available as a transitive dependency; verify and add explicitly if needed.
 
+### Optional Field Defaults
+
+When optional block fields are omitted, renderer components apply these defaults:
+- `TextBlock.alignment` → `'left'`
+- `ImageBlock.width` → `'medium'`
+- `ButtonBlock.style` → `'primary'`
+- `ButtonBlock.size` → `'default'`
+- `LinksBlock.layout` → `'stacked'`
+- `GalleryBlock.columns` → `3`
+- `HeroBlock.overlay` → `true`
+
 ---
 
 ## Implementation Phases
@@ -352,7 +368,7 @@ Right column renders `<LandingRenderer blocks={blocks} />` in real-time as the a
 | # | Task | Key Files |
 |---|---|---|
 | 1 | Add `LandingPageConfig`, `LandingAsset`, block types | `src/lib/config/types.ts` |
-| 2 | Add `landing_page` to config key map + defaults | `src/lib/config/types.ts`, `src/lib/config/defaults.ts` |
+| 2 | Add `landing_page: 'landingPage'` to `CONFIG_KEY_MAP` + `landingPage: null` to `DEFAULT_CONFIG` | `src/lib/config/types.ts`, `src/lib/config/defaults.ts` |
 | 3 | Backfill logic for existing sites (lazy init on config load) | `src/lib/config/server.ts` |
 | 4 | Create `landing-assets` Supabase Storage bucket + RLS | SQL migration |
 | 5 | Default landing page generation in setup wizard | `src/app/setup/` |
