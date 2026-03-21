@@ -2,6 +2,7 @@
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
+import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
 
 /**
  * Save config during setup. Uses service role client to bypass RLS
@@ -164,6 +165,27 @@ export async function setupCreateCustomField(
   }
 
   return { success: true };
+}
+
+/**
+ * Create a default landing page during setup.
+ */
+export async function setupSaveLandingPage(
+  siteName: string,
+  tagline: string,
+  locationName: string
+) {
+  const supabase = createServiceClient();
+  const landingPage = createDefaultLandingPage(siteName, tagline, locationName, true);
+
+  const { error } = await supabase
+    .from('site_config')
+    .upsert({ key: 'landing_page', value: landingPage });
+
+  if (error) {
+    return { error: error.message };
+  }
+  return { error: null };
 }
 
 /**

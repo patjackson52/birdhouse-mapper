@@ -8,6 +8,7 @@ import {
   setupCreateItemType,
   setupClearItemTypes,
   setupComplete,
+  setupSaveLandingPage,
 } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
 import dynamic from 'next/dynamic';
@@ -138,7 +139,10 @@ export default function SetupPage() {
       const adminResult = await setupCreateAdmin(adminEmail, adminPassword, adminName);
       if (adminResult.error) throw new Error(adminResult.error);
 
-      // 4. Mark setup complete
+      // 4. Create default landing page
+      await setupSaveLandingPage(siteName, tagline, locationName);
+
+      // 5. Mark setup complete
       const completeResult = await setupComplete();
       if (completeResult.error) throw new Error(completeResult.error);
 

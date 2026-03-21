@@ -26,8 +26,9 @@ yarn-error.log*
 # local env files
 .env*.local
 
-# superpowers brainstorm mockups
+# superpowers
 .superpowers/
+.worktrees/
 
 # vercel
 .vercel
