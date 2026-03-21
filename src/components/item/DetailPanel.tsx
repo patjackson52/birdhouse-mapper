@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 import Link from 'next/link';
+import PhotoViewer from '@/components/ui/PhotoViewer';
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
@@ -111,14 +112,10 @@ export default function DetailPanel({ item, onClose, isAuthenticated }: DetailPa
         </div>
       )}
 
-      {/* Primary photo */}
+      {/* Photos */}
       {item.photos.length > 0 && (
         <div className="mb-4">
-          <div className="aspect-video bg-sage-light rounded-lg overflow-hidden">
-            <div className="w-full h-full flex items-center justify-center text-sage text-sm">
-              Photo placeholder
-            </div>
-          </div>
+          <PhotoViewer photos={item.photos} />
         </div>
       )}
 
