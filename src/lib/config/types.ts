@@ -1,3 +1,5 @@
+import type { LandingPageConfig } from './landing-types';
+
 export interface SiteConfig {
   siteName: string;
   tagline: string;
@@ -26,6 +28,7 @@ export interface SiteConfig {
   mapStyle: string | null; // map tile source ID, null = use theme default
   customNavItems: { label: string; href: string }[];
   setupComplete: boolean;
+  landingPage: LandingPageConfig | null;
 }
 
 /** Maps site_config DB keys to SiteConfig property names */
@@ -44,4 +47,5 @@ export const CONFIG_KEY_MAP: Record<string, keyof SiteConfig> = {
   map_style: 'mapStyle',
   custom_nav_items: 'customNavItems',
   setup_complete: 'setupComplete',
+  landing_page: 'landingPage',
 };
