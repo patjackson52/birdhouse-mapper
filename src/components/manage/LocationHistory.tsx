@@ -32,7 +32,7 @@ export default function LocationHistory({ itemId, onRevert }: LocationHistoryPro
 
       setHistory(historyData);
 
-      const creatorIds = [...new Set(historyData.map((h) => h.created_by))];
+      const creatorIds = Array.from(new Set(historyData.map((h) => h.created_by)));
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import EditItemForm from '@/components/manage/EditItemForm';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import type { Photo } from '@/lib/types';
+import type { Photo, ItemStatus } from '@/lib/types';
 
 export default function EditItemPage() {
   const params = useParams();
@@ -18,7 +18,7 @@ export default function EditItemPage() {
       description: string | null;
       latitude: number;
       longitude: number;
-      status: string;
+      status: ItemStatus;
       item_type_id: string;
       custom_field_values: Record<string, unknown>;
     };

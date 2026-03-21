@@ -17,10 +17,7 @@ const LocationPicker = dynamic(() => import('./LocationPicker'), {
   ),
 });
 
-const LocationHistory = dynamic(() => import('./LocationHistory'), {
-  ssr: false,
-  loading: () => null,
-});
+import LocationHistory from './LocationHistory';
 
 interface EditItemFormProps {
   itemId: string;
@@ -183,12 +180,13 @@ export default function EditItemForm({
 
       // If location changed, insert into location_history
       if (latitude !== originalLatitude || longitude !== originalLongitude) {
-        await supabase.from('location_history').insert({
+        const { error: historyError } = await supabase.from('location_history').insert({
           item_id: itemId,
           latitude,
           longitude,
           created_by: user.id,
         });
+        if (historyError) throw historyError;
       }
 
       // Update species: delete all existing, then insert current selection
