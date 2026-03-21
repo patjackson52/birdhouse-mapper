@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -36,6 +36,111 @@ function MapResizer({ expanded }: { expanded: boolean }) {
   return null;
 }
 
+function MapPanner({ panTarget }: { panTarget: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (panTarget) {
+      map.flyTo(panTarget, map.getZoom());
+    }
+  }, [panTarget, map]);
+  return null;
+}
+
+function isValidLat(v: number) {
+  return isFinite(v) && v >= -90 && v <= 90;
+}
+
+function isValidLng(v: number) {
+  return isFinite(v) && v >= -180 && v <= 180;
+}
+
+function CoordinateInputs({
+  latitude,
+  longitude,
+  onChange,
+  onPan,
+  className,
+}: {
+  latitude: number | null;
+  longitude: number | null;
+  onChange: (lat: number, lng: number) => void;
+  onPan: (target: [number, number]) => void;
+  className?: string;
+}) {
+  const [latText, setLatText] = useState(latitude !== null ? latitude.toFixed(6) : '');
+  const [lngText, setLngText] = useState(longitude !== null ? longitude.toFixed(6) : '');
+  const [latValid, setLatValid] = useState(true);
+  const [lngValid, setLngValid] = useState(true);
+
+  // Track whether inputs are focused to avoid overwriting user typing
+  const latFocused = useRef(false);
+  const lngFocused = useRef(false);
+
+  // Sync from props (map click / GPS) when inputs are not focused
+  useEffect(() => {
+    if (!latFocused.current) {
+      setLatText(latitude !== null ? latitude.toFixed(6) : '');
+      setLatValid(true);
+    }
+  }, [latitude]);
+
+  useEffect(() => {
+    if (!lngFocused.current) {
+      setLngText(longitude !== null ? longitude.toFixed(6) : '');
+      setLngValid(true);
+    }
+  }, [longitude]);
+
+  const commit = useCallback(() => {
+    const lat = parseFloat(latText);
+    const lng = parseFloat(lngText);
+    const latOk = !isNaN(lat) && isValidLat(lat);
+    const lngOk = !isNaN(lng) && isValidLng(lng);
+    setLatValid(latText === '' || latOk);
+    setLngValid(lngText === '' || lngOk);
+    if (latOk && lngOk) {
+      onChange(lat, lng);
+      onPan([lat, lng]);
+    }
+  }, [latText, lngText, onChange, onPan]);
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commit();
+    }
+  }
+
+  const inputBase = 'input-field w-28 text-xs py-1 px-2';
+
+  return (
+    <div className={`flex items-center gap-2 ${className ?? ''}`}>
+      <label className="text-xs text-sage font-medium">Lat</label>
+      <input
+        type="text"
+        value={latText}
+        onChange={(e) => setLatText(e.target.value)}
+        onFocus={() => { latFocused.current = true; }}
+        onBlur={() => { latFocused.current = false; commit(); }}
+        onKeyDown={handleKeyDown}
+        className={`${inputBase} ${!latValid ? 'border-red-500 focus:ring-red-500' : ''}`}
+        placeholder="Latitude"
+      />
+      <label className="text-xs text-sage font-medium">Lng</label>
+      <input
+        type="text"
+        value={lngText}
+        onChange={(e) => setLngText(e.target.value)}
+        onFocus={() => { lngFocused.current = true; }}
+        onBlur={() => { lngFocused.current = false; commit(); }}
+        onKeyDown={handleKeyDown}
+        className={`${inputBase} ${!lngValid ? 'border-red-500 focus:ring-red-500' : ''}`}
+        placeholder="Longitude"
+      />
+    </div>
+  );
+}
+
 export default function LocationPicker({
   latitude,
   longitude,
@@ -45,6 +150,7 @@ export default function LocationPicker({
   const theme = useTheme();
   const [gpsLoading, setGpsLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [panTarget, setPanTarget] = useState<[number, number] | null>(null);
 
   const defaultCenter: [number, number] = [config.mapCenter.lat, config.mapCenter.lng];
   const defaultZoom = config.mapCenter.zoom;
@@ -75,7 +181,7 @@ export default function LocationPicker({
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex items-center gap-3 mb-2 flex-wrap">
         <button
           type="button"
           onClick={handleUseMyLocation}
@@ -91,11 +197,12 @@ export default function LocationPicker({
         >
           {expanded ? 'Collapse Map' : 'Expand Map'}
         </button>
-        {latitude && longitude && (
-          <span className="text-xs text-sage">
-            {latitude.toFixed(6)}, {longitude.toFixed(6)}
-          </span>
-        )}
+        <CoordinateInputs
+          latitude={latitude}
+          longitude={longitude}
+          onChange={onChange}
+          onPan={setPanTarget}
+        />
       </div>
 
       <div
@@ -116,6 +223,7 @@ export default function LocationPicker({
           zoomControl={true}
         >
           <MapResizer expanded={expanded} />
+          <MapPanner panTarget={panTarget} />
           <TileLayer
             attribution={theme.tileAttribution}
             url={theme.tileUrl}
@@ -129,7 +237,7 @@ export default function LocationPicker({
         {/* Controls overlay when expanded */}
         {expanded && (
           <>
-            <div className="absolute top-4 left-4 z-[1000] flex gap-2">
+            <div className="absolute top-4 left-4 z-[1000] flex gap-2 flex-wrap items-center">
               <button
                 type="button"
                 onClick={handleUseMyLocation}
@@ -138,6 +246,14 @@ export default function LocationPicker({
               >
                 {gpsLoading ? 'Getting...' : 'Use My Location'}
               </button>
+              <div className="bg-white rounded-lg shadow-lg border border-sage-light px-3 py-2">
+                <CoordinateInputs
+                  latitude={latitude}
+                  longitude={longitude}
+                  onChange={onChange}
+                  onPan={setPanTarget}
+                />
+              </div>
             </div>
             <button
               type="button"
@@ -149,18 +265,13 @@ export default function LocationPicker({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            {latitude && longitude && (
-              <div className="absolute bottom-4 left-4 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light px-3 py-2 text-xs text-forest-dark">
-                {latitude.toFixed(6)}, {longitude.toFixed(6)}
-              </div>
-            )}
           </>
         )}
       </div>
 
       {!expanded && (
         <p className="text-xs text-sage mt-1">
-          Click on the map to set the location, or use GPS.
+          Click the map, use GPS, or type coordinates.
         </p>
       )}
     </div>
