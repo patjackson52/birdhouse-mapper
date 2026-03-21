@@ -26,7 +26,7 @@ Add item editing capabilities to the Birdhouse Mapper app. Currently items can o
 | `item_id`    | uuid (FK → items)     | ON DELETE CASCADE         |
 | `latitude`   | float8                | NOT NULL                  |
 | `longitude`  | float8                | NOT NULL                  |
-| `created_by` | uuid (FK → profiles)  | Who moved it              |
+| `created_by` | uuid (FK → profiles)  | NOT NULL — who moved it   |
 | `created_at` | timestamptz           | Default now()             |
 
 ### No changes to `items` table
@@ -57,7 +57,7 @@ The migration creates a `location_history` row for every existing item using its
 
 - Add action bar at the bottom of the panel content (above the Updates timeline)
 - Two buttons: "Edit Item" (links to `/manage/edit/[id]`) and "Add Update" (links to `/manage/update?item=[id]`)
-- Visible to all authenticated users
+- Visible to all authenticated users. `DetailPanel` will receive an `isAuthenticated` prop to conditionally render the action bar. The parent page (`src/app/page.tsx`) will need to fetch session state and pass it down. Anonymous map viewers see no edit buttons.
 
 ### Modified: Admin Dashboard (`/admin/page.tsx`)
 
@@ -75,7 +75,7 @@ The migration creates a `location_history` row for every existing item using its
 
 ### Saving
 
-1. **Core fields** (name, description, status, custom_field_values, item_type_id): direct `update` on `items` table
+1. **Core fields** (name, description, status, custom_field_values, item_type_id): direct `update` on `items` table. If `item_type_id` changes, `custom_field_values` is cleared and rebuilt from the new type's fields only — old type's values are discarded.
 2. **Location change** (lat/lng differ from original values):
    - Insert new row into `location_history` with new coordinates and current user
    - Update `items.latitude` and `items.longitude`
@@ -110,7 +110,7 @@ The migration creates a `location_history` row for every existing item using its
 
 - All authenticated users (editors + admins) can edit any item via `/manage/edit/[id]`
 - Location history is visible and revertable by admins only
-- The existing middleware already protects `/manage/*` routes for authenticated users
+- Auth is enforced server-side in middleware (`src/middleware.ts`), which checks the user session for `/manage/*` routes and redirects unauthenticated users to `/login`. The new `/manage/edit/[id]` route inherits this protection automatically.
 
 ## New TypeScript types
 
@@ -120,7 +120,7 @@ export interface LocationHistory {
   item_id: string;
   latitude: number;
   longitude: number;
-  created_by: string | null;
+  created_by: string;
   created_at: string;
 }
 ```
