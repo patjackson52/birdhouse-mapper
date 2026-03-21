@@ -199,7 +199,7 @@ src/components/landing/
 
 ### Theme Integration
 
-All block components use the **theme-agnostic CSS variable classes** defined in `tailwind.config.ts` — e.g., `text-primary`, `text-primary-dark`, `bg-accent`, `bg-parchment`, `text-sage`. These map to CSS variables (`var(--color-primary)`, etc.) that resolve to different colors per theme preset. Do NOT use preset-specific class names like `text-forest-dark` — use `text-primary-dark` instead. This ensures blocks work correctly across all theme presets (forest, ocean, desert, urban, arctic, meadow). No per-block color configuration needed. If the admin changes the site theme, the landing page updates instantly.
+All block components use the existing Tailwind color classes defined in `tailwind.config.ts`: `text-forest`, `text-forest-dark`, `bg-golden`, `bg-parchment`, `text-sage`, `bg-sage-light`. Despite the "forest" naming, these are **already theme-agnostic** — they resolve to CSS variables (`var(--color-primary)`, `var(--color-primary-dark)`, `var(--color-accent)`, etc.) that change per theme preset. When the admin switches from "forest" to "ocean", these classes automatically resolve to the ocean theme's colors. No per-block color configuration needed. If the admin changes the site theme, the landing page updates instantly.
 
 ### StatsBlock Auto Mode — Smart Filtering
 
