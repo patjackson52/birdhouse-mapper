@@ -70,7 +70,7 @@ export async function uploadLandingAsset(
     fileName: file.name,
     mimeType: file.type,
     category,
-    description: description || undefined,
+    description: description || '',
     uploadedAt: new Date().toISOString(),
   };
 
