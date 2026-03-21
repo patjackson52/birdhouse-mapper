@@ -257,7 +257,8 @@ export default function EditItemForm({
       router.push('/manage');
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save changes.');
+      const message = err instanceof Error ? err.message : typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: unknown }).message) : 'Failed to save changes.';
+      setError(message);
       setSaving(false);
     }
   }
