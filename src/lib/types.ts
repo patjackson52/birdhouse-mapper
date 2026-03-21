@@ -79,6 +79,24 @@ export interface Profile {
   display_name: string | null;
   role: UserRole;
   created_at: string;
+  is_temporary: boolean;
+  session_expires_at: string | null;
+  invite_id: string | null;
+  deleted_at: string | null;
+}
+
+export interface Invite {
+  id: string;
+  token: string;
+  created_by: string;
+  display_name: string | null;
+  role: UserRole;
+  convertible: boolean;
+  session_expires_at: string;
+  expires_at: string;
+  claimed_by: string | null;
+  claimed_at: string | null;
+  created_at: string;
 }
 
 export interface SiteConfigRow {
@@ -87,15 +105,49 @@ export interface SiteConfigRow {
   updated_at: string;
 }
 
+export interface Species {
+  id: string;
+  name: string;
+  scientific_name: string | null;
+  description: string | null;
+  photo_path: string | null;
+  conservation_status: string | null;
+  category: string | null;
+  external_link: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemSpecies {
+  item_id: string;
+  species_id: string;
+}
+
+export interface UpdateSpecies {
+  update_id: string;
+  species_id: string;
+}
+
+export interface LocationHistory {
+  id: string;
+  item_id: string;
+  latitude: number;
+  longitude: number;
+  created_by: string;
+  created_at: string;
+}
+
 // ======================
 // Composite types
 // ======================
 
 export interface ItemWithDetails extends Item {
   item_type: ItemType;
-  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[] })[];
+  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[]; species: Species[] })[];
   photos: Photo[];
-  custom_fields: CustomField[]; // field definitions for this item's type
+  custom_fields: CustomField[];
+  species: Species[];
 }
 
 // ======================
@@ -143,14 +195,44 @@ export interface Database {
       };
       profiles: {
         Row: Profile;
-        Insert: Omit<Profile, 'created_at'>;
+        Insert: Omit<Profile, 'created_at' | 'is_temporary' | 'session_expires_at' | 'invite_id' | 'deleted_at'> & Partial<Pick<Profile, 'is_temporary' | 'session_expires_at' | 'invite_id' | 'deleted_at'>>;
         Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      invites: {
+        Row: Invite;
+        Insert: Omit<Invite, 'id' | 'created_at' | 'claimed_by' | 'claimed_at'>;
+        Update: Partial<Omit<Invite, 'id' | 'created_at'>>;
         Relationships: [];
       };
       site_config: {
         Row: SiteConfigRow;
         Insert: Omit<SiteConfigRow, 'updated_at'>;
         Update: Partial<Omit<SiteConfigRow, 'key'>>;
+        Relationships: [];
+      };
+      species: {
+        Row: Species;
+        Insert: Omit<Species, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Species, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      item_species: {
+        Row: ItemSpecies;
+        Insert: ItemSpecies;
+        Update: never;
+        Relationships: [];
+      };
+      update_species: {
+        Row: UpdateSpecies;
+        Insert: UpdateSpecies;
+        Update: never;
+        Relationships: [];
+      };
+      location_history: {
+        Row: LocationHistory;
+        Insert: Omit<LocationHistory, 'id' | 'created_at'>;
+        Update: never;
         Relationships: [];
       };
     };

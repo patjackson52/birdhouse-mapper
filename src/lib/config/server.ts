@@ -2,6 +2,7 @@ import { unstable_cache, revalidateTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { DEFAULT_CONFIG } from './defaults';
 import { CONFIG_KEY_MAP, type SiteConfig } from './types';
+import { createDefaultLandingPage } from './landing-defaults';
 
 const CACHE_TAG = 'site-config';
 
@@ -40,6 +41,16 @@ export const getConfig = unstable_cache(
       if (propName) {
         (config as Record<string, unknown>)[propName] = row.value;
       }
+    }
+
+    // Backfill landing page for existing sites that were set up before this feature
+    if (config.landingPage === null && config.setupComplete) {
+      config.landingPage = createDefaultLandingPage(
+        config.siteName,
+        config.tagline,
+        config.locationName,
+        false
+      );
     }
 
     return config;

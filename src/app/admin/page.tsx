@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { Item, ItemUpdate, UpdateType, Profile } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import StatusBadge from '@/components/item/StatusBadge';
@@ -8,6 +9,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { formatShortDate } from '@/lib/utils';
 
 export default function AdminPage() {
+  const router = useRouter();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [updates, setUpdates] = useState<(ItemUpdate & { item_name?: string; update_type_name?: string })[]>([]);
@@ -196,8 +198,12 @@ export default function AdminPage() {
             </thead>
             <tbody className="divide-y divide-sage-light">
               {items.map((item) => (
-                <tr key={item.id} className="hover:bg-sage-light">
-                  <td className="px-4 py-3 text-sm font-medium text-forest-dark">
+                <tr
+                  key={item.id}
+                  className="hover:bg-sage-light cursor-pointer"
+                  onClick={() => router.push(`/manage/edit/${item.id}`)}
+                >
+                  <td className="px-4 py-3 text-sm font-medium text-forest-dark hover:underline hover:decoration-forest">
                     {item.name}
                   </td>
                   <td className="px-4 py-3">
@@ -205,7 +211,10 @@ export default function AdminPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => handleDeleteItem(item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteItem(item.id);
+                      }}
                       className="text-xs text-red-600 hover:text-red-800 transition-colors"
                     >
                       Delete

@@ -15,4 +15,5 @@ export const DEFAULT_CONFIG: SiteConfig = {
   mapStyle: null,
   customNavItems: [],
   setupComplete: false,
+  landingPage: null,
 };
