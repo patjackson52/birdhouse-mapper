@@ -14,13 +14,19 @@ TO public
 USING (bucket_id = 'landing-assets');
 
 -- Admin INSERT: only authenticated admin users can upload
-CREATE POLICY "Authenticated users can upload landing assets"
+CREATE POLICY "Admin users can upload landing assets"
 ON storage.objects FOR INSERT
 TO authenticated
-WITH CHECK (bucket_id = 'landing-assets');
+WITH CHECK (
+  bucket_id = 'landing-assets'
+  AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);
 
--- Admin DELETE: only authenticated users can delete
-CREATE POLICY "Authenticated users can delete landing assets"
+-- Admin DELETE: only authenticated admin users can delete
+CREATE POLICY "Admin users can delete landing assets"
 ON storage.objects FOR DELETE
 TO authenticated
-USING (bucket_id = 'landing-assets');
+USING (
+  bucket_id = 'landing-assets'
+  AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+);

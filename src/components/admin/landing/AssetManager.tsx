@@ -41,7 +41,7 @@ export default function AssetManager({
     setUploadError(null);
     setUploadingImage(true);
     try {
-      const blob = await resizeImage(file, 1600);
+      const blob = await resizeImage(file, 2000);
       const resized = new File([blob], file.name, { type: 'image/jpeg' });
       const formData = new FormData();
       formData.append('file', resized);

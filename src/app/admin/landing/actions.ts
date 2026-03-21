@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getConfig, invalidateConfig } from '@/lib/config/server';
 import { revalidateTag } from 'next/cache';
 import type { LandingPageConfig, LandingAsset } from '@/lib/config/landing-types';
+import { landingBlocksSchema } from '@/lib/landing/schemas';
 
 export async function getLandingPageConfig(): Promise<LandingPageConfig | null> {
   const config = await getConfig();
@@ -11,6 +12,11 @@ export async function getLandingPageConfig(): Promise<LandingPageConfig | null> 
 }
 
 export async function saveLandingPageConfig(config: LandingPageConfig) {
+  const parseResult = landingBlocksSchema.safeParse(config.blocks);
+  if (!parseResult.success) {
+    return { error: 'Invalid block data' };
+  }
+
   const supabase = createClient();
 
   const { error } = await supabase
@@ -35,6 +41,10 @@ export async function uploadLandingAsset(
   const description = formData.get('description') as string | null;
 
   if (!file) return { asset: null, error: 'No file provided' };
+
+  if (file.size > 10 * 1024 * 1024) {
+    return { asset: null, error: 'File exceeds 10MB limit' };
+  }
 
   const id = crypto.randomUUID();
   const prefix = category === 'image' ? 'images' : 'documents';

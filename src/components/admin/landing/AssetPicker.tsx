@@ -33,7 +33,7 @@ export default function AssetPicker({ assets, onSelect, onUpload, onClose }: Ass
     setUploadError(null);
     setUploading(true);
     try {
-      const blob = await resizeImage(file, 1600);
+      const blob = await resizeImage(file, 2000);
       const resized = new File([blob], file.name, { type: 'image/jpeg' });
       const formData = new FormData();
       formData.append('file', resized);
@@ -155,7 +155,7 @@ export default function AssetPicker({ assets, onSelect, onUpload, onClose }: Ass
               >
                 {uploading ? 'Uploading…' : 'Choose Image File'}
               </button>
-              <p className="text-xs text-gray-400">Image will be resized to max 1600px width.</p>
+              <p className="text-xs text-gray-400">Image will be resized to max 2000px width.</p>
             </div>
           )}
 
