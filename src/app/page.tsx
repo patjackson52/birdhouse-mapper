@@ -46,6 +46,7 @@ function HomePageContent() {
   const [selectedItem, setSelectedItem] = useState<ItemWithDetails | null>(
     null,
   );
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const deepLinkedRef = useRef(false);
@@ -54,7 +55,7 @@ function HomePageContent() {
     async function fetchData() {
       const supabase = createClient();
 
-      const [itemRes, typeRes, fieldRes] = await Promise.all([
+      const [itemRes, typeRes, fieldRes, userRes] = await Promise.all([
         supabase
           .from("items")
           .select("*")
@@ -68,11 +69,13 @@ function HomePageContent() {
           .from("custom_fields")
           .select("*")
           .order("sort_order", { ascending: true }),
+        supabase.auth.getUser(),
       ]);
 
       if (itemRes.data) setItems(itemRes.data);
       if (typeRes.data) setItemTypes(typeRes.data);
       if (fieldRes.data) setCustomFields(fieldRes.data);
+      setIsAuthenticated(!!userRes.data.user);
       setLoading(false);
     }
 
@@ -177,7 +180,11 @@ function HomePageContent() {
       </Link>
 
       {/* Detail panel */}
-      <DetailPanel item={selectedItem} onClose={() => setSelectedItem(null)} />
+      <DetailPanel
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        isAuthenticated={isAuthenticated}
+      />
     </div>
   );
 }
