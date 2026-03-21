@@ -8,13 +8,15 @@ import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
+import Link from 'next/link';
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
   onClose: () => void;
+  isAuthenticated?: boolean;
 }
 
-export default function DetailPanel({ item, onClose }: DetailPanelProps) {
+export default function DetailPanel({ item, onClose, isAuthenticated }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -117,6 +119,24 @@ export default function DetailPanel({ item, onClose }: DetailPanelProps) {
               Photo placeholder
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Action bar for authenticated users */}
+      {isAuthenticated && (
+        <div className="flex gap-2 mb-4">
+          <Link
+            href={`/manage/edit/${item.id}`}
+            className="btn-primary text-sm flex-1 text-center"
+          >
+            Edit Item
+          </Link>
+          <Link
+            href={`/manage/update?item=${item.id}`}
+            className="btn-secondary text-sm flex-1 text-center"
+          >
+            Add Update
+          </Link>
         </div>
       )}
 
