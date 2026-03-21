@@ -1,5 +1,7 @@
 # Landing Page Feature Spec
 
+**Status:** Implemented (Phase 1 MVP)
+
 ## Overview
 
 Add customizable landing pages to Field Mapper that serve as the public entry point for a project site. Landing pages are **AI-generated from a text prompt** (via Vercel AI SDK + Claude), then **editable block-by-block** in an admin UI. They automatically inherit the site's existing theme (CSS variables, colors, fonts) so they match the rest of the app with zero extra styling work.
