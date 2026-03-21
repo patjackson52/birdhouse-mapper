@@ -47,6 +47,16 @@ export default function AdminLayout({
                 Settings
               </Link>
               <Link
+                href="/admin/landing"
+                className={`text-sm transition-colors ${
+                  pathname.startsWith('/admin/landing')
+                    ? 'text-white font-medium'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                Landing Page
+              </Link>
+              <Link
                 href="/admin/types"
                 className={`text-sm transition-colors ${
                   pathname.startsWith('/admin/types')
