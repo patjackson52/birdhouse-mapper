@@ -20,7 +20,7 @@ Field Mapper projects need a public-facing landing page that introduces the proj
 
 ## Goals
 
-1. Let admins create a rich, customizable landing page without writing code
+1. Let admins create a rich and customizable landing page without writing code
 2. Support images, links, partner logos, and structured layouts
 3. Landing page is the new `/` route; map moves to `/map`
 4. Keep the system simple enough for non-technical users but extensible for future AI-assisted generation
