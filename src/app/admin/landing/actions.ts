@@ -91,7 +91,7 @@ export async function deleteLandingAsset(storagePath: string) {
   return { error: null };
 }
 
-import { generateObject } from 'ai';
+import { generateText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { generationBlocksSchema } from '@/lib/landing/schemas';
 import type { LandingBlock } from '@/lib/config/landing-types';
@@ -176,10 +176,12 @@ Guidelines:
 - Use document context to write accurate, detailed descriptions
 - Generate descriptive alt text for all image blocks for accessibility`;
 
-    const { object: blocks } = await generateObject({
+    // Use generateText instead of generateObject because Anthropic's API
+    // doesn't support 'oneOf' JSON Schema (produced by z.discriminatedUnion).
+    // We ask Claude to return JSON, then validate with Zod ourselves.
+    const { text } = await generateText({
       model: anthropic('claude-sonnet-4-6'),
-      schema: generationBlocksSchema,
-      system: systemPrompt,
+      system: systemPrompt + '\n\nYou MUST respond with ONLY a valid JSON array of blocks. No markdown fences, no explanation — just the JSON array.',
       messages: [{
         role: 'user',
         content: [
@@ -189,6 +191,19 @@ Guidelines:
       }],
       maxOutputTokens: 2000,
     });
+
+    // Extract JSON from response (handle possible markdown fences)
+    let jsonText = text.trim();
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+
+    const parsed = JSON.parse(jsonText);
+    const parseResult = generationBlocksSchema.safeParse(parsed);
+    if (!parseResult.success) {
+      return { blocks: null, error: 'AI returned invalid block structure: ' + parseResult.error.message };
+    }
+    const blocks = parseResult.data;
 
     // Add UUIDs and resolve asset IDs to public URLs
     const assetMap = new Map(assets.map(a => [a.id, a.publicUrl]));
