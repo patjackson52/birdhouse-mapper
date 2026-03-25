@@ -2,7 +2,7 @@ import Link from 'next/link';
 import PlatformNav from '@/components/platform/PlatformNav';
 import PlatformFooter from '@/components/platform/PlatformFooter';
 
-export default function LandingPage() {
+export function PlatformLanding() {
   return (
     <>
       <PlatformNav />
