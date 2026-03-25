@@ -1,12 +1,22 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export interface TenantContext {
+export interface OrgTenantContext {
   orgId: string;
   orgSlug: string;
-  propertyId: string | null;  // null = use org's default property
+  propertyId: string | null;
   propertySlug: string | null;
   source: 'custom_domain' | 'platform_subdomain' | 'default';
 }
+
+export interface PlatformContext {
+  orgId: null;
+  orgSlug: null;
+  propertyId: null;
+  propertySlug: null;
+  source: 'platform';
+}
+
+export type TenantContext = OrgTenantContext | PlatformContext;
 
 /**
  * Resolve tenant context from hostname and pathname.
@@ -20,6 +30,17 @@ export async function resolveTenant(
   supabase: SupabaseClient
 ): Promise<TenantContext | null> {
   const platformDomain = process.env.PLATFORM_DOMAIN;
+
+  // Signal 0: Platform root — exact match on PLATFORM_DOMAIN with no subdomain
+  if (platformDomain && hostname === platformDomain) {
+    return {
+      orgId: null,
+      orgSlug: null,
+      propertyId: null,
+      propertySlug: null,
+      source: 'platform' as const,
+    };
+  }
 
   // Signal A: Custom domain lookup
   if (platformDomain && !hostname.endsWith(platformDomain) && hostname !== 'localhost') {
