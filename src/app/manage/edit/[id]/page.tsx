@@ -41,17 +41,29 @@ export default function EditItemPage() {
         { data: item, error: itemError },
         { data: itemSpecies },
         { data: photos },
-        { data: profile },
+        { data: userRow },
       ] = await Promise.all([
         supabase.from('items').select('*').eq('id', id).single(),
         supabase.from('item_species').select('species_id').eq('item_id', id),
         supabase.from('photos').select('*').eq('item_id', id),
-        supabase.from('profiles').select('role').eq('id', user.id).single(),
+        supabase.from('users').select('is_platform_admin').eq('id', user.id).single(),
       ]);
 
       if (!item || itemError) {
         router.push('/manage');
         return;
+      }
+
+      let isAdmin = userRow?.is_platform_admin ?? false;
+      if (!isAdmin) {
+        const { data: membership } = await supabase
+          .from('org_memberships')
+          .select('id, roles!inner(base_role)')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .eq('roles.base_role', 'org_admin')
+          .limit(1);
+        isAdmin = (membership?.length ?? 0) > 0;
       }
 
       setFormProps({
@@ -66,7 +78,7 @@ export default function EditItemPage() {
         },
         initialSpeciesIds: (itemSpecies ?? []).map((s: { species_id: string }) => s.species_id),
         initialPhotos: photos ?? [],
-        isAdmin: profile?.role === 'admin',
+        isAdmin,
       });
       setLoading(false);
     }

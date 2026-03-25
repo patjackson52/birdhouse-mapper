@@ -111,10 +111,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Single combined profile query for role + temp status
+  // Single combined profile query for admin + temp status
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('role, is_temporary, session_expires_at, invite_id')
+    .from('users')
+    .select('is_platform_admin, is_temporary, session_expires_at, invite_id')
     .eq('id', user.id)
     .single();
 
@@ -150,10 +150,23 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Non-admin users cannot access admin routes
-  if (pathname.startsWith('/admin') && (!profile || profile.role !== 'admin')) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/manage';
-    return NextResponse.redirect(url);
+  if (pathname.startsWith('/admin')) {
+    let isAdmin = profile?.is_platform_admin ?? false;
+    if (!isAdmin) {
+      const { data } = await supabase
+        .from('org_memberships')
+        .select('id, roles!inner(base_role)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .eq('roles.base_role', 'org_admin')
+        .limit(1);
+      isAdmin = (data?.length ?? 0) > 0;
+    }
+    if (!isAdmin) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/manage';
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

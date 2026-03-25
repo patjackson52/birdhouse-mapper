@@ -48,17 +48,36 @@ const mockItems = [
   },
 ];
 
-const mockProfiles = [
-  { id: 'user-1', display_name: 'Test User', role: 'admin', created_at: '2026-01-01', is_temporary: false, session_expires_at: null, invite_id: null, deleted_at: null },
+const mockMemberships = [
+  {
+    id: 'membership-1',
+    role_id: 'role-1',
+    users: { id: 'user-1', display_name: 'Test User', email: 'test@example.com', is_temporary: false, created_at: '2026-01-01' },
+    roles: { id: 'role-1', name: 'Admin' },
+  },
+];
+
+const mockRoles = [
+  { id: 'role-1', name: 'Admin', org_id: 'org-1', description: null, base_role: 'org_admin', color: null, icon: null, permissions: {}, is_default_new_member_role: false, is_public_role: false, sort_order: 1, created_at: '2026-01-01', updated_at: '2026-01-01' },
+  { id: 'role-2', name: 'Editor', org_id: 'org-1', description: null, base_role: 'editor', color: null, icon: null, permissions: {}, is_default_new_member_role: true, is_public_role: false, sort_order: 2, created_at: '2026-01-01', updated_at: '2026-01-01' },
 ];
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     from: (table: string) => {
-      if (table === 'profiles') {
+      if (table === 'org_memberships') {
         return {
           select: () => ({
-            order: () => ({ data: mockProfiles, error: null }),
+            eq: () => ({
+              order: () => ({ data: mockMemberships, error: null }),
+            }),
+          }),
+        };
+      }
+      if (table === 'roles') {
+        return {
+          select: () => ({
+            order: () => ({ data: mockRoles, error: null }),
           }),
         };
       }

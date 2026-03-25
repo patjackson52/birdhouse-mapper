@@ -83,7 +83,7 @@ export async function completeInviteClaim(
 
   // Insert profile via service role
   const { error: profileError } = await service
-    .from('profiles')
+    .from('users')
     .insert({
       id: userId,
       display_name: name,
@@ -110,7 +110,7 @@ export async function completeInviteClaim(
 
   if (claimError) {
     // Clean up orphaned anonymous auth user and profile
-    await service.from('profiles').delete().eq('id', userId);
+    await service.from('users').delete().eq('id', userId);
     await service.auth.admin.deleteUser(userId);
     return { error: 'Failed to complete invite claim.' };
   }
