@@ -57,12 +57,13 @@ policies are rewritten from `users.role` checks to `check_permission()` calls.
  9. Populate org config columns from site_config
 10. Populate org_id/property_id on all content rows
 11. Make org_id/property_id NOT NULL, add FKs
-12. Create permission resolution functions
-13. Drop all legacy write policies on content tables
-14. Create new permission-based write policies
-15. Drop site_config table
-16. Add updated_at triggers for new tables
-17. Add indexes
+12. Create auto_populate_org_property trigger for content tables
+13. Create permission resolution functions
+14. Drop all legacy write policies on content tables
+15. Create new permission-based write policies
+16. Drop site_config table
+17. Add updated_at triggers for new tables
+18. Add indexes
 ```
 
 ---
@@ -468,9 +469,28 @@ CREATE POLICY "items_delete" ON items FOR DELETE
   USING (check_permission(auth.uid(), property_id, 'items', 'delete'));
 ```
 
-Same pattern for:
-- `item_updates` — category `'updates'`
-- `photos` — category `'attachments'`
+Same pattern for `item_updates` — category `'updates'`.
+
+For `photos` — category `'attachments'`, but note the action names differ from the generic pattern:
+```sql
+CREATE POLICY "photos_public_read" ON photos FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "photos_insert" ON photos FOR INSERT
+  TO authenticated
+  WITH CHECK (check_permission(auth.uid(), property_id, 'attachments', 'upload'));
+
+CREATE POLICY "photos_update" ON photos FOR UPDATE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'attachments', 'upload'));
+
+CREATE POLICY "photos_delete" ON photos FOR DELETE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'attachments', 'delete_any'));
+```
+
+The `attachments` permission category uses `upload`/`delete_own`/`delete_any` (not `create`/`edit_any`/`delete`).
 
 ### `location_history` — append-only
 
@@ -604,7 +624,7 @@ CREATE TRIGGER property_memberships_updated_at
 ```sql
 -- properties
 CREATE INDEX idx_properties_org ON properties (org_id) WHERE deleted_at IS NULL;
-CREATE INDEX idx_properties_org_slug ON properties (org_id, slug);
+-- orgs.slug already has a unique index from UNIQUE (org_id, slug) constraint, no additional index needed
 CREATE INDEX idx_properties_publicly_listed ON properties (is_publicly_listed)
   WHERE is_publicly_listed = true;
 
