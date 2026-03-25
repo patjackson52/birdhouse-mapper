@@ -8,8 +8,8 @@ import { StatusBadge } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
 import {
   getPropertyMembers,
-  addPropertyOverride,
-  removePropertyOverride,
+  addPropertyOverrideForProperty as addPropertyOverride,
+  removePropertyOverrideForProperty as removePropertyOverride,
   type PropertyMember,
 } from './actions';
 

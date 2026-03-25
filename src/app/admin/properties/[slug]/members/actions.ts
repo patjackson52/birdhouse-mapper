@@ -108,5 +108,17 @@ export async function getPropertyMembers(propertySlug: string): Promise<{
   return { property, members };
 }
 
-// Re-export override helpers so the page can import them from one place
-export { addPropertyOverride, removePropertyOverride } from '@/app/admin/members/[userId]/actions';
+// Wrapper functions for override helpers — 'use server' files can only export async functions
+export async function addPropertyOverrideForProperty(
+  userId: string,
+  propertyId: string,
+  roleId: string
+) {
+  const { addPropertyOverride } = await import('@/app/admin/members/[userId]/actions');
+  return addPropertyOverride(userId, propertyId, roleId);
+}
+
+export async function removePropertyOverrideForProperty(propertyMembershipId: string) {
+  const { removePropertyOverride } = await import('@/app/admin/members/[userId]/actions');
+  return removePropertyOverride(propertyMembershipId);
+}
