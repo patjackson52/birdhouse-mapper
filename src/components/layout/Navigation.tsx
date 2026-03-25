@@ -2,13 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useConfig } from '@/lib/config/client';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Navigation() {
   const pathname = usePathname();
   const config = useConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsAuthenticated(!!user);
+    });
+  }, []);
 
   // Hide org navigation on platform pages — they render their own PlatformNav.
   // Detect via cookie set by middleware for platform context.
@@ -65,28 +74,32 @@ export default function Navigation() {
                   {link.label}
                 </Link>
               ))}
-              <div className="w-px h-6 bg-sage-light mx-2" />
-              <Link
-                href="/manage"
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isManage && !pathname.startsWith('/admin/settings')
-                    ? 'bg-forest text-white'
-                    : 'text-sage hover:text-forest-dark hover:bg-sage-light'
-                }`}
-              >
-                Manage
-              </Link>
-              <Link
-                href="/admin/settings"
-                className={`p-2 rounded-lg transition-colors ${
-                  pathname.startsWith('/admin/settings')
-                    ? 'bg-forest text-white'
-                    : 'text-sage hover:text-forest-dark hover:bg-sage-light'
-                }`}
-                title="Site Settings"
-              >
-                <SettingsIcon className="w-4 h-4" />
-              </Link>
+              {isAuthenticated && (
+                <>
+                  <div className="w-px h-6 bg-sage-light mx-2" />
+                  <Link
+                    href="/manage"
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      isManage && !pathname.startsWith('/admin/settings')
+                        ? 'bg-forest text-white'
+                        : 'text-sage hover:text-forest-dark hover:bg-sage-light'
+                    }`}
+                  >
+                    Manage
+                  </Link>
+                  <Link
+                    href="/admin/settings"
+                    className={`p-2 rounded-lg transition-colors ${
+                      pathname.startsWith('/admin/settings')
+                        ? 'bg-forest text-white'
+                        : 'text-sage hover:text-forest-dark hover:bg-sage-light'
+                    }`}
+                    title="Site Settings"
+                  >
+                    <SettingsIcon className="w-4 h-4" />
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         </div>
@@ -127,30 +140,34 @@ export default function Navigation() {
                   {link.label}
                 </Link>
               ))}
-              <Link
-                href="/manage"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  isManage && !pathname.startsWith('/admin/settings')
-                    ? 'bg-forest text-white'
-                    : 'text-sage hover:bg-sage-light'
-                }`}
-              >
-                <SettingsIcon className="w-5 h-5" />
-                Manage
-              </Link>
-              <Link
-                href="/admin/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  pathname.startsWith('/admin/settings')
-                    ? 'bg-forest text-white'
-                    : 'text-sage hover:bg-sage-light'
-                }`}
-              >
-                <GearIcon className="w-5 h-5" />
-                Settings
-              </Link>
+              {isAuthenticated && (
+                <>
+                  <Link
+                    href="/manage"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      isManage && !pathname.startsWith('/admin/settings')
+                        ? 'bg-forest text-white'
+                        : 'text-sage hover:bg-sage-light'
+                    }`}
+                  >
+                    <SettingsIcon className="w-5 h-5" />
+                    Manage
+                  </Link>
+                  <Link
+                    href="/admin/settings"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      pathname.startsWith('/admin/settings')
+                        ? 'bg-forest text-white'
+                        : 'text-sage hover:bg-sage-light'
+                    }`}
+                  >
+                    <GearIcon className="w-5 h-5" />
+                    Settings
+                  </Link>
+                </>
+              )}
             </nav>
           </div>
         )}
