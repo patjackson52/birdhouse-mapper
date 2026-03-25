@@ -49,9 +49,57 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // Platform context — handle entirely here, then return early
+  if (tenant?.source === 'platform') {
+    // Refresh session
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const isPlatformAuthRoute = ['/signup', '/signin'].includes(pathname);
+    const isOnboard = pathname === '/onboard' || pathname.startsWith('/onboard');
+    const isRoot = pathname === '/';
+    const isAuthCallback = pathname.startsWith('/api/auth/');
+    const isStaticAsset = pathname.startsWith('/_next/') || pathname.startsWith('/favicon');
+
+    // Always pass through static assets and auth callbacks
+    if (isStaticAsset || isAuthCallback) {
+      supabaseResponse.headers.set('x-tenant-source', 'platform');
+      return supabaseResponse;
+    }
+
+    // Onboard requires auth
+    if (isOnboard && !user) {
+      return NextResponse.redirect(new URL('/signup', request.url));
+    }
+
+    // Authenticated user on root — route to org or onboard
+    if (isRoot && user) {
+      const { data: membership } = await supabase
+        .from('org_memberships')
+        .select('orgs(slug)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+
+      const orgSlug = (membership?.orgs as any)?.slug;
+      if (orgSlug) {
+        const platformDomain = process.env.PLATFORM_DOMAIN;
+        return NextResponse.redirect(
+          new URL(`https://${orgSlug}.${platformDomain}/manage`)
+        );
+      }
+      return NextResponse.redirect(new URL('/onboard', request.url));
+    }
+
+    // All other platform routes (/, /signup, /signin, /onboard with auth) — pass through
+    supabaseResponse.headers.set('x-tenant-source', 'platform');
+    return supabaseResponse;
+  }
+
   // Inject tenant context as headers for server components
   supabaseResponse.headers.set('x-org-id', tenant.orgId);
   supabaseResponse.headers.set('x-org-slug', tenant.orgSlug);
+  supabaseResponse.headers.set('x-tenant-source', tenant.source);
   if (tenant.propertyId) supabaseResponse.headers.set('x-property-id', tenant.propertyId);
   if (tenant.propertySlug) supabaseResponse.headers.set('x-property-slug', tenant.propertySlug);
 
