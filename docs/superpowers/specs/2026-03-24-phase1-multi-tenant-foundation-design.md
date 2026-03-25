@@ -190,7 +190,7 @@ CREATE TABLE org_memberships (
   notification_prefs    jsonb DEFAULT '{}',
   joined_at             timestamptz,
   created_at            timestamptz DEFAULT now(),
-  updated_at            timestamptz DEFAULT now(),
+  updated_at            timestamptz DEFAULT now()
 );
 ```
 
