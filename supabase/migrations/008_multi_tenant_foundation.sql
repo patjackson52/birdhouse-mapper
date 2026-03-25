@@ -260,3 +260,435 @@ CREATE VIEW profiles AS
 SELECT id, display_name, role, created_at,
        is_temporary, session_expires_at, invite_id, deleted_at
 FROM users;
+
+-- ======================
+-- 12. Drop old RLS policies on users (formerly profiles)
+-- ======================
+-- After ALTER TABLE RENAME, these policies are now on the users table
+-- with their original names.
+
+DROP POLICY IF EXISTS "Users can view own profile" ON users;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON users;
+DROP POLICY IF EXISTS "Admins can update profiles" ON users;
+
+-- ======================
+-- 13. Create new RLS policies on users, orgs, roles, org_memberships
+-- ======================
+
+-- ── users ──────────────────────────────────────────────────────────
+-- RLS already enabled from 001_initial_schema.sql (survived the rename)
+
+CREATE POLICY "users_read_own" ON users FOR SELECT
+  TO authenticated
+  USING (id = auth.uid());
+
+CREATE POLICY "users_platform_admin" ON users FOR ALL
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.is_platform_admin
+  ));
+
+CREATE POLICY "users_org_admin_read" ON users FOR SELECT
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid()
+      AND om.status = 'active'
+      AND r.base_role = 'org_admin'
+      AND om.org_id IN (
+        SELECT om2.org_id FROM org_memberships om2
+        WHERE om2.user_id = users.id AND om2.status = 'active'
+      )
+  ));
+
+CREATE POLICY "users_update_own" ON users FOR UPDATE
+  TO authenticated
+  USING (id = auth.uid())
+  WITH CHECK (id = auth.uid());
+
+-- ── orgs ───────────────────────────────────────────────────────────
+
+ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "orgs_member_read" ON orgs FOR SELECT
+  TO authenticated
+  USING (id IN (
+    SELECT org_id FROM org_memberships
+    WHERE user_id = auth.uid() AND status = 'active'
+  ));
+
+CREATE POLICY "orgs_admin_update" ON orgs FOR UPDATE
+  TO authenticated
+  USING (id IN (
+    SELECT om.org_id FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid() AND om.status = 'active'
+      AND r.base_role = 'org_admin'
+  ));
+
+CREATE POLICY "orgs_platform_admin" ON orgs FOR ALL
+  TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM users WHERE id = auth.uid() AND is_platform_admin
+  ));
+
+-- ── roles ──────────────────────────────────────────────────────────
+
+ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "roles_org_member_read" ON roles FOR SELECT
+  TO authenticated
+  USING (org_id IN (
+    SELECT org_id FROM org_memberships
+    WHERE user_id = auth.uid() AND status = 'active'
+  ));
+
+CREATE POLICY "roles_org_admin_manage" ON roles FOR ALL
+  TO authenticated
+  USING (org_id IN (
+    SELECT om.org_id FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid() AND om.status = 'active'
+      AND r.base_role = 'org_admin'
+  ));
+
+-- ── org_memberships ────────────────────────────────────────────────
+
+ALTER TABLE org_memberships ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_memberships_read_own" ON org_memberships FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "org_memberships_admin_read" ON org_memberships FOR SELECT
+  TO authenticated
+  USING (org_id IN (
+    SELECT om.org_id FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid() AND om.status = 'active'
+      AND r.base_role = 'org_admin'
+  ));
+
+CREATE POLICY "org_memberships_admin_manage" ON org_memberships FOR ALL
+  TO authenticated
+  USING (org_id IN (
+    SELECT om.org_id FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid() AND om.status = 'active'
+      AND r.base_role = 'org_admin'
+  ));
+
+-- ======================
+-- 14. Update existing content and storage policies (profiles → users rename)
+-- ======================
+-- Only policies that reference `profiles` in their expressions need updating.
+-- Public SELECT policies (using (true)) are unchanged.
+
+-- ── items ──────────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Authenticated users can insert items" ON items;
+CREATE POLICY "Authenticated users can insert items"
+  ON items FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'editor'))
+  );
+
+DROP POLICY IF EXISTS "Authenticated users can update items" ON items;
+CREATE POLICY "Authenticated users can update items"
+  ON items FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'editor'))
+  );
+
+DROP POLICY IF EXISTS "Admins can delete items" ON items;
+CREATE POLICY "Admins can delete items"
+  ON items FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── item_updates ───────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Authenticated users can insert item updates" ON item_updates;
+CREATE POLICY "Authenticated users can insert item updates"
+  ON item_updates FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'editor'))
+  );
+
+DROP POLICY IF EXISTS "Authenticated users can update item updates" ON item_updates;
+CREATE POLICY "Authenticated users can update item updates"
+  ON item_updates FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'editor'))
+  );
+
+DROP POLICY IF EXISTS "Admins can delete item updates" ON item_updates;
+CREATE POLICY "Admins can delete item updates"
+  ON item_updates FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── photos ─────────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Authenticated users can insert photos" ON photos;
+CREATE POLICY "Authenticated users can insert photos"
+  ON photos FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'editor'))
+  );
+
+DROP POLICY IF EXISTS "Authenticated users can update photos" ON photos;
+CREATE POLICY "Authenticated users can update photos"
+  ON photos FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role IN ('admin', 'editor'))
+  );
+
+DROP POLICY IF EXISTS "Admins can delete photos" ON photos;
+CREATE POLICY "Admins can delete photos"
+  ON photos FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── site_config ────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Admins can insert site config" ON site_config;
+CREATE POLICY "Admins can insert site config"
+  ON site_config FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can update site config" ON site_config;
+CREATE POLICY "Admins can update site config"
+  ON site_config FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can delete site config" ON site_config;
+CREATE POLICY "Admins can delete site config"
+  ON site_config FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── item_types ─────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Admins can insert item types" ON item_types;
+CREATE POLICY "Admins can insert item types"
+  ON item_types FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can update item types" ON item_types;
+CREATE POLICY "Admins can update item types"
+  ON item_types FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can delete item types" ON item_types;
+CREATE POLICY "Admins can delete item types"
+  ON item_types FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── custom_fields ──────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Admins can insert custom fields" ON custom_fields;
+CREATE POLICY "Admins can insert custom fields"
+  ON custom_fields FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can update custom fields" ON custom_fields;
+CREATE POLICY "Admins can update custom fields"
+  ON custom_fields FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can delete custom fields" ON custom_fields;
+CREATE POLICY "Admins can delete custom fields"
+  ON custom_fields FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── update_types ───────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Admins can insert update types" ON update_types;
+CREATE POLICY "Admins can insert update types"
+  ON update_types FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can update update types" ON update_types;
+CREATE POLICY "Admins can update update types"
+  ON update_types FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can delete update types" ON update_types;
+CREATE POLICY "Admins can delete update types"
+  ON update_types FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── invites ────────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Admins can view invites" ON invites;
+CREATE POLICY "Admins can view invites"
+  ON invites FOR SELECT
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can create invites" ON invites;
+CREATE POLICY "Admins can create invites"
+  ON invites FOR INSERT
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can update invites" ON invites;
+CREATE POLICY "Admins can update invites"
+  ON invites FOR UPDATE
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can delete invites" ON invites;
+CREATE POLICY "Admins can delete invites"
+  ON invites FOR DELETE
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- Keep: "Users can view their own claimed invite" — does not reference profiles
+
+-- ── redirects ──────────────────────────────────────────────────────
+
+DROP POLICY IF EXISTS "Admins can insert redirects" ON redirects;
+CREATE POLICY "Admins can insert redirects"
+  ON redirects FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can update redirects" ON redirects;
+CREATE POLICY "Admins can update redirects"
+  ON redirects FOR UPDATE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admins can delete redirects" ON redirects;
+CREATE POLICY "Admins can delete redirects"
+  ON redirects FOR DELETE TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+-- ── storage.objects ────────────────────────────────────────────────
+-- Only admin-gated policies reference profiles. Public read and auth upload are unchanged.
+
+DROP POLICY IF EXISTS "Admins can delete item photos from storage" ON storage.objects;
+CREATE POLICY "Admins can delete item photos from storage"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'item-photos'
+    AND EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admin users can upload landing assets" ON storage.objects;
+CREATE POLICY "Admin users can upload landing assets"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'landing-assets'
+    AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
+  );
+
+DROP POLICY IF EXISTS "Admin users can delete landing assets" ON storage.objects;
+CREATE POLICY "Admin users can delete landing assets"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'landing-assets'
+    AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- ======================
+-- 15. Replace handle_new_user() trigger function
+-- ======================
+
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  IF new.is_anonymous = true THEN
+    RETURN new;
+  END IF;
+
+  INSERT INTO users (id, display_name, email, email_verified, full_name, role)
+  VALUES (
+    new.id,
+    new.raw_user_meta_data->>'display_name',
+    new.email,
+    (new.email_confirmed_at IS NOT NULL),
+    COALESCE(new.raw_user_meta_data->>'display_name', 'Unknown'),
+    'editor'  -- kept for compatibility; actual role comes from org_memberships
+  );
+  -- NOTE: No org_membership is created here. New users join orgs through
+  -- the invite/join flow (Phase 2). Until then, new signups can access
+  -- content tables via users.role but cannot query orgs/roles/org_memberships.
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ======================
+-- 16. Add updated_at triggers for new tables
+-- ======================
+-- Reuse the existing update_updated_at() function from 001_initial_schema.sql
+
+CREATE TRIGGER orgs_updated_at
+  BEFORE UPDATE ON orgs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER roles_updated_at
+  BEFORE UPDATE ON roles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER org_memberships_updated_at
+  BEFORE UPDATE ON org_memberships
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ======================
+-- 17. Add indexes
+-- ======================
+
+-- org_memberships
+CREATE INDEX idx_org_memberships_user ON org_memberships (user_id);
+CREATE INDEX idx_org_memberships_org_active ON org_memberships (org_id, status) WHERE status = 'active';
+CREATE INDEX idx_org_memberships_token ON org_memberships (invitation_token) WHERE invitation_token IS NOT NULL;
+CREATE UNIQUE INDEX idx_org_memberships_org_user ON org_memberships (org_id, user_id) WHERE user_id IS NOT NULL;
+
+-- roles
+CREATE INDEX idx_roles_org ON roles (org_id);
+
+-- users (new indexes)
+CREATE INDEX idx_users_last_active_org ON users (last_active_org_id);
+CREATE INDEX idx_users_email ON users (email);
