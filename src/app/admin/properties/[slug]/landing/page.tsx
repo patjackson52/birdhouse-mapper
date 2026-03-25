@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { LandingPageConfig, LandingBlock, LandingAsset } from '@/lib/config/landing-types';
-import { getLandingPageConfig, saveLandingPageConfig, generateLandingPage } from './actions';
+import { getLandingPageConfig, saveLandingPageConfig, generateLandingPage } from '@/app/admin/landing/actions';
 import HomepageToggle from '@/components/admin/landing/HomepageToggle';
 import AssetManager from '@/components/admin/landing/AssetManager';
 import GenerateSection from '@/components/admin/landing/GenerateSection';
