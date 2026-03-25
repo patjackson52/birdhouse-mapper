@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add customizable landing pages to Field Mapper that serve as the public entry point for a project site. Landing pages are **AI-generated from a text prompt**, then **editable block-by-block** in an admin UI. They automatically inherit the site's existing theme (CSS variables, colors, fonts) so they match the rest of the app with zero extra styling work.
+Add customizable landing pages to Field Mapper that serve as the public entry point for a project site. Landing pages are **AI-generated from a text prompt**, then **editable block-by-block** in an admin UI. They automatically inherit the site's existing theme (CSS variables, colors, fonts) so will they match the rest of the app with zero extra styling work.
 
 The current `/` route (interactive map) moves to `/map`. The new `/` becomes the landing page.
 
