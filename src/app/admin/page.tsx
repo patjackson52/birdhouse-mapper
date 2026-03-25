@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { StatusBadge } from '@/components/admin/StatusBadge';
+import { StatusBadge, derivePropertyStatus } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
 
 type Property = {
@@ -16,17 +16,12 @@ type Property = {
   created_at: string;
 };
 
-function deriveStatus(property: Property): string {
-  if (property.deleted_at !== null) return 'archived';
-  if (!property.is_active) return 'setup';
-  return 'active';
-}
-
 export default function OrgDashboardPage() {
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [membersCount, setMembersCount] = useState(0);
   const [domainsCount, setDomainsCount] = useState(0);
+  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,7 +42,23 @@ export default function OrgDashboardPage() {
           .select('id', { count: 'exact', head: true }),
       ]);
 
-      if (propertiesRes.data) setProperties(propertiesRes.data);
+      if (propertiesRes.data) {
+        setProperties(propertiesRes.data);
+
+        // Fetch item counts per property
+        const itemCountsRes = await supabase
+          .from('items')
+          .select('property_id')
+          .in('property_id', propertiesRes.data.map((p) => p.id));
+
+        if (itemCountsRes.data) {
+          const counts: Record<string, number> = {};
+          for (const item of itemCountsRes.data) {
+            counts[item.property_id] = (counts[item.property_id] || 0) + 1;
+          }
+          setItemCounts(counts);
+        }
+      }
       if (membershipsRes.count !== null) setMembersCount(membershipsRes.count);
       if (domainsRes.count !== null) setDomainsCount(domainsRes.count);
 
@@ -137,11 +148,14 @@ export default function OrgDashboardPage() {
                   <td className="px-4 py-3 text-sm font-medium text-forest-dark">
                     {property.name}
                   </td>
-                  <td className="px-4 py-3 text-sm text-sage font-mono hidden sm:table-cell">
-                    {property.slug}
+                  <td className="px-4 py-3 text-sm text-sage hidden sm:table-cell">
+                    <span className="font-mono">{property.slug}</span>
+                    <span className="ml-2 text-sage/70">
+                      — {itemCounts[property.id] ?? 0} items
+                    </span>
                   </td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={deriveStatus(property)} />
+                    <StatusBadge status={derivePropertyStatus(property)} />
                   </td>
                 </tr>
               ))}

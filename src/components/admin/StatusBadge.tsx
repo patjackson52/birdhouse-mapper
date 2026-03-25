@@ -12,6 +12,12 @@ const STATUS_STYLES: Record<string, string> = {
   revoked: 'bg-gray-100 text-gray-600',
 };
 
+export function derivePropertyStatus(property: { is_active: boolean; deleted_at: string | null }): string {
+  if (property.deleted_at) return 'archived';
+  if (!property.is_active) return 'setup';
+  return 'active';
+}
+
 export function StatusBadge({ status }: { status: string }) {
   const style = STATUS_STYLES[status.toLowerCase()] || 'bg-gray-100 text-gray-600';
   return (

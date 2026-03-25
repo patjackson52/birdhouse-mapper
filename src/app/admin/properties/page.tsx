@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { StatusBadge } from '@/components/admin/StatusBadge';
+import { createClient } from '@/lib/supabase/client';
+import { StatusBadge, derivePropertyStatus } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
 import {
   createProperty,
@@ -23,12 +24,6 @@ type Property = {
 
 type FilterTab = 'all' | 'active' | 'setup' | 'archived';
 
-function deriveStatus(property: Property): string {
-  if (property.deleted_at !== null) return 'archived';
-  if (!property.is_active) return 'setup';
-  return 'active';
-}
-
 function toSlug(name: string): string {
   return name
     .toLowerCase()
@@ -43,6 +38,9 @@ export default function PropertiesPage() {
   const [isPending, startTransition] = useTransition();
 
   const [properties, setProperties] = useState<Property[]>([]);
+  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
+  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
+  const [customDomains, setCustomDomains] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -57,7 +55,48 @@ export default function PropertiesPage() {
   async function loadProperties() {
     const result = await getProperties();
     if (result.properties) {
-      setProperties(result.properties as Property[]);
+      const props = result.properties as Property[];
+      setProperties(props);
+
+      const supabase = createClient();
+      const propertyIds = props.map((p) => p.id);
+
+      const [itemsRes, membershipsRes, domainsRes] = await Promise.all([
+        supabase.from('items').select('property_id').in('property_id', propertyIds),
+        supabase
+          .from('property_memberships')
+          .select('property_id')
+          .in('property_id', propertyIds),
+        supabase
+          .from('custom_domains')
+          .select('property_id, domain')
+          .in('property_id', propertyIds)
+          .eq('status', 'active'),
+      ]);
+
+      if (itemsRes.data) {
+        const counts: Record<string, number> = {};
+        for (const item of itemsRes.data) {
+          counts[item.property_id] = (counts[item.property_id] || 0) + 1;
+        }
+        setItemCounts(counts);
+      }
+
+      if (membershipsRes.data) {
+        const counts: Record<string, number> = {};
+        for (const m of membershipsRes.data) {
+          counts[m.property_id] = (counts[m.property_id] || 0) + 1;
+        }
+        setMemberCounts(counts);
+      }
+
+      if (domainsRes.data) {
+        const domains: Record<string, string> = {};
+        for (const d of domainsRes.data) {
+          domains[d.property_id] = d.domain;
+        }
+        setCustomDomains(domains);
+      }
     }
     setLoading(false);
   }
@@ -91,12 +130,8 @@ export default function PropertiesPage() {
       return;
     }
 
-    // Reset form and reload
-    setFormName('');
-    setFormSlug('');
-    setFormDescription('');
-    setShowCreateForm(false);
-    await loadProperties();
+    // Redirect to the new property's admin page
+    router.push(`/admin/properties/${result.slug}`);
   }
 
   function handleArchiveToggle(property: Property) {
@@ -109,7 +144,7 @@ export default function PropertiesPage() {
 
   const filteredProperties = properties.filter((p) => {
     if (activeTab === 'all') return true;
-    return deriveStatus(p) === activeTab;
+    return derivePropertyStatus(p) === activeTab;
   });
 
   const tabs: { key: FilterTab; label: string }[] = [
@@ -220,7 +255,7 @@ export default function PropertiesPage() {
           const count =
             key === 'all'
               ? properties.length
-              : properties.filter((p) => deriveStatus(p) === key).length;
+              : properties.filter((p) => derivePropertyStatus(p) === key).length;
           return (
             <button
               key={key}
@@ -263,8 +298,14 @@ export default function PropertiesPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">
                   Status
                 </th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase hidden md:table-cell">
-                  Description
+                <th className="text-right px-4 py-3 text-xs font-medium text-sage uppercase hidden md:table-cell">
+                  Items
+                </th>
+                <th className="text-right px-4 py-3 text-xs font-medium text-sage uppercase hidden md:table-cell">
+                  Members
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase hidden lg:table-cell">
+                  Domain
                 </th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-sage uppercase">
                   Actions
@@ -273,7 +314,7 @@ export default function PropertiesPage() {
             </thead>
             <tbody className="divide-y divide-sage-light">
               {filteredProperties.map((property) => {
-                const status = deriveStatus(property);
+                const status = derivePropertyStatus(property);
                 const isArchived = status === 'archived';
                 return (
                   <tr
@@ -290,8 +331,14 @@ export default function PropertiesPage() {
                     <td className="px-4 py-3">
                       <StatusBadge status={status} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-sage hidden md:table-cell max-w-xs truncate">
-                      {property.description || <span className="italic opacity-50">No description</span>}
+                    <td className="px-4 py-3 text-sm text-sage text-right hidden md:table-cell">
+                      {itemCounts[property.id] ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-sage text-right hidden md:table-cell">
+                      {memberCounts[property.id] ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-sage font-mono hidden lg:table-cell">
+                      {customDomains[property.id] || <span className="italic opacity-50 font-sans">—</span>}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
