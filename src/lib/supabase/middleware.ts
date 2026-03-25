@@ -144,7 +144,8 @@ export async function updateSession(request: NextRequest) {
 
     if (!setupDoneCookie) {
       // Check database for setup_complete
-      const { data } = await supabase
+      // Use tenantClient (service-role) since this runs for unauthenticated users
+      const { data } = await tenantClient
         .from('orgs')
         .select('setup_complete')
         .eq('id', tenant.orgId)
