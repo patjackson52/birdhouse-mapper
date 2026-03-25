@@ -12,10 +12,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.63",
+    "@ai-sdk/anthropic": "^3.0.64",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.0",
-    "ai": "^6.0.134",
+    "ai": "^6.0.138",
     "leaflet": "^1.9.4",
     "next": "^14.2.0",
     "qrcode.react": "^4.2.0",
