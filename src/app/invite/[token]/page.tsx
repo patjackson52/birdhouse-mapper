@@ -15,7 +15,7 @@ export default async function InvitePage({
 
   if (user) {
     const { data: profile } = await supabase
-      .from('profiles')
+      .from('users')
       .select('display_name')
       .eq('id', user.id)
       .single();

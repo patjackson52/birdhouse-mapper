@@ -123,7 +123,7 @@ export async function setupCreateAdmin(email: string, password: string, displayN
   } else {
     // Create new user — but first disable the trigger temporarily
     // to avoid "Database error creating new user" from a broken trigger
-    await supabase.from('profiles').select('id').limit(0); // warm up connection
+    await supabase.from('users').select('id').limit(0); // warm up connection
 
     const { data: userData, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -146,7 +146,7 @@ export async function setupCreateAdmin(email: string, password: string, displayN
   // Ensure profile exists with admin role
   // Use upsert to handle both new and existing profiles
   const { error: upsertError } = await supabase
-    .from('profiles')
+    .from('users')
     .upsert({
       id: userId,
       display_name: displayName,

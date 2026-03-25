@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 
   // 2. Find expired temp profiles ready for cleanup
   const { data: expiredProfiles, error: profilesError } = await supabase
-    .from('profiles')
+    .from('users')
     .select('id, invite_id')
     .eq('is_temporary', true)
     .is('deleted_at', null)
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
 
     // 3. Soft-delete the profile
     await supabase
-      .from('profiles')
+      .from('users')
       .update({ deleted_at: now })
       .eq('id', profile.id);
 

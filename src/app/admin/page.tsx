@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Item, ItemUpdate, UpdateType, Profile } from '@/lib/types';
+import type { Item, ItemUpdate, UpdateType, Role } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import StatusBadge from '@/components/item/StatusBadge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { formatShortDate } from '@/lib/utils';
 
+type UserWithMembership = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  is_temporary: boolean;
+  created_at: string;
+  role_name: string;
+  role_id: string;
+  membership_id: string;
+};
+
 export default function AdminPage() {
   const router = useRouter();
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [users, setUsers] = useState<UserWithMembership[]>([]);
+  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [updates, setUpdates] = useState<(ItemUpdate & { item_name?: string; update_type_name?: string })[]>([]);
   const [updateTypes, setUpdateTypes] = useState<UpdateType[]>([]);
@@ -21,14 +33,30 @@ export default function AdminPage() {
     async function fetchData() {
       const supabase = createClient();
 
-      const [profileRes, itemRes, updateRes, typeRes] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: true }),
+      const [membershipRes, roleRes, itemRes, updateRes, typeRes] = await Promise.all([
+        supabase.from('org_memberships')
+          .select('id, role_id, users!inner(id, display_name, email, is_temporary, created_at), roles!inner(id, name)')
+          .eq('status', 'active')
+          .order('created_at', { ascending: true }),
+        supabase.from('roles').select('*').order('sort_order', { ascending: true }),
         supabase.from('items').select('*').order('name', { ascending: true }),
         supabase.from('item_updates').select('*').order('update_date', { ascending: false }),
         supabase.from('update_types').select('*').order('sort_order', { ascending: true }),
       ]);
 
-      if (profileRes.data) setProfiles(profileRes.data);
+      if (membershipRes.data) {
+        setUsers(membershipRes.data.map((m: any) => ({
+          id: m.users.id,
+          display_name: m.users.display_name,
+          email: m.users.email,
+          is_temporary: m.users.is_temporary,
+          created_at: m.users.created_at,
+          role_name: m.roles.name,
+          role_id: m.role_id,
+          membership_id: m.id,
+        })));
+      }
+      if (roleRes.data) setAvailableRoles(roleRes.data);
       if (itemRes.data) setItems(itemRes.data);
       if (typeRes.data) setUpdateTypes(typeRes.data);
       if (updateRes.data) {
@@ -70,16 +98,19 @@ export default function AdminPage() {
     }
   }
 
-  async function handleRoleChange(profileId: string, newRole: 'admin' | 'editor') {
+  async function handleRoleChange(membershipId: string, newRoleId: string) {
     const supabase = createClient();
     const { error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', profileId);
+      .from('org_memberships')
+      .update({ role_id: newRoleId })
+      .eq('id', membershipId);
 
     if (!error) {
-      setProfiles((prev) =>
-        prev.map((p) => (p.id === profileId ? { ...p, role: newRole } : p))
+      const roleName = availableRoles.find(r => r.id === newRoleId)?.name ?? '';
+      setUsers((prev) =>
+        prev.map((u) => u.membership_id === membershipId
+          ? { ...u, role_id: newRoleId, role_name: roleName }
+          : u)
       );
     }
   }
@@ -110,7 +141,7 @@ export default function AdminPage() {
               ? `Items (${items.length})`
               : tab === 'updates'
               ? `Updates (${updates.length})`
-              : `Users (${profiles.length})`}
+              : `Users (${users.length})`}
           </button>
         ))}
       </div>
@@ -148,25 +179,24 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-sage-light">
-                {profiles.map((p) => (
-                  <tr key={p.id}>
+                {users.map((u) => (
+                  <tr key={u.membership_id}>
                     <td className="px-4 py-3 text-sm text-forest-dark">
-                      {p.display_name || 'Unnamed User'}
+                      {u.display_name || u.email || 'Unnamed User'}
                     </td>
                     <td className="px-4 py-3">
                       <select
-                        value={p.role}
-                        onChange={(e) =>
-                          handleRoleChange(p.id, e.target.value as 'admin' | 'editor')
-                        }
+                        value={u.role_id}
+                        onChange={(e) => handleRoleChange(u.membership_id, e.target.value)}
                         className="input-field w-auto text-sm py-1"
                       >
-                        <option value="editor">Editor</option>
-                        <option value="admin">Admin</option>
+                        {availableRoles.map((role) => (
+                          <option key={role.id} value={role.id}>{role.name}</option>
+                        ))}
                       </select>
                     </td>
                     <td className="px-4 py-3 text-sm text-sage">
-                      {formatShortDate(p.created_at)}
+                      {formatShortDate(u.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right">
                       <span className="text-xs text-sage">—</span>

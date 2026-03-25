@@ -3,6 +3,27 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { generateToken, hashToken } from '@/lib/invites/tokens';
 import { INVITE_LINK_TTL_MS, MAX_ACTIVE_INVITES } from '@/lib/invites/constants';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+async function isOrgAdmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('is_platform_admin')
+    .eq('id', userId)
+    .single();
+
+  if (userRow?.is_platform_admin) return true;
+
+  const { data } = await supabase
+    .from('org_memberships')
+    .select('id, roles!inner(base_role)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .eq('roles.base_role', 'org_admin')
+    .limit(1);
+
+  return (data?.length ?? 0) > 0;
+}
 
 export async function createInvite(opts: {
   displayName: string | null;
@@ -15,13 +36,7 @@ export async function createInvite(opts: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || profile.role !== 'admin') {
+  if (!(await isOrgAdmin(supabase, user.id))) {
     return { error: 'Admin access required' };
   }
 
@@ -66,13 +81,7 @@ export async function getInvites() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!profile || profile.role !== 'admin') {
+  if (!(await isOrgAdmin(supabase, user.id))) {
     return { error: 'Admin access required' };
   }
 
@@ -94,7 +103,7 @@ export async function getInvites() {
   let profileMap: Record<string, string> = {};
   if (claimedIds.length > 0) {
     const { data: profiles } = await service
-      .from('profiles')
+      .from('users')
       .select('id, display_name')
       .in('id', claimedIds);
 
@@ -126,19 +135,13 @@ export async function convertAccount(opts: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!adminProfile || adminProfile.role !== 'admin') {
+  if (!(await isOrgAdmin(supabase, user.id))) {
     return { error: 'Admin access required' };
   }
 
   // Verify target user is temporary and their invite is convertible
   const { data: targetProfile } = await service
-    .from('profiles')
+    .from('users')
     .select('is_temporary, invite_id')
     .eq('id', opts.userId)
     .single();
@@ -169,7 +172,7 @@ export async function convertAccount(opts: {
   }
 
   const { error: profileError } = await service
-    .from('profiles')
+    .from('users')
     .update({
       is_temporary: false,
       session_expires_at: null,
@@ -190,18 +193,12 @@ export async function revokeAccess(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!adminProfile || adminProfile.role !== 'admin') {
+  if (!(await isOrgAdmin(supabase, user.id))) {
     return { error: 'Admin access required' };
   }
 
   const { error } = await service
-    .from('profiles')
+    .from('users')
     .update({ session_expires_at: new Date().toISOString() })
     .eq('id', userId)
     .eq('is_temporary', true);

@@ -22,7 +22,7 @@ export default function ManageLayout({
       if (!user) return;
 
       const { data: profile } = await supabase
-        .from('profiles')
+        .from('users')
         .select('is_temporary, session_expires_at')
         .eq('id', user.id)
         .single();

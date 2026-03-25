@@ -34,7 +34,7 @@ export default function LocationHistory({ itemId, onRevert }: LocationHistoryPro
 
       const creatorIds = Array.from(new Set(historyData.map((h) => h.created_by)));
       const { data: profileData } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*')
         .in('id', creatorIds);
 
