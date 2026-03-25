@@ -38,6 +38,19 @@ export function AdminShell({
   const isPropertyRoute =
     pathname != null && /^\/admin\/properties\/[^/]+/.test(pathname);
 
+  // True when we're on /admin but have a property context (property domain) and are about
+  // to redirect — we suppress the org sidebar during this brief moment.
+  const isPropertyDomainRoot =
+    propertyId != null && propertySlug != null && pathname === '/admin';
+
+  useEffect(() => {
+    // If we're on /admin with a property context (property domain),
+    // redirect to the property admin
+    if (propertyId && propertySlug && pathname === '/admin') {
+      router.replace(`/admin/properties/${propertySlug}`);
+    }
+  }, [propertyId, propertySlug, pathname, router]);
+
   useEffect(() => {
     if (!orgId) return;
     const supabase = createClient();
@@ -75,7 +88,7 @@ export function AdminShell({
 
       {/* Body: sidebar + content */}
       <div className="flex flex-1">
-        {!isPropertyRoute && (
+        {!isPropertyRoute && !isPropertyDomainRoot && (
           <AdminSidebar
             title={orgName}
             items={ORG_NAV_ITEMS}
