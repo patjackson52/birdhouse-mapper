@@ -1,5 +1,5 @@
 -- Migration: 009_properties_and_permissions.sql
--- Phase 2: Properties & Permission Resolution (steps 1-11)
+-- Phase 2: Properties & Permission Resolution (steps 1-18)
 -- Spec: docs/superpowers/specs/2026-03-24-phase2-properties-permissions-design.md
 --
 -- Execution steps in this file:
@@ -14,6 +14,13 @@
 --   9. Populate org config columns from site_config
 --  10. Populate org_id/property_id on all content rows
 --  11. Make org_id/property_id NOT NULL, add FKs
+--  12. Create auto_populate_org_property trigger for content tables
+--  13. Create permission resolution functions
+--  14. Drop all legacy write policies on content tables
+--  15. Create new permission-based RLS policies
+--  16. Drop site_config table
+--  17. Add updated_at triggers for new tables
+--  18. Add indexes
 
 -- ============================================================================
 -- Step 1: Add config columns to orgs
@@ -275,3 +282,494 @@ ALTER TABLE invites ADD CONSTRAINT invites_org_fk
 ALTER TABLE redirects ALTER COLUMN org_id SET NOT NULL;
 ALTER TABLE redirects ADD CONSTRAINT redirects_org_fk
   FOREIGN KEY (org_id) REFERENCES orgs(id) ON DELETE CASCADE;
+
+-- ============================================================================
+-- Step 12: Create auto_populate_org_property trigger for content tables
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION auto_populate_org_property()
+RETURNS trigger AS $$
+BEGIN
+  -- Auto-populate org_id from user's active org if not set
+  IF NEW.org_id IS NULL THEN
+    NEW.org_id := (SELECT last_active_org_id FROM public.users WHERE id = auth.uid());
+  END IF;
+
+  -- Auto-populate property_id from org's default property if not set
+  IF TG_ARGV[0] = 'property_scoped' AND NEW.property_id IS NULL THEN
+    NEW.property_id := (SELECT default_property_id FROM public.orgs WHERE id = NEW.org_id);
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Property-scoped tables
+CREATE TRIGGER items_auto_org_property BEFORE INSERT ON items
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('property_scoped');
+CREATE TRIGGER item_updates_auto_org_property BEFORE INSERT ON item_updates
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('property_scoped');
+CREATE TRIGGER photos_auto_org_property BEFORE INSERT ON photos
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('property_scoped');
+CREATE TRIGGER location_history_auto_org_property BEFORE INSERT ON location_history
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('property_scoped');
+
+-- Org-scoped tables
+CREATE TRIGGER item_types_auto_org BEFORE INSERT ON item_types
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER custom_fields_auto_org BEFORE INSERT ON custom_fields
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER update_types_auto_org BEFORE INSERT ON update_types
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER species_auto_org BEFORE INSERT ON species
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER item_species_auto_org BEFORE INSERT ON item_species
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER update_species_auto_org BEFORE INSERT ON update_species
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER invites_auto_org BEFORE INSERT ON invites
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+CREATE TRIGGER redirects_auto_org BEFORE INSERT ON redirects
+  FOR EACH ROW EXECUTE FUNCTION auto_populate_org_property('org_scoped');
+
+-- ============================================================================
+-- Step 13: Permission resolution functions
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION resolve_property_role_id(p_user_id uuid, p_property_id uuid)
+RETURNS uuid AS $$
+  SELECT COALESCE(
+    -- Level 1: explicit property membership override
+    (SELECT pm.role_id FROM public.property_memberships pm
+     WHERE pm.user_id = p_user_id AND pm.property_id = p_property_id),
+    -- Level 2: inherited from org membership
+    (SELECT om.role_id FROM public.org_memberships om
+     JOIN public.properties p ON p.org_id = om.org_id
+     WHERE om.user_id = p_user_id AND p.id = p_property_id
+       AND om.status = 'active'
+       AND p.is_active = true AND p.deleted_at IS NULL)
+  )
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION check_permission(
+  p_user_id uuid,
+  p_property_id uuid,
+  p_category text,    -- 'items', 'updates', 'tasks', 'attachments', etc.
+  p_action text       -- 'view', 'create', 'edit_any', 'delete', etc.
+)
+RETURNS boolean AS $$
+DECLARE
+  v_role_id uuid;
+  v_permissions jsonb;
+BEGIN
+  -- Level 0: platform admin bypasses everything
+  IF (SELECT is_platform_admin FROM public.users WHERE id = p_user_id) THEN
+    RETURN true;
+  END IF;
+
+  -- Level 1: org_admin bypasses property-level checks
+  IF EXISTS (
+    SELECT 1 FROM public.org_memberships om
+    JOIN public.roles r ON r.id = om.role_id
+    JOIN public.properties p ON p.org_id = om.org_id
+    WHERE om.user_id = p_user_id AND p.id = p_property_id
+      AND om.status = 'active' AND r.base_role = 'org_admin'
+  ) THEN
+    RETURN true;
+  END IF;
+
+  -- Levels 2-3: resolve effective role (property override or org inherited)
+  v_role_id := resolve_property_role_id(p_user_id, p_property_id);
+
+  IF v_role_id IS NULL THEN
+    RETURN false;  -- no access at all
+  END IF;
+
+  -- Look up permission from role's JSONB
+  SELECT permissions INTO v_permissions FROM public.roles WHERE id = v_role_id;
+
+  RETURN COALESCE((v_permissions -> p_category ->> p_action)::boolean, false);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION user_accessible_property_ids(p_user_id uuid)
+RETURNS SETOF uuid AS $$
+BEGIN
+  -- Platform admins: all properties
+  IF (SELECT is_platform_admin FROM public.users WHERE id = p_user_id) THEN
+    RETURN QUERY SELECT id FROM public.properties WHERE deleted_at IS NULL;
+    RETURN;
+  END IF;
+
+  -- Properties in orgs where user has active membership
+  RETURN QUERY
+  SELECT p.id FROM public.properties p
+  JOIN public.org_memberships om ON om.org_id = p.org_id
+  WHERE om.user_id = p_user_id AND om.status = 'active'
+    AND p.deleted_at IS NULL
+
+  UNION
+
+  -- Properties with explicit property_membership
+  SELECT pm.property_id FROM public.property_memberships pm
+  JOIN public.properties p2 ON p2.id = pm.property_id
+  WHERE pm.user_id = p_user_id AND p2.deleted_at IS NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- ============================================================================
+-- Step 14: Drop all legacy write policies on content tables
+-- ============================================================================
+
+-- items
+DROP POLICY IF EXISTS "Public can view items" ON items;
+DROP POLICY IF EXISTS "Authenticated users can insert items" ON items;
+DROP POLICY IF EXISTS "Authenticated users can update items" ON items;
+DROP POLICY IF EXISTS "Admins can delete items" ON items;
+
+-- item_updates
+DROP POLICY IF EXISTS "Public can view item updates" ON item_updates;
+DROP POLICY IF EXISTS "Authenticated users can insert item updates" ON item_updates;
+DROP POLICY IF EXISTS "Authenticated users can update item updates" ON item_updates;
+DROP POLICY IF EXISTS "Admins can delete item updates" ON item_updates;
+
+-- photos
+DROP POLICY IF EXISTS "Public can view photos" ON photos;
+DROP POLICY IF EXISTS "Authenticated users can insert photos" ON photos;
+DROP POLICY IF EXISTS "Authenticated users can update photos" ON photos;
+DROP POLICY IF EXISTS "Admins can delete photos" ON photos;
+
+-- site_config
+DROP POLICY IF EXISTS "Public can view site config" ON site_config;
+DROP POLICY IF EXISTS "Admins can insert site config" ON site_config;
+DROP POLICY IF EXISTS "Admins can update site config" ON site_config;
+DROP POLICY IF EXISTS "Admins can delete site config" ON site_config;
+
+-- item_types
+DROP POLICY IF EXISTS "Public can view item types" ON item_types;
+DROP POLICY IF EXISTS "Admins can insert item types" ON item_types;
+DROP POLICY IF EXISTS "Admins can update item types" ON item_types;
+DROP POLICY IF EXISTS "Admins can delete item types" ON item_types;
+
+-- custom_fields
+DROP POLICY IF EXISTS "Public can view custom fields" ON custom_fields;
+DROP POLICY IF EXISTS "Admins can insert custom fields" ON custom_fields;
+DROP POLICY IF EXISTS "Admins can update custom fields" ON custom_fields;
+DROP POLICY IF EXISTS "Admins can delete custom fields" ON custom_fields;
+
+-- update_types
+DROP POLICY IF EXISTS "Public can view update types" ON update_types;
+DROP POLICY IF EXISTS "Admins can insert update types" ON update_types;
+DROP POLICY IF EXISTS "Admins can update update types" ON update_types;
+DROP POLICY IF EXISTS "Admins can delete update types" ON update_types;
+
+-- invites (keep "Users can view their own claimed invite")
+DROP POLICY IF EXISTS "Admins can view invites" ON invites;
+DROP POLICY IF EXISTS "Admins can create invites" ON invites;
+DROP POLICY IF EXISTS "Admins can update invites" ON invites;
+DROP POLICY IF EXISTS "Admins can delete invites" ON invites;
+
+-- redirects
+DROP POLICY IF EXISTS "Public can view redirects" ON redirects;
+DROP POLICY IF EXISTS "Admins can insert redirects" ON redirects;
+DROP POLICY IF EXISTS "Admins can update redirects" ON redirects;
+DROP POLICY IF EXISTS "Admins can delete redirects" ON redirects;
+
+-- location_history
+DROP POLICY IF EXISTS "Public can view location history" ON location_history;
+DROP POLICY IF EXISTS "Authenticated users can insert location history" ON location_history;
+
+-- species
+DROP POLICY IF EXISTS "Public can view species" ON species;
+DROP POLICY IF EXISTS "Authenticated users can insert species" ON species;
+DROP POLICY IF EXISTS "Authenticated users can update species" ON species;
+DROP POLICY IF EXISTS "Authenticated users can delete species" ON species;
+
+-- item_species
+DROP POLICY IF EXISTS "Public can view item species" ON item_species;
+DROP POLICY IF EXISTS "Authenticated users can insert item species" ON item_species;
+DROP POLICY IF EXISTS "Authenticated users can delete item species" ON item_species;
+
+-- update_species
+DROP POLICY IF EXISTS "Public can view update species" ON update_species;
+DROP POLICY IF EXISTS "Authenticated users can insert update species" ON update_species;
+DROP POLICY IF EXISTS "Authenticated users can delete update species" ON update_species;
+
+-- ============================================================================
+-- Step 15: Create new permission-based RLS policies
+-- ============================================================================
+
+-- Enable RLS on new tables
+ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE property_memberships ENABLE ROW LEVEL SECURITY;
+
+-- properties: org members can read, org admins can manage, platform admins full access
+CREATE POLICY "properties_org_member_read" ON properties FOR SELECT
+  TO authenticated
+  USING (org_id IN (SELECT user_active_org_ids()));
+
+CREATE POLICY "properties_admin_manage" ON properties FOR ALL
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "properties_platform_admin" ON properties FOR ALL
+  TO authenticated
+  USING (is_platform_admin());
+
+-- property_memberships: org members can read, org admins can manage, platform admins full access
+CREATE POLICY "property_memberships_read" ON property_memberships FOR SELECT
+  TO authenticated
+  USING (org_id IN (SELECT user_active_org_ids()));
+
+CREATE POLICY "property_memberships_admin_manage" ON property_memberships FOR ALL
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "property_memberships_platform_admin" ON property_memberships FOR ALL
+  TO authenticated
+  USING (is_platform_admin());
+
+-- items: public read, permission-based writes
+CREATE POLICY "items_public_read" ON items FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "items_insert" ON items FOR INSERT
+  TO authenticated
+  WITH CHECK (check_permission(auth.uid(), property_id, 'items', 'create'));
+
+CREATE POLICY "items_update" ON items FOR UPDATE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'items', 'edit_any'));
+
+CREATE POLICY "items_delete" ON items FOR DELETE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'items', 'delete'));
+
+-- item_updates: public read, permission-based writes (category 'updates')
+CREATE POLICY "item_updates_public_read" ON item_updates FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "item_updates_insert" ON item_updates FOR INSERT
+  TO authenticated
+  WITH CHECK (check_permission(auth.uid(), property_id, 'updates', 'create'));
+
+CREATE POLICY "item_updates_update" ON item_updates FOR UPDATE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'updates', 'edit_any'));
+
+CREATE POLICY "item_updates_delete" ON item_updates FOR DELETE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'updates', 'delete'));
+
+-- photos: public read, permission-based writes (category 'attachments')
+CREATE POLICY "photos_public_read" ON photos FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "photos_insert" ON photos FOR INSERT
+  TO authenticated
+  WITH CHECK (check_permission(auth.uid(), property_id, 'attachments', 'upload'));
+
+CREATE POLICY "photos_update" ON photos FOR UPDATE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'attachments', 'upload'));
+
+CREATE POLICY "photos_delete" ON photos FOR DELETE
+  TO authenticated
+  USING (check_permission(auth.uid(), property_id, 'attachments', 'delete_any'));
+
+-- location_history: public read, insert requires item edit permission (append-only)
+CREATE POLICY "location_history_public_read" ON location_history FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "location_history_insert" ON location_history FOR INSERT
+  TO authenticated
+  WITH CHECK (check_permission(auth.uid(), property_id, 'items', 'edit_any'));
+
+-- item_types: public read, org-admin writes
+CREATE POLICY "item_types_public_read" ON item_types FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "item_types_insert" ON item_types FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "item_types_update" ON item_types FOR UPDATE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "item_types_delete" ON item_types FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- custom_fields: public read, org-admin writes
+CREATE POLICY "custom_fields_public_read" ON custom_fields FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "custom_fields_insert" ON custom_fields FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "custom_fields_update" ON custom_fields FOR UPDATE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "custom_fields_delete" ON custom_fields FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- update_types: public read, org-admin writes
+CREATE POLICY "update_types_public_read" ON update_types FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "update_types_insert" ON update_types FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "update_types_update" ON update_types FOR UPDATE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "update_types_delete" ON update_types FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- species: public read, org-admin writes
+CREATE POLICY "species_public_read" ON species FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "species_insert" ON species FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "species_update" ON species FOR UPDATE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "species_delete" ON species FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- item_species: public read, org-admin writes
+CREATE POLICY "item_species_public_read" ON item_species FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "item_species_insert" ON item_species FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "item_species_delete" ON item_species FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- update_species: public read, org-admin writes
+CREATE POLICY "update_species_public_read" ON update_species FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "update_species_insert" ON update_species FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "update_species_delete" ON update_species FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- invites: keep existing "Users can view their own claimed invite", add admin policies
+CREATE POLICY "invites_admin_read" ON invites FOR SELECT
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "invites_insert" ON invites FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "invites_update" ON invites FOR UPDATE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "invites_delete" ON invites FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- redirects: public read, org-admin writes
+CREATE POLICY "redirects_public_read" ON redirects FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "redirects_insert" ON redirects FOR INSERT
+  TO authenticated
+  WITH CHECK (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "redirects_update" ON redirects FOR UPDATE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "redirects_delete" ON redirects FOR DELETE
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+-- ============================================================================
+-- Step 16: Drop site_config table
+-- ============================================================================
+
+DROP TABLE site_config;
+
+-- ============================================================================
+-- Step 17: Add updated_at triggers for new tables
+-- ============================================================================
+
+CREATE TRIGGER properties_updated_at
+  BEFORE UPDATE ON properties
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER property_memberships_updated_at
+  BEFORE UPDATE ON property_memberships
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================================
+-- Step 18: Add indexes
+-- ============================================================================
+
+-- properties
+CREATE INDEX idx_properties_org ON properties (org_id) WHERE deleted_at IS NULL;
+CREATE INDEX idx_properties_publicly_listed ON properties (is_publicly_listed)
+  WHERE is_publicly_listed = true;
+
+-- property_memberships
+CREATE INDEX idx_property_memberships_user ON property_memberships (user_id);
+CREATE INDEX idx_property_memberships_property ON property_memberships (property_id);
+CREATE UNIQUE INDEX idx_property_memberships_property_user
+  ON property_memberships (property_id, user_id) WHERE user_id IS NOT NULL;
+
+-- Content tables (org_id/property_id indexes)
+CREATE INDEX idx_items_org ON items (org_id);
+CREATE INDEX idx_items_property ON items (property_id);
+CREATE INDEX idx_items_org_property ON items (org_id, property_id);
+
+CREATE INDEX idx_item_updates_org ON item_updates (org_id);
+CREATE INDEX idx_item_updates_property ON item_updates (property_id);
+
+CREATE INDEX idx_photos_org ON photos (org_id);
+CREATE INDEX idx_photos_property ON photos (property_id);
+
+CREATE INDEX idx_location_history_org ON location_history (org_id);
+CREATE INDEX idx_location_history_property ON location_history (property_id);
+
+-- Org-scoped tables
+CREATE INDEX idx_item_types_org ON item_types (org_id);
+CREATE INDEX idx_custom_fields_org ON custom_fields (org_id);
+CREATE INDEX idx_update_types_org ON update_types (org_id);
+CREATE INDEX idx_species_org ON species (org_id);
+CREATE INDEX idx_item_species_org ON item_species (org_id);
+CREATE INDEX idx_update_species_org ON update_species (org_id);
+CREATE INDEX idx_invites_org ON invites (org_id);
+CREATE INDEX idx_redirects_org ON redirects (org_id);
