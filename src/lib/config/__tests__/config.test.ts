@@ -1,29 +1,145 @@
 import { describe, it, expect } from 'vitest';
 import { DEFAULT_CONFIG } from '../defaults';
-import { CONFIG_KEY_MAP, type SiteConfig } from '../types';
+import { buildSiteConfig, type SiteConfig } from '../types';
 
-describe('CONFIG_KEY_MAP', () => {
-  it('maps all DB keys to valid SiteConfig properties', () => {
-    const siteConfigKeys = Object.keys(DEFAULT_CONFIG) as (keyof SiteConfig)[];
+describe('buildSiteConfig', () => {
+  it('maps org and property fields to SiteConfig shape', () => {
+    const org = {
+      name: 'My Bird Project',
+      tagline: 'Tracking nests',
+      logo_url: 'https://example.com/logo.png',
+      favicon_url: 'https://example.com/favicon.ico',
+      theme: { preset: 'ocean' },
+      setup_complete: true,
+    };
+    const property = {
+      description: 'Bainbridge Island',
+      map_default_lat: 47.6,
+      map_default_lng: -122.5,
+      map_default_zoom: 16,
+      map_style: 'satellite',
+      custom_map: null,
+      about_content: '# About us',
+      footer_text: 'Footer here',
+      footer_links: [{ label: 'Home', url: '/' }],
+      custom_nav_items: [{ label: 'Blog', href: '/blog' }],
+      landing_page: null,
+      logo_url: null,
+    };
 
-    for (const [dbKey, propName] of Object.entries(CONFIG_KEY_MAP)) {
-      expect(siteConfigKeys).toContain(propName);
-    }
+    const config = buildSiteConfig(org, property);
+
+    expect(config.siteName).toBe('My Bird Project');
+    expect(config.tagline).toBe('Tracking nests');
+    expect(config.locationName).toBe('Bainbridge Island');
+    expect(config.mapCenter).toEqual({ lat: 47.6, lng: -122.5, zoom: 16 });
+    expect(config.theme).toEqual({ preset: 'ocean' });
+    expect(config.logoUrl).toBe('https://example.com/logo.png');
+    expect(config.faviconUrl).toBe('https://example.com/favicon.ico');
+    expect(config.aboutContent).toBe('# About us');
+    expect(config.footerText).toBe('Footer here');
+    expect(config.footerLinks).toEqual([{ label: 'Home', url: '/' }]);
+    expect(config.customNavItems).toEqual([{ label: 'Blog', href: '/blog' }]);
+    expect(config.mapStyle).toBe('satellite');
+    expect(config.customMap).toBeNull();
+    expect(config.setupComplete).toBe(true);
+    expect(config.landingPage).toBeNull();
   });
 
-  it('covers all SiteConfig properties', () => {
-    const mappedProps = new Set(Object.values(CONFIG_KEY_MAP));
-    const configProps = Object.keys(DEFAULT_CONFIG) as (keyof SiteConfig)[];
+  it('uses property logo_url over org logo_url when present', () => {
+    const org = {
+      name: 'Test',
+      tagline: null,
+      logo_url: 'https://example.com/org-logo.png',
+      favicon_url: null,
+      theme: null,
+      setup_complete: false,
+    };
+    const property = {
+      description: null,
+      map_default_lat: null,
+      map_default_lng: null,
+      map_default_zoom: null,
+      map_style: null,
+      custom_map: null,
+      about_content: null,
+      footer_text: null,
+      footer_links: null,
+      custom_nav_items: null,
+      landing_page: null,
+      logo_url: 'https://example.com/prop-logo.png',
+    };
 
-    for (const prop of configProps) {
-      expect(mappedProps.has(prop)).toBe(true);
-    }
+    const config = buildSiteConfig(org, property);
+    expect(config.logoUrl).toBe('https://example.com/prop-logo.png');
   });
 
-  it('has no duplicate property mappings', () => {
-    const values = Object.values(CONFIG_KEY_MAP);
-    const unique = new Set(values);
-    expect(unique.size).toBe(values.length);
+  it('falls back to org logo_url when property logo_url is null', () => {
+    const org = {
+      name: 'Test',
+      tagline: null,
+      logo_url: 'https://example.com/org-logo.png',
+      favicon_url: null,
+      theme: null,
+      setup_complete: false,
+    };
+    const property = {
+      description: null,
+      map_default_lat: null,
+      map_default_lng: null,
+      map_default_zoom: null,
+      map_style: null,
+      custom_map: null,
+      about_content: null,
+      footer_text: null,
+      footer_links: null,
+      custom_nav_items: null,
+      landing_page: null,
+      logo_url: null,
+    };
+
+    const config = buildSiteConfig(org, property);
+    expect(config.logoUrl).toBe('https://example.com/org-logo.png');
+  });
+
+  it('uses defaults for null org/property fields', () => {
+    const org = {
+      name: 'Minimal',
+      tagline: null,
+      logo_url: null,
+      favicon_url: null,
+      theme: null,
+      setup_complete: false,
+    };
+    const property = {
+      description: null,
+      map_default_lat: null,
+      map_default_lng: null,
+      map_default_zoom: null,
+      map_style: null,
+      custom_map: null,
+      about_content: null,
+      footer_text: null,
+      footer_links: null,
+      custom_nav_items: null,
+      landing_page: null,
+      logo_url: null,
+    };
+
+    const config = buildSiteConfig(org, property);
+
+    expect(config.siteName).toBe('Minimal');
+    expect(config.tagline).toBe('');
+    expect(config.locationName).toBe('');
+    expect(config.mapCenter).toEqual({ lat: 0, lng: 0, zoom: 2 });
+    expect(config.theme).toEqual({ preset: 'forest' });
+    expect(config.aboutContent).toBe('');
+    expect(config.logoUrl).toBeNull();
+    expect(config.faviconUrl).toBeNull();
+    expect(config.footerText).toBe('');
+    expect(config.footerLinks).toEqual([]);
+    expect(config.customNavItems).toEqual([]);
+    expect(config.setupComplete).toBe(false);
   });
 });
 
@@ -54,69 +170,5 @@ describe('DEFAULT_CONFIG', () => {
   it('has a theme with a preset', () => {
     expect(DEFAULT_CONFIG.theme.preset).toBeDefined();
     expect(typeof DEFAULT_CONFIG.theme.preset).toBe('string');
-  });
-});
-
-describe('config parsing', () => {
-  it('correctly builds SiteConfig from DB rows', () => {
-    // Simulate what getConfig() does: start with defaults, overlay DB values
-    const dbRows = [
-      { key: 'site_name', value: 'My Bird Project' },
-      { key: 'tagline', value: 'Tracking nests' },
-      { key: 'map_center', value: { lat: 47.6, lng: -122.5, zoom: 16 } },
-      { key: 'setup_complete', value: true },
-    ];
-
-    const config = { ...DEFAULT_CONFIG };
-    for (const row of dbRows) {
-      const propName = CONFIG_KEY_MAP[row.key];
-      if (propName) {
-        (config as Record<string, unknown>)[propName] = row.value;
-      }
-    }
-
-    expect(config.siteName).toBe('My Bird Project');
-    expect(config.tagline).toBe('Tracking nests');
-    expect(config.mapCenter).toEqual({ lat: 47.6, lng: -122.5, zoom: 16 });
-    expect(config.setupComplete).toBe(true);
-    // Unset values retain defaults
-    expect(config.footerText).toBe('Built with Field Mapper');
-    expect(config.theme).toEqual({ preset: 'forest' });
-  });
-
-  it('ignores unknown DB keys', () => {
-    const dbRows = [
-      { key: 'unknown_key', value: 'should be ignored' },
-      { key: 'site_name', value: 'Valid' },
-    ];
-
-    const config = { ...DEFAULT_CONFIG };
-    for (const row of dbRows) {
-      const propName = CONFIG_KEY_MAP[row.key];
-      if (propName) {
-        (config as Record<string, unknown>)[propName] = row.value;
-      }
-    }
-
-    expect(config.siteName).toBe('Valid');
-    expect((config as Record<string, unknown>)['unknown_key']).toBeUndefined();
-  });
-
-  it('handles null values from DB', () => {
-    const dbRows = [
-      { key: 'logo_url', value: null },
-      { key: 'custom_map', value: null },
-    ];
-
-    const config = { ...DEFAULT_CONFIG };
-    for (const row of dbRows) {
-      const propName = CONFIG_KEY_MAP[row.key];
-      if (propName) {
-        (config as Record<string, unknown>)[propName] = row.value;
-      }
-    }
-
-    expect(config.logoUrl).toBeNull();
-    expect(config.customMap).toBeNull();
   });
 });
