@@ -42,17 +42,22 @@ export async function GET(request: Request) {
         if (user) {
           const { data: membership } = await supabase
             .from('org_memberships')
-            .select('orgs(slug)')
+            .select('orgs(slug, custom_domains(domain, is_primary))')
             .eq('user_id', user.id)
             .eq('status', 'active')
             .limit(1)
             .single();
 
-          const orgSlug = (membership?.orgs as any)?.slug;
-          if (orgSlug) {
+          const org = (membership?.orgs as any);
+          if (org?.slug) {
+            // Prefer primary custom domain, fall back to platform subdomain
+            const primaryDomain = org.custom_domains?.find((d: any) => d.is_primary)?.domain;
+            if (primaryDomain) {
+              return NextResponse.redirect(new URL(`https://${primaryDomain}/manage`));
+            }
             const platformDomain = process.env.PLATFORM_DOMAIN;
             return NextResponse.redirect(
-              new URL(`https://${orgSlug}.${platformDomain}/manage`)
+              new URL(`https://${org.slug}.${platformDomain}/manage`)
             );
           }
         }

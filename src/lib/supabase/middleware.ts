@@ -73,19 +73,25 @@ export async function updateSession(request: NextRequest) {
 
     // Authenticated user on root — route to org or onboard
     if (isRoot && user) {
-      const { data: membership } = await supabase
+      // Find user's org and its primary custom domain (if any)
+      const { data: membership } = await tenantClient
         .from('org_memberships')
-        .select('orgs(slug)')
+        .select('orgs(slug, custom_domains(domain, is_primary))')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .limit(1)
         .single();
 
-      const orgSlug = (membership?.orgs as any)?.slug;
-      if (orgSlug) {
+      const org = (membership?.orgs as any);
+      if (org?.slug) {
+        // Prefer the org's primary custom domain, fall back to platform subdomain
+        const primaryDomain = org.custom_domains?.find((d: any) => d.is_primary)?.domain;
+        if (primaryDomain) {
+          return NextResponse.redirect(new URL(`https://${primaryDomain}/manage`));
+        }
         const platformDomain = process.env.PLATFORM_DOMAIN;
         return NextResponse.redirect(
-          new URL(`https://${orgSlug}.${platformDomain}/manage`)
+          new URL(`https://${org.slug}.${platformDomain}/manage`)
         );
       }
       return NextResponse.redirect(new URL('/onboard', request.url));
