@@ -4,9 +4,11 @@ import { NextResponse } from 'next/server';
 import type { CookieOptions } from '@supabase/ssr';
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/manage';
+  const requestUrl = new URL(request.url);
+  const { origin } = requestUrl;
+  const code = requestUrl.searchParams.get('code');
+  const context = requestUrl.searchParams.get('context');
+  const next = requestUrl.searchParams.get('next') ?? '/manage';
 
   if (code) {
     const cookieStore = cookies();
@@ -32,10 +34,38 @@ export async function GET(request: Request) {
     );
 
     const { error } = await supabase.auth.exchangeCodeForSession(code);
+
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      if (context === 'platform') {
+        // Check if user has an org membership
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: membership } = await supabase
+            .from('org_memberships')
+            .select('orgs(slug)')
+            .eq('user_id', user.id)
+            .eq('status', 'active')
+            .limit(1)
+            .single();
+
+          const orgSlug = (membership?.orgs as any)?.slug;
+          if (orgSlug) {
+            const platformDomain = process.env.PLATFORM_DOMAIN;
+            return NextResponse.redirect(
+              new URL(`https://${orgSlug}.${platformDomain}/manage`)
+            );
+          }
+        }
+        // No org — redirect to onboard
+        return NextResponse.redirect(new URL('/onboard', origin));
+      }
+
+      // Existing behavior — redirect to next (default /manage)
+      return NextResponse.redirect(new URL(next, origin));
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth`);
+  // Error redirect
+  const errorRedirect = context === 'platform' ? '/signin' : '/login';
+  return NextResponse.redirect(new URL(`${errorRedirect}?error=auth`, origin));
 }

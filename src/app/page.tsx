@@ -1,13 +1,24 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { getConfig } from '@/lib/config/server';
 import { LandingRenderer } from '@/components/landing/LandingRenderer';
 import { HomeMapView } from '@/components/map/HomeMapView';
+import { PlatformLanding } from '@/components/platform/PlatformLanding';
 
 interface HomePageProps {
   searchParams: Record<string, string | string[] | undefined>;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
+  const headersList = await headers();
+  const isPlatform = headersList.get('x-tenant-source') === 'platform';
+
+  // Platform context — render platform landing page
+  if (isPlatform) {
+    return <PlatformLanding />;
+  }
+
+  // Org context — existing behavior
   const config = await getConfig();
 
   // Forward any query params to /map (preserves deep links like ?item=123)
