@@ -19,9 +19,21 @@ export async function saveLandingPageConfig(config: LandingPageConfig) {
 
   const supabase = createClient();
 
+  // Get the single org's default property
+  const { data: org, error: orgError } = await supabase
+    .from('orgs')
+    .select('id, default_property_id')
+    .limit(1)
+    .single();
+
+  if (orgError || !org?.default_property_id) {
+    return { error: `Failed to find property: ${orgError?.message ?? 'no default property'}` };
+  }
+
   const { error } = await supabase
-    .from('site_config')
-    .upsert({ key: 'landing_page', value: config as unknown as Record<string, unknown> });
+    .from('properties')
+    .update({ landing_page: config as unknown as Record<string, unknown> })
+    .eq('id', org.default_property_id);
 
   if (error) {
     return { error: error.message };

@@ -1,49 +1,63 @@
 import { unstable_cache, revalidateTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { DEFAULT_CONFIG } from './defaults';
-import { CONFIG_KEY_MAP, type SiteConfig } from './types';
+import { buildSiteConfig, type SiteConfig } from './types';
 import { createDefaultLandingPage } from './landing-defaults';
 
 const CACHE_TAG = 'site-config';
 
 /**
- * Creates a lightweight Supabase client for config reads.
- * Uses anon key only — no cookies needed since site_config has public SELECT.
- * This avoids issues with unstable_cache running outside request context.
+ * Creates a Supabase client with service role for config reads.
+ * Uses service role because orgs/properties have RLS requiring authentication,
+ * but config needs to be readable for public pages (landing, about, map).
  */
 function createConfigClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 }
 
 /**
- * Fetches all site config from the database.
+ * Fetches site config by reading from orgs + properties.
  * Cached for 60 seconds, busted immediately via revalidateTag on admin save.
  */
 export const getConfig = unstable_cache(
   async (): Promise<SiteConfig> => {
     const supabase = createConfigClient();
-    const { data, error } = await supabase
-      .from('site_config')
-      .select('key, value');
 
-    if (error || !data) {
-      console.error('Failed to fetch site config:', error?.message);
+    // Get the first org and its default property
+    const { data: org, error: orgError } = await supabase
+      .from('orgs')
+      .select('name, tagline, logo_url, favicon_url, theme, setup_complete, default_property_id')
+      .limit(1)
+      .single();
+
+    if (orgError || !org) {
+      console.error('Failed to fetch org config:', orgError?.message);
       return { ...DEFAULT_CONFIG };
     }
 
-    const config = { ...DEFAULT_CONFIG };
-
-    for (const row of data) {
-      const propName = CONFIG_KEY_MAP[row.key];
-      if (propName) {
-        (config as Record<string, unknown>)[propName] = row.value;
-      }
+    const propertyId = org.default_property_id;
+    if (!propertyId) {
+      console.error('No default property configured');
+      return { ...DEFAULT_CONFIG };
     }
 
-    // Backfill landing page for existing sites that were set up before this feature
+    const { data: property, error: propError } = await supabase
+      .from('properties')
+      .select('description, map_default_lat, map_default_lng, map_default_zoom, map_style, custom_map, about_content, footer_text, footer_links, custom_nav_items, landing_page, logo_url')
+      .eq('id', propertyId)
+      .single();
+
+    if (propError || !property) {
+      console.error('Failed to fetch property config:', propError?.message);
+      return { ...DEFAULT_CONFIG };
+    }
+
+    const config = buildSiteConfig(org, property);
+
+    // Backfill landing page for existing sites
     if (config.landingPage === null && config.setupComplete) {
       config.landingPage = createDefaultLandingPage(
         config.siteName,

@@ -4,26 +4,98 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
 import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
 
+/** Keys that map to columns on the orgs table */
+const ORG_KEY_TO_COLUMN: Record<string, string> = {
+  site_name: 'name',
+  tagline: 'tagline',
+  logo_url: 'logo_url',
+  favicon_url: 'favicon_url',
+  theme: 'theme',
+};
+
+/** Keys that map to columns on the properties table */
+const PROPERTY_KEY_TO_COLUMN: Record<string, string> = {
+  location_name: 'description',
+  map_style: 'map_style',
+  custom_map: 'custom_map',
+  about_content: 'about_content',
+  footer_text: 'footer_text',
+  footer_links: 'footer_links',
+  custom_nav_items: 'custom_nav_items',
+};
+
 /**
  * Save config during setup. Uses service role client to bypass RLS
  * since no admin account exists yet.
+ * Updates the existing org and default property (created by migration).
  */
 export async function setupSaveConfig(entries: { key: string; value: unknown }[]) {
   const supabase = createServiceClient();
 
+  // Get the single org and default property
+  const { data: org, error: orgLookupError } = await supabase
+    .from('orgs')
+    .select('id, default_property_id')
+    .limit(1)
+    .single();
+
+  if (orgLookupError || !org) {
+    return { error: `Failed to find org: ${orgLookupError?.message ?? 'not found'}` };
+  }
+
+  const orgId = org.id;
+  const propertyId = org.default_property_id;
+
+  // Collect updates for each table
+  const orgUpdates: Record<string, unknown> = {};
+  const propertyUpdates: Record<string, unknown> = {};
+
   for (const entry of entries) {
-    // Supabase sends JS null as SQL NULL, but site_config.value is NOT NULL jsonb.
-    // JSONB null (the literal) is a valid non-null value, so we need to handle this:
-    // when value is JS null, we skip the update (the DB already has jsonb null from seed).
     if (entry.value === null || entry.value === undefined) continue;
 
+    // Handle map_center specially: it splits into separate property columns
+    if (entry.key === 'map_center') {
+      const center = entry.value as { lat: number; lng: number; zoom: number };
+      propertyUpdates['map_default_lat'] = center.lat;
+      propertyUpdates['map_default_lng'] = center.lng;
+      propertyUpdates['map_default_zoom'] = center.zoom;
+      continue;
+    }
+
+    const orgCol = ORG_KEY_TO_COLUMN[entry.key];
+    if (orgCol) {
+      orgUpdates[orgCol] = entry.value;
+      continue;
+    }
+
+    const propCol = PROPERTY_KEY_TO_COLUMN[entry.key];
+    if (propCol) {
+      propertyUpdates[propCol] = entry.value;
+      continue;
+    }
+  }
+
+  // Write org updates
+  if (Object.keys(orgUpdates).length > 0) {
     const { error } = await supabase
-      .from('site_config')
-      .update({ value: entry.value as never })
-      .eq('key', entry.key);
+      .from('orgs')
+      .update(orgUpdates)
+      .eq('id', orgId);
 
     if (error) {
-      return { error: `Failed to save ${entry.key}: ${error.message}` };
+      return { error: `Failed to save org settings: ${error.message}` };
+    }
+  }
+
+  // Write property updates
+  if (Object.keys(propertyUpdates).length > 0 && propertyId) {
+    const { error } = await supabase
+      .from('properties')
+      .update(propertyUpdates)
+      .eq('id', propertyId);
+
+    if (error) {
+      return { error: `Failed to save property settings: ${error.message}` };
     }
   }
 
@@ -178,9 +250,21 @@ export async function setupSaveLandingPage(
   const supabase = createServiceClient();
   const landingPage = createDefaultLandingPage(siteName, tagline, locationName, true);
 
+  // Get the single org's default property
+  const { data: org, error: orgError } = await supabase
+    .from('orgs')
+    .select('id, default_property_id')
+    .limit(1)
+    .single();
+
+  if (orgError || !org?.default_property_id) {
+    return { error: `Failed to find property: ${orgError?.message ?? 'no default property'}` };
+  }
+
   const { error } = await supabase
-    .from('site_config')
-    .upsert({ key: 'landing_page', value: landingPage });
+    .from('properties')
+    .update({ landing_page: landingPage })
+    .eq('id', org.default_property_id);
 
   if (error) {
     return { error: error.message };
@@ -189,15 +273,15 @@ export async function setupSaveLandingPage(
 }
 
 /**
- * Complete setup: set setup_complete to true and clear the setup_done cookie.
+ * Complete setup: set setup_complete to true on the org.
  */
 export async function setupComplete() {
   const supabase = createServiceClient();
 
   const { error } = await supabase
-    .from('site_config')
-    .update({ value: true as never })
-    .eq('key', 'setup_complete');
+    .from('orgs')
+    .update({ setup_complete: true })
+    .limit(1);
 
   if (error) {
     return { error: error.message };
