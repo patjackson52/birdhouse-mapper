@@ -52,6 +52,7 @@ describe('Phase 3 types', () => {
         token: 'abc123', can_view_map: true, can_view_items: true,
         can_submit_forms: false, expires_at: null, use_count: 0,
         last_used_at: null, is_active: true, label: 'Public map embed',
+        allowed_domain_id: null,
         created_by: 'user-1', created_at: '2026-01-01T00:00:00Z',
       };
       expect(aat.is_active).toBe(true);

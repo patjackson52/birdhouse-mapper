@@ -1,5 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient } from '@supabase/supabase-js';
 import { NextResponse, type NextRequest } from 'next/server';
+import { resolveTenant } from '@/lib/tenant/resolve';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -30,6 +32,28 @@ export async function updateSession(request: NextRequest) {
   );
 
   const pathname = request.nextUrl.pathname;
+
+  // --- Tenant resolution (Step 0) ---
+  // Service-role client for tenant resolution (bypasses RLS on custom_domains)
+  const tenantClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  const hostname = request.headers.get('host') ?? 'localhost';
+  const tenant = await resolveTenant(hostname, pathname, tenantClient);
+
+  if (!tenant) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/not-found';
+    return NextResponse.rewrite(url);
+  }
+
+  // Inject tenant context as headers for server components
+  supabaseResponse.headers.set('x-org-id', tenant.orgId);
+  supabaseResponse.headers.set('x-org-slug', tenant.orgSlug);
+  if (tenant.propertyId) supabaseResponse.headers.set('x-property-id', tenant.propertyId);
+  if (tenant.propertySlug) supabaseResponse.headers.set('x-property-slug', tenant.propertySlug);
 
   // --- QR code redirect handler ---
   if (pathname.startsWith('/go/')) {
@@ -64,12 +88,12 @@ export async function updateSession(request: NextRequest) {
     if (!setupDoneCookie) {
       // Check database for setup_complete
       const { data } = await supabase
-        .from('site_config')
-        .select('value')
-        .eq('key', 'setup_complete')
+        .from('orgs')
+        .select('setup_complete')
+        .eq('id', tenant.orgId)
         .single();
 
-      const setupComplete = data?.value === true;
+      const setupComplete = data?.setup_complete === true;
 
       if (setupComplete) {
         // Set cookie so we don't check DB on every request
@@ -157,6 +181,7 @@ export async function updateSession(request: NextRequest) {
         .from('org_memberships')
         .select('id, roles!inner(base_role)')
         .eq('user_id', user.id)
+        .eq('org_id', tenant.orgId)
         .eq('status', 'active')
         .eq('roles.base_role', 'org_admin')
         .limit(1);
