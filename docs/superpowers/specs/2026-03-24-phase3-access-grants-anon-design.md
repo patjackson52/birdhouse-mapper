@@ -804,7 +804,7 @@ it currently updates `profiles.role` directly. After Phase 3, it should manage `
 | Risk | Mitigation |
 |------|------------|
 | Anon SELECT policies are complex (3 OR paths) | Each path independent; SECURITY DEFINER avoids recursion. Tested per-path. |
-| Dropping `users.role` breaks profiles view consumers | Only 2 files reference `profiles` — updated in this phase. |
+| Dropping `users.role` breaks profiles view consumers | 10 files reference `profiles` — all inventoried in Section 11 — updated in this phase. |
 | Storage policy loosens to "org_admin of any org" | Acceptable for single-org. Tighten with metadata later. |
 | `item_ids` JSONB scope on temp grants is expensive | Item-level check in app layer only, not RLS. RLS checks property-level. |
 | `check_anon_access()` on every anon SELECT | STABLE + simple index on `property_access_config.property_id`. Fast. |
