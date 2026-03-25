@@ -86,15 +86,17 @@ export function UserLocationProvider({ children }: { children: ReactNode }) {
     startWatching();
   }, [startWatching]);
 
-  // Start watching on mount
+  // Clean up watcher on unmount — don't auto-start on mount.
+  // Location tracking only begins when startTracking() is called
+  // (e.g., by the map's locate button). This prevents the browser
+  // from prompting for location permission on non-map pages.
   useEffect(() => {
-    startWatching();
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
-  }, [startWatching]);
+  }, []);
 
   return (
     <LocationContext.Provider
