@@ -18,6 +18,10 @@ export type SubscriptionTier = 'free' | 'community' | 'pro' | 'municipal';
 
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled';
 
+export type CustomDomainStatus = 'pending' | 'verifying' | 'active' | 'failed' | 'disabled';
+export type SslStatus = 'pending' | 'issuing' | 'active' | 'failed' | 'expiring_soon';
+export type DomainType = 'subdomain' | 'apex';
+
 // ======================
 // Table interfaces
 // ======================
@@ -193,6 +197,7 @@ export interface Property {
   footer_links: unknown | null;
   custom_nav_items: unknown | null;
   is_publicly_listed: boolean;
+  primary_custom_domain_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -319,8 +324,29 @@ export interface AnonymousAccessToken {
   last_used_at: string | null;
   is_active: boolean;
   label: string | null;
+  allowed_domain_id: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export interface CustomDomain {
+  id: string;
+  org_id: string;
+  property_id: string | null;
+  domain: string;
+  status: CustomDomainStatus;
+  verification_token: string | null;
+  verified_at: string | null;
+  last_checked_at: string | null;
+  ssl_status: SslStatus;
+  ssl_expires_at: string | null;
+  caddy_last_issued: string | null;
+  domain_type: DomainType;
+  is_primary: boolean;
+  redirect_to_domain_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // ======================
@@ -454,6 +480,12 @@ export interface Database {
         Row: AnonymousAccessToken;
         Insert: Omit<AnonymousAccessToken, 'id' | 'created_at'>;
         Update: Partial<Omit<AnonymousAccessToken, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      custom_domains: {
+        Row: CustomDomain;
+        Insert: Omit<CustomDomain, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<CustomDomain, 'id' | 'created_at'>>;
         Relationships: [];
       };
     };
