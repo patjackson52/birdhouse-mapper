@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import AdminPage from '@/app/admin/page';
 
 // Mock next/navigation
@@ -10,156 +10,102 @@ vi.mock('next/navigation', () => ({
     back: vi.fn(),
     refresh: vi.fn(),
   }),
+  usePathname: () => '/admin',
 }));
 
-// Mock Supabase client
-const mockSelect = vi.fn();
-const mockOrder = vi.fn();
-const mockFrom = vi.fn();
-const mockDelete = vi.fn();
-const mockEq = vi.fn();
+// Mock next/link
+vi.mock('next/link', () => ({
+  default: ({ children, href, ...props }: any) => (
+    <a href={href} {...props}>{children}</a>
+  ),
+}));
 
-const mockItems = [
-  {
-    id: 'item-1',
-    name: 'Test Birdbox',
-    status: 'active',
-    latitude: 47.6,
-    longitude: -122.3,
-    item_type_id: 'type-1',
-    custom_field_values: {},
-    created_at: '2026-01-01',
-    updated_at: '2026-01-01',
-    created_by: 'user-1',
-    description: null,
-  },
-  {
-    id: 'item-2',
-    name: 'Another Box',
-    status: 'planned',
-    latitude: 47.7,
-    longitude: -122.4,
-    item_type_id: 'type-1',
-    custom_field_values: {},
-    created_at: '2026-01-02',
-    updated_at: '2026-01-02',
-    created_by: 'user-1',
-    description: null,
-  },
+const mockProperties = [
+  { id: 'prop-1', name: 'Elm Street Preserve', slug: 'elm-street', is_active: true, deleted_at: null, created_at: '2026-01-01' },
+  { id: 'prop-2', name: 'Downtown Parks', slug: 'downtown', is_active: false, deleted_at: null, created_at: '2026-01-02' },
 ];
 
-const mockMemberships = [
-  {
-    id: 'membership-1',
-    role_id: 'role-1',
-    users: { id: 'user-1', display_name: 'Test User', email: 'test@example.com', is_temporary: false, created_at: '2026-01-01' },
-    roles: { id: 'role-1', name: 'Admin' },
-  },
-];
+// Result that also acts as a passthrough chain (for .eq() after count select)
+const countResult = (n: number) => {
+  const r: any = { data: null, count: n, error: null };
+  r.eq = () => r;
+  r.select = () => r;
+  return r;
+};
 
-const mockRoles = [
-  { id: 'role-1', name: 'Admin', org_id: 'org-1', description: null, base_role: 'org_admin', color: null, icon: null, permissions: {}, is_default_new_member_role: false, is_public_role: false, sort_order: 1, created_at: '2026-01-01', updated_at: '2026-01-01' },
-  { id: 'role-2', name: 'Editor', org_id: 'org-1', description: null, base_role: 'editor', color: null, icon: null, permissions: {}, is_default_new_member_role: true, is_public_role: false, sort_order: 2, created_at: '2026-01-01', updated_at: '2026-01-01' },
-];
+const dataResult = (d: any) => {
+  const r: any = { data: d, error: null };
+  r.order = () => r;
+  r.eq = () => r;
+  r.in = () => r;
+  r.select = () => r;
+  r.single = () => Promise.resolve(r);
+  return r;
+};
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     from: (table: string) => {
-      if (table === 'org_memberships') {
+      if (table === 'properties') {
         return {
           select: () => ({
-            eq: () => ({
-              order: () => ({ data: mockMemberships, error: null }),
-            }),
+            order: () => ({ data: mockProperties, error: null }),
+            eq: () => ({ order: () => ({ data: mockProperties, error: null }) }),
           }),
         };
       }
-      if (table === 'roles') {
-        return {
-          select: () => ({
-            order: () => ({ data: mockRoles, error: null }),
-          }),
-        };
+      if (table === 'org_memberships') {
+        return { select: (_c: string, _o?: any) => countResult(5) };
+      }
+      if (table === 'custom_domains') {
+        return { select: (_c: string, _o?: any) => countResult(1) };
+      }
+      if (table === 'orgs') {
+        return dataResult({ name: 'Test Org' });
       }
       if (table === 'items') {
-        return {
-          select: () => ({
-            order: () => ({ data: mockItems, error: null }),
-          }),
-          delete: () => ({
-            eq: () => ({ error: null }),
-          }),
-        };
+        return { select: () => ({ in: () => ({ data: [], error: null }) }) };
       }
-      if (table === 'item_updates') {
-        return {
-          select: () => ({
-            order: () => ({ data: [], error: null }),
-          }),
-          delete: () => ({
-            eq: () => ({ error: null }),
-          }),
-        };
-      }
-      if (table === 'update_types') {
-        return {
-          select: () => ({
-            order: () => ({ data: [], error: null }),
-          }),
-        };
-      }
-      return { select: () => ({ order: () => ({ data: [], error: null }) }) };
+      return dataResult([]);
     },
   }),
 }));
 
-describe('AdminPage', () => {
+describe('AdminPage (Org Dashboard)', () => {
   beforeEach(() => {
     mockPush.mockClear();
   });
 
-  it('renders item rows and navigates to edit on click', async () => {
+  it('renders the org dashboard heading', async () => {
     render(<AdminPage />);
 
-    // Wait for items to load
     await waitFor(() => {
-      expect(screen.getByText('Test Birdbox')).toBeInTheDocument();
+      expect(screen.getByText('Dashboard')).toBeInTheDocument();
     });
-
-    expect(screen.getByText('Another Box')).toBeInTheDocument();
-
-    // Click the first item row
-    const row = screen.getByText('Test Birdbox').closest('tr')!;
-    fireEvent.click(row);
-
-    expect(mockPush).toHaveBeenCalledWith('/manage/edit/item-1');
   });
 
-  it('does not navigate when delete button is clicked', async () => {
+  it('renders property list with status badges', async () => {
     render(<AdminPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Test Birdbox')).toBeInTheDocument();
+      expect(screen.getByText('Elm Street Preserve')).toBeInTheDocument();
+      expect(screen.getByText('Downtown Parks')).toBeInTheDocument();
     });
-
-    // Mock window.confirm to return false (cancel deletion)
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-
-    const deleteButtons = screen.getAllByText('Delete');
-    fireEvent.click(deleteButtons[0]);
-
-    // router.push should NOT have been called
-    expect(mockPush).not.toHaveBeenCalled();
   });
 
-  it('item rows have cursor-pointer class', async () => {
+  it('navigates to property admin on row click', async () => {
+    const { fireEvent } = await import('@testing-library/react');
     render(<AdminPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Test Birdbox')).toBeInTheDocument();
+      expect(screen.getByText('Elm Street Preserve')).toBeInTheDocument();
     });
 
-    const row = screen.getByText('Test Birdbox').closest('tr')!;
-    expect(row).toHaveClass('cursor-pointer');
+    // Click the property row
+    const row = screen.getByText('Elm Street Preserve').closest('[class*="cursor-pointer"]')
+      || screen.getByText('Elm Street Preserve').parentElement;
+    if (row) fireEvent.click(row);
+
+    expect(mockPush).toHaveBeenCalledWith('/admin/properties/elm-street');
   });
 });
