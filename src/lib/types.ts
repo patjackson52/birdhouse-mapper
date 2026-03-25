@@ -12,6 +12,10 @@ export type BaseRole = 'platform_admin' | 'org_admin' | 'org_staff' | 'contribut
 
 export type OrgMembershipStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 
+export type SubscriptionTier = 'free' | 'community' | 'pro' | 'municipal';
+
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'cancelled';
+
 // ======================
 // Table interfaces
 // ======================
@@ -94,8 +98,8 @@ export interface Org {
   name: string;
   slug: string;
   is_active: boolean;
-  subscription_tier: string;
-  subscription_status: string;
+  subscription_tier: SubscriptionTier;
+  subscription_status: SubscriptionStatus;
   primary_custom_domain_id: string | null;
   created_at: string;
   updated_at: string;

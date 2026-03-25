@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type {
   BaseRole,
   OrgMembershipStatus,
+  SubscriptionTier,
+  SubscriptionStatus,
   Org,
   Role,
   RolePermissions,
@@ -43,6 +45,30 @@ describe('Multi-tenant types', () => {
     it('rejects invalid values at compile time', () => {
       // @ts-expect-error - 'banned' is not a valid OrgMembershipStatus
       const _bad: OrgMembershipStatus = 'banned';
+    });
+  });
+
+  describe('SubscriptionTier', () => {
+    it('accepts all valid tier values', () => {
+      const tiers: SubscriptionTier[] = ['free', 'community', 'pro', 'municipal'];
+      expect(tiers).toHaveLength(4);
+    });
+
+    it('rejects invalid values at compile time', () => {
+      // @ts-expect-error - 'enterprise' is not a valid SubscriptionTier
+      const _bad: SubscriptionTier = 'enterprise';
+    });
+  });
+
+  describe('SubscriptionStatus', () => {
+    it('accepts all valid status values', () => {
+      const statuses: SubscriptionStatus[] = ['trialing', 'active', 'past_due', 'cancelled'];
+      expect(statuses).toHaveLength(4);
+    });
+
+    it('rejects invalid values at compile time', () => {
+      // @ts-expect-error - 'expired' is not a valid SubscriptionStatus
+      const _bad: SubscriptionStatus = 'expired';
     });
   });
 

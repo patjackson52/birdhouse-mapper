@@ -87,7 +87,7 @@ CREATE TABLE org_memberships (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id                uuid NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   user_id               uuid REFERENCES users(id) ON DELETE SET NULL,
-  role_id               uuid NOT NULL REFERENCES roles(id),
+  role_id               uuid NOT NULL REFERENCES roles(id),  -- ON DELETE defaults to RESTRICT: roles cannot be deleted while memberships reference them
   status                text NOT NULL DEFAULT 'invited'
                         CHECK (status IN ('invited', 'active', 'suspended', 'revoked')),
   invited_email         text,
@@ -262,6 +262,48 @@ SELECT id, display_name, role, created_at,
 FROM users;
 
 -- ======================
+-- RLS helper functions (SECURITY DEFINER to avoid recursion)
+-- ======================
+-- These functions bypass RLS when querying users/roles/org_memberships,
+-- preventing infinite recursion in self-referencing and cross-table policies.
+
+CREATE OR REPLACE FUNCTION is_platform_admin()
+RETURNS boolean AS $$
+  SELECT COALESCE(
+    (SELECT is_platform_admin FROM public.users WHERE id = auth.uid()),
+    false
+  )
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION user_org_admin_org_ids()
+RETURNS SETOF uuid AS $$
+  SELECT om.org_id FROM public.org_memberships om
+  JOIN public.roles r ON r.id = om.role_id
+  WHERE om.user_id = auth.uid() AND om.status = 'active'
+    AND r.base_role = 'org_admin'
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION user_active_org_ids()
+RETURNS SETOF uuid AS $$
+  SELECT org_id FROM public.org_memberships
+  WHERE user_id = auth.uid() AND status = 'active'
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+CREATE OR REPLACE FUNCTION user_visible_to_org_admin(target_user_id uuid)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.org_memberships om1
+    JOIN public.roles r ON r.id = om1.role_id
+    JOIN public.org_memberships om2 ON om2.org_id = om1.org_id
+    WHERE om1.user_id = auth.uid()
+      AND om1.status = 'active'
+      AND r.base_role = 'org_admin'
+      AND om2.user_id = target_user_id
+      AND om2.status = 'active'
+  )
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- ======================
 -- 12. Drop old RLS policies on users (formerly profiles)
 -- ======================
 -- After ALTER TABLE RENAME, these policies are now on the users table
@@ -274,6 +316,8 @@ DROP POLICY IF EXISTS "Admins can update profiles" ON users;
 -- ======================
 -- 13. Create new RLS policies on users, orgs, roles, org_memberships
 -- ======================
+-- All policies use SECURITY DEFINER helper functions to avoid
+-- self-referencing and cross-table RLS recursion.
 
 -- ── users ──────────────────────────────────────────────────────────
 -- RLS already enabled from 001_initial_schema.sql (survived the rename)
@@ -284,23 +328,11 @@ CREATE POLICY "users_read_own" ON users FOR SELECT
 
 CREATE POLICY "users_platform_admin" ON users FOR ALL
   TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM users u WHERE u.id = auth.uid() AND u.is_platform_admin
-  ));
+  USING (is_platform_admin());
 
 CREATE POLICY "users_org_admin_read" ON users FOR SELECT
   TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM org_memberships om
-    JOIN roles r ON r.id = om.role_id
-    WHERE om.user_id = auth.uid()
-      AND om.status = 'active'
-      AND r.base_role = 'org_admin'
-      AND om.org_id IN (
-        SELECT om2.org_id FROM org_memberships om2
-        WHERE om2.user_id = users.id AND om2.status = 'active'
-      )
-  ));
+  USING (user_visible_to_org_admin(id));
 
 CREATE POLICY "users_update_own" ON users FOR UPDATE
   TO authenticated
@@ -313,25 +345,15 @@ ALTER TABLE orgs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "orgs_member_read" ON orgs FOR SELECT
   TO authenticated
-  USING (id IN (
-    SELECT org_id FROM org_memberships
-    WHERE user_id = auth.uid() AND status = 'active'
-  ));
+  USING (id IN (SELECT * FROM user_active_org_ids()));
 
 CREATE POLICY "orgs_admin_update" ON orgs FOR UPDATE
   TO authenticated
-  USING (id IN (
-    SELECT om.org_id FROM org_memberships om
-    JOIN roles r ON r.id = om.role_id
-    WHERE om.user_id = auth.uid() AND om.status = 'active'
-      AND r.base_role = 'org_admin'
-  ));
+  USING (id IN (SELECT * FROM user_org_admin_org_ids()));
 
 CREATE POLICY "orgs_platform_admin" ON orgs FOR ALL
   TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM users WHERE id = auth.uid() AND is_platform_admin
-  ));
+  USING (is_platform_admin());
 
 -- ── roles ──────────────────────────────────────────────────────────
 
@@ -339,19 +361,11 @@ ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "roles_org_member_read" ON roles FOR SELECT
   TO authenticated
-  USING (org_id IN (
-    SELECT org_id FROM org_memberships
-    WHERE user_id = auth.uid() AND status = 'active'
-  ));
+  USING (org_id IN (SELECT * FROM user_active_org_ids()));
 
 CREATE POLICY "roles_org_admin_manage" ON roles FOR ALL
   TO authenticated
-  USING (org_id IN (
-    SELECT om.org_id FROM org_memberships om
-    JOIN roles r ON r.id = om.role_id
-    WHERE om.user_id = auth.uid() AND om.status = 'active'
-      AND r.base_role = 'org_admin'
-  ));
+  USING (org_id IN (SELECT * FROM user_org_admin_org_ids()));
 
 -- ── org_memberships ────────────────────────────────────────────────
 
@@ -363,21 +377,11 @@ CREATE POLICY "org_memberships_read_own" ON org_memberships FOR SELECT
 
 CREATE POLICY "org_memberships_admin_read" ON org_memberships FOR SELECT
   TO authenticated
-  USING (org_id IN (
-    SELECT om.org_id FROM org_memberships om
-    JOIN roles r ON r.id = om.role_id
-    WHERE om.user_id = auth.uid() AND om.status = 'active'
-      AND r.base_role = 'org_admin'
-  ));
+  USING (org_id IN (SELECT * FROM user_org_admin_org_ids()));
 
 CREATE POLICY "org_memberships_admin_manage" ON org_memberships FOR ALL
   TO authenticated
-  USING (org_id IN (
-    SELECT om.org_id FROM org_memberships om
-    JOIN roles r ON r.id = om.role_id
-    WHERE om.user_id = auth.uid() AND om.status = 'active'
-      AND r.base_role = 'org_admin'
-  ));
+  USING (org_id IN (SELECT * FROM user_org_admin_org_ids()));
 
 -- ======================
 -- 14. Update existing content and storage policies (profiles → users rename)
