@@ -258,10 +258,9 @@ describe('Multi-tenant types', () => {
       expect(_check).toBe(true);
     });
 
-    it('still includes profiles in Tables for compatibility', () => {
-      type ProfilesRow = Database['public']['Tables']['profiles']['Row'];
-      const _check: ProfilesRow extends { id: string; role: string } ? true : never = true;
-      expect(_check).toBe(true);
+    it('does not include profiles (view dropped in Phase 3)', () => {
+      // @ts-expect-error - profiles should be removed from Database
+      type _Dead = Database['public']['Tables']['profiles'];
     });
   });
 });

@@ -4,7 +4,7 @@ import type { Role, RolePermissions } from '../types';
 export interface ResolvedAccess {
   role: Role;
   permissions: RolePermissions;
-  source: 'platform_admin' | 'org_admin' | 'property_membership' | 'org_membership';
+  source: 'platform_admin' | 'org_admin' | 'property_membership' | 'org_membership' | 'temporary_grant';
 }
 
 /**
@@ -77,28 +77,49 @@ export async function resolveUserAccess(
     .eq('status', 'active')
     .single();
 
-  if (!orgMembership) return null;
+  const orgRole = orgMembership ? (orgMembership as any).roles as Role : null;
 
-  const orgRole = (orgMembership as any).roles as Role;
   if (orgRole?.base_role === 'org_admin') {
     return { role: orgRole, permissions: orgRole.permissions, source: 'org_admin' };
   }
 
   // 3. Check property membership override
-  const { data: propMembership } = await supabase
-    .from('property_memberships')
-    .select('role_id, roles(id, name, description, base_role, color, icon, permissions, is_default_new_member_role, is_public_role, is_system_role, sort_order, org_id, created_at, updated_at)')
-    .eq('user_id', userId)
-    .eq('property_id', propertyId)
-    .maybeSingle();
+  if (orgMembership) {
+    const { data: propMembership } = await supabase
+      .from('property_memberships')
+      .select('role_id, roles(id, name, description, base_role, color, icon, permissions, is_default_new_member_role, is_public_role, is_system_role, sort_order, org_id, created_at, updated_at)')
+      .eq('user_id', userId)
+      .eq('property_id', propertyId)
+      .maybeSingle();
 
-  if (propMembership) {
-    const propRole = (propMembership as any).roles as Role;
-    return { role: propRole, permissions: propRole.permissions, source: 'property_membership' };
+    if (propMembership) {
+      const propRole = (propMembership as any).roles as Role;
+      return { role: propRole, permissions: propRole.permissions, source: 'property_membership' };
+    }
   }
 
   // 4. Fall back to org membership role
-  return { role: orgRole, permissions: orgRole.permissions, source: 'org_membership' };
+  if (orgRole) {
+    return { role: orgRole, permissions: orgRole.permissions, source: 'org_membership' };
+  }
+
+  // 5. Check temporary access grants
+  const { data: tempGrant } = await supabase
+    .from('temporary_access_grants')
+    .select('role_id, roles(*)')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .lte('valid_from', new Date().toISOString())
+    .gt('valid_until', new Date().toISOString())
+    .or(`property_id.eq.${propertyId},property_id.is.null`)
+    .maybeSingle();
+
+  if (tempGrant) {
+    const tempRole = (tempGrant as any).roles as Role;
+    return { role: tempRole, permissions: tempRole.permissions, source: 'temporary_grant' };
+  }
+
+  return null;
 }
 
 /** Helper to get the org_admin role for a property's org */

@@ -53,6 +53,17 @@ describe('hasPermission', () => {
     expect(hasPermission(access, 'items', 'delete')).toBe(false);
   });
 
+  it('checks permission JSONB for temporary_grant source', () => {
+    const role = makeRole({ items: { view: true, create: true, edit_any: false, edit_assigned: false, delete: false } });
+    const access: ResolvedAccess = {
+      role,
+      permissions: role.permissions,
+      source: 'temporary_grant',
+    };
+    expect(hasPermission(access, 'items', 'create')).toBe(true);
+    expect(hasPermission(access, 'items', 'delete')).toBe(false);
+  });
+
   it('returns false for unknown category/action', () => {
     const role = makeRole();
     const access: ResolvedAccess = {

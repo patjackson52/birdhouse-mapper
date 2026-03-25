@@ -10,6 +10,8 @@ export type UserRole = 'admin' | 'editor';
 
 export type BaseRole = 'platform_admin' | 'org_admin' | 'org_staff' | 'contributor' | 'viewer' | 'public';
 
+export type TemporaryAccessGrantStatus = 'active' | 'expired' | 'revoked' | 'used';
+
 export type OrgMembershipStatus = 'invited' | 'active' | 'suspended' | 'revoked';
 
 export type SubscriptionTier = 'free' | 'community' | 'pro' | 'municipal';
@@ -263,6 +265,64 @@ export interface LocationHistory {
   property_id: string;
 }
 
+export interface PropertyAccessConfig {
+  id: string;
+  org_id: string;
+  property_id: string;
+  anon_access_enabled: boolean;
+  anon_can_view_map: boolean;
+  anon_can_view_items: boolean;
+  anon_can_view_item_details: boolean;
+  anon_can_submit_forms: boolean;
+  anon_visible_field_keys: string[] | null;
+  password_protected: boolean;
+  password_hash: string | null;
+  allow_embed: boolean;
+  embed_allowed_origins: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemporaryAccessGrant {
+  id: string;
+  org_id: string;
+  property_id: string | null;
+  user_id: string | null;
+  granted_email: string | null;
+  invite_token: string | null;
+  role_id: string;
+  valid_from: string;
+  valid_until: string;
+  is_single_use: boolean;
+  item_ids: string[] | null;
+  status: TemporaryAccessGrantStatus;
+  revoked_at: string | null;
+  revoked_by: string | null;
+  revoke_reason: string | null;
+  first_used_at: string | null;
+  granted_by: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AnonymousAccessToken {
+  id: string;
+  org_id: string;
+  property_id: string;
+  token: string;
+  can_view_map: boolean;
+  can_view_items: boolean;
+  can_submit_forms: boolean;
+  expires_at: string | null;
+  use_count: number;
+  last_used_at: string | null;
+  is_active: boolean;
+  label: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 // ======================
 // Composite types
 // ======================
@@ -316,12 +376,6 @@ export interface Database {
         Row: Photo;
         Insert: Omit<Photo, 'id' | 'created_at'>;
         Update: Partial<Omit<Photo, 'id' | 'created_at'>>;
-        Relationships: [];
-      };
-      profiles: {
-        Row: Profile;
-        Insert: Omit<Profile, 'created_at' | 'is_temporary' | 'session_expires_at' | 'invite_id' | 'deleted_at'> & Partial<Pick<Profile, 'is_temporary' | 'session_expires_at' | 'invite_id' | 'deleted_at'>>;
-        Update: Partial<Omit<Profile, 'id' | 'created_at'>>;
         Relationships: [];
       };
       orgs: {
@@ -382,6 +436,24 @@ export interface Database {
         Row: LocationHistory;
         Insert: Omit<LocationHistory, 'id' | 'created_at'>;
         Update: never;
+        Relationships: [];
+      };
+      property_access_config: {
+        Row: PropertyAccessConfig;
+        Insert: Omit<PropertyAccessConfig, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<PropertyAccessConfig, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      temporary_access_grants: {
+        Row: TemporaryAccessGrant;
+        Insert: Omit<TemporaryAccessGrant, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<TemporaryAccessGrant, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      anonymous_access_tokens: {
+        Row: AnonymousAccessToken;
+        Insert: Omit<AnonymousAccessToken, 'id' | 'created_at'>;
+        Update: Partial<Omit<AnonymousAccessToken, 'id' | 'created_at'>>;
         Relationships: [];
       };
     };
