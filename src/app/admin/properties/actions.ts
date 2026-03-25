@@ -42,10 +42,14 @@ export async function archiveProperty(propertyId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
   const { error } = await supabase
     .from('properties')
     .update({ deleted_at: new Date().toISOString() })
-    .eq('id', propertyId);
+    .eq('id', propertyId)
+    .eq('org_id', tenant.orgId);
 
   if (error) return { error: error.message };
   return { success: true };
@@ -56,10 +60,14 @@ export async function unarchiveProperty(propertyId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
   const { error } = await supabase
     .from('properties')
     .update({ deleted_at: null })
-    .eq('id', propertyId);
+    .eq('id', propertyId)
+    .eq('org_id', tenant.orgId);
 
   if (error) return { error: error.message };
   return { success: true };

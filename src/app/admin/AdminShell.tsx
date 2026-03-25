@@ -55,7 +55,7 @@ export function AdminShell({
     if (!orgId) return;
     const supabase = createClient();
     supabase
-      .from('organizations')
+      .from('orgs')
       .select('name')
       .eq('id', orgId)
       .single()
