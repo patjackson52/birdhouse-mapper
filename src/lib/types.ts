@@ -32,6 +32,8 @@ export interface Item {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  org_id: string;
+  property_id: string;
 }
 
 export interface ItemType {
@@ -41,6 +43,7 @@ export interface ItemType {
   color: string;
   sort_order: number;
   created_at: string;
+  org_id: string;
 }
 
 export interface CustomField {
@@ -51,6 +54,7 @@ export interface CustomField {
   options: string[] | null;
   required: boolean;
   sort_order: number;
+  org_id: string;
 }
 
 export interface UpdateType {
@@ -60,6 +64,7 @@ export interface UpdateType {
   is_global: boolean;
   item_type_id: string | null;
   sort_order: number;
+  org_id: string;
 }
 
 export interface ItemUpdate {
@@ -70,6 +75,8 @@ export interface ItemUpdate {
   update_date: string;
   created_at: string;
   created_by: string | null;
+  org_id: string;
+  property_id: string;
 }
 
 export interface Photo {
@@ -80,6 +87,8 @@ export interface Photo {
   caption: string | null;
   is_primary: boolean;
   created_at: string;
+  org_id: string;
+  property_id: string;
 }
 
 export interface Profile {
@@ -101,6 +110,12 @@ export interface Org {
   subscription_tier: SubscriptionTier;
   subscription_status: SubscriptionStatus;
   primary_custom_domain_id: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  theme: unknown | null;
+  tagline: string | null;
+  setup_complete: boolean;
+  default_property_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -152,6 +167,49 @@ export interface OrgMembership {
   updated_at: string;
 }
 
+export interface Property {
+  id: string;
+  org_id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_active: boolean;
+  map_default_lat: number | null;
+  map_default_lng: number | null;
+  map_default_zoom: number | null;
+  map_style: string | null;
+  map_bounds: unknown | null;
+  custom_map: unknown | null;
+  landing_headline: string | null;
+  landing_body: string | null;
+  landing_image_url: string | null;
+  landing_page: unknown | null;
+  primary_color: string | null;
+  logo_url: string | null;
+  about_content: string | null;
+  footer_text: string | null;
+  footer_links: unknown | null;
+  custom_nav_items: unknown | null;
+  is_publicly_listed: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface PropertyMembership {
+  id: string;
+  org_id: string;
+  property_id: string;
+  user_id: string | null;
+  role_id: string;
+  grant_type: 'explicit' | 'temporary';
+  granted_by: string | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Invite {
   id: string;
   token: string;
@@ -164,12 +222,7 @@ export interface Invite {
   claimed_by: string | null;
   claimed_at: string | null;
   created_at: string;
-}
-
-export interface SiteConfigRow {
-  key: string;
-  value: unknown;
-  updated_at: string;
+  org_id: string;
 }
 
 export interface Species {
@@ -184,16 +237,19 @@ export interface Species {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  org_id: string;
 }
 
 export interface ItemSpecies {
   item_id: string;
   species_id: string;
+  org_id: string;
 }
 
 export interface UpdateSpecies {
   update_id: string;
   species_id: string;
+  org_id: string;
 }
 
 export interface LocationHistory {
@@ -203,6 +259,8 @@ export interface LocationHistory {
   longitude: number;
   created_by: string;
   created_at: string;
+  org_id: string;
+  property_id: string;
 }
 
 // ======================
@@ -290,10 +348,16 @@ export interface Database {
         Update: Partial<Omit<Invite, 'id' | 'created_at'>>;
         Relationships: [];
       };
-      site_config: {
-        Row: SiteConfigRow;
-        Insert: Omit<SiteConfigRow, 'updated_at'>;
-        Update: Partial<Omit<SiteConfigRow, 'key'>>;
+      properties: {
+        Row: Property;
+        Insert: Omit<Property, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Property, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      property_memberships: {
+        Row: PropertyMembership;
+        Insert: Omit<PropertyMembership, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<PropertyMembership, 'id' | 'created_at'>>;
         Relationships: [];
       };
       species: {

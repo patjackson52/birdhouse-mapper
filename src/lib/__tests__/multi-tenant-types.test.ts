@@ -82,6 +82,12 @@ describe('Multi-tenant types', () => {
         subscription_tier: 'free',
         subscription_status: 'trialing',
         primary_custom_domain_id: null,
+        logo_url: null,
+        favicon_url: null,
+        theme: null,
+        tagline: null,
+        setup_complete: false,
+        default_property_id: null,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       };

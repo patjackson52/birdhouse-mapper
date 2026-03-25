@@ -19,6 +19,8 @@ describe('Item type structure', () => {
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
       created_by: null,
+      org_id: 'org-1',
+      property_id: 'prop-1',
     };
     expect(item.name).toBe('Test Box');
     expect(item.custom_field_values['field-1']).toBe('Chickadee');
@@ -44,6 +46,7 @@ describe('ItemType structure', () => {
       color: '#5D7F3A',
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
+      org_id: 'org-1',
     };
     expect(type.icon).toBe('🏠');
   });
@@ -59,6 +62,7 @@ describe('CustomField structure', () => {
       options: ['Chickadee', 'Swallow', 'Wren'],
       required: false,
       sort_order: 0,
+      org_id: 'org-1',
     };
     expect(field.options).toHaveLength(3);
   });
@@ -72,6 +76,7 @@ describe('CustomField structure', () => {
       options: null,
       required: false,
       sort_order: 1,
+      org_id: 'org-1',
     };
     expect(field.options).toBeNull();
   });
@@ -86,6 +91,7 @@ describe('UpdateType structure', () => {
       is_global: true,
       item_type_id: null,
       sort_order: 0,
+      org_id: 'org-1',
     };
     expect(ut.is_global).toBe(true);
     expect(ut.item_type_id).toBeNull();
@@ -99,6 +105,7 @@ describe('UpdateType structure', () => {
       is_global: false,
       item_type_id: 'type-1',
       sort_order: 4,
+      org_id: 'org-1',
     };
     expect(ut.is_global).toBe(false);
     expect(ut.item_type_id).toBe('type-1');
@@ -109,12 +116,12 @@ describe('ItemWithDetails composite type', () => {
   it('assembles a full item with type, updates, photos, and custom fields', () => {
     const itemType: ItemType = {
       id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
-      sort_order: 0, created_at: '2025-01-01T00:00:00Z',
+      sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1',
     };
 
     const updateType: UpdateType = {
       id: 'ut-1', name: 'Observation', icon: '👀',
-      is_global: true, item_type_id: null, sort_order: 0,
+      is_global: true, item_type_id: null, sort_order: 0, org_id: 'org-1',
     };
 
     const detailed: ItemWithDetails = {
@@ -129,6 +136,8 @@ describe('ItemWithDetails composite type', () => {
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
       created_by: null,
+      org_id: 'org-1',
+      property_id: 'prop-1',
       item_type: itemType,
       updates: [
         {
@@ -139,6 +148,8 @@ describe('ItemWithDetails composite type', () => {
           update_date: '2025-04-01',
           created_at: '2025-04-01T00:00:00Z',
           created_by: null,
+          org_id: 'org-1',
+          property_id: 'prop-1',
           update_type: updateType,
           photos: [],
           species: [],
@@ -148,7 +159,7 @@ describe('ItemWithDetails composite type', () => {
       custom_fields: [
         {
           id: 'f1', item_type_id: 'type-1', name: 'Target Species',
-          field_type: 'dropdown', options: ['Chickadee'], required: false, sort_order: 0,
+          field_type: 'dropdown', options: ['Chickadee'], required: false, sort_order: 0, org_id: 'org-1',
         },
       ],
       species: [],
@@ -175,6 +186,7 @@ describe('Species structure', () => {
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
+      org_id: 'org-1',
     };
     expect(species.name).toBe('Black-capped Chickadee');
     expect(species.scientific_name).toBe('Poecile atricapillus');
@@ -193,6 +205,7 @@ describe('Species structure', () => {
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
+      org_id: 'org-1',
     };
     expect(species.scientific_name).toBeNull();
   });
@@ -200,12 +213,12 @@ describe('Species structure', () => {
 
 describe('Join table structures', () => {
   it('accepts ItemSpecies', () => {
-    const is: ItemSpecies = { item_id: 'item-1', species_id: 'sp-1' };
+    const is: ItemSpecies = { item_id: 'item-1', species_id: 'sp-1', org_id: 'org-1' };
     expect(is.item_id).toBe('item-1');
   });
 
   it('accepts UpdateSpecies', () => {
-    const us: UpdateSpecies = { update_id: 'upd-1', species_id: 'sp-1' };
+    const us: UpdateSpecies = { update_id: 'upd-1', species_id: 'sp-1', org_id: 'org-1' };
     expect(us.update_id).toBe('upd-1');
   });
 });
@@ -216,17 +229,17 @@ describe('ItemWithDetails with species', () => {
       id: 'sp-1', name: 'Chickadee', scientific_name: null,
       description: null, photo_path: null, conservation_status: null,
       category: null, external_link: null, sort_order: 0,
-      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
+      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z', org_id: 'org-1',
     };
 
     const itemType: ItemType = {
       id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
-      sort_order: 0, created_at: '2025-01-01T00:00:00Z',
+      sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1',
     };
 
     const updateType: UpdateType = {
       id: 'ut-1', name: 'Observation', icon: '👀',
-      is_global: true, item_type_id: null, sort_order: 0,
+      is_global: true, item_type_id: null, sort_order: 0, org_id: 'org-1',
     };
 
     const detailed: ItemWithDetails = {
@@ -234,12 +247,13 @@ describe('ItemWithDetails with species', () => {
       latitude: 47.6, longitude: -122.5, item_type_id: 'type-1',
       custom_field_values: {}, status: 'active',
       created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
-      created_by: null,
+      created_by: null, org_id: 'org-1', property_id: 'prop-1',
       item_type: itemType,
       updates: [{
         id: 'upd-1', item_id: '123', update_type_id: 'ut-1',
         content: 'Saw a bird', update_date: '2025-04-01',
         created_at: '2025-04-01T00:00:00Z', created_by: null,
+        org_id: 'org-1', property_id: 'prop-1',
         update_type: updateType, photos: [], species: [species],
       }],
       photos: [],
