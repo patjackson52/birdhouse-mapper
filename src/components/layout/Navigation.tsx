@@ -10,6 +10,12 @@ export default function Navigation() {
   const config = useConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Hide org navigation on platform pages — they render their own PlatformNav.
+  // Detect via cookie set by middleware for platform context.
+  if (typeof document !== 'undefined' && document.cookie.includes('x-tenant-source=platform')) {
+    return null;
+  }
+
   const publicLinks = config.landingPage?.enabled
     ? [
         { href: '/', label: 'Home', icon: HomeIcon },
