@@ -93,12 +93,21 @@ export async function updateSession(request: NextRequest) {
 
     // All other platform routes (/, /signup, /signin, /onboard with auth) — pass through
     supabaseResponse.headers.set('x-tenant-source', 'platform');
+    // Set cookie so client components (Navigation) can detect platform context
+    supabaseResponse.cookies.set('x-tenant-source', 'platform', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
     return supabaseResponse;
   }
 
   // Inject tenant context as headers for server components
   supabaseResponse.headers.set('x-org-id', tenant.orgId);
   supabaseResponse.headers.set('x-org-slug', tenant.orgSlug);
+  // Clear platform cookie in org context (in case user navigated from platform domain)
+  supabaseResponse.cookies.delete('x-tenant-source');
   supabaseResponse.headers.set('x-tenant-source', tenant.source);
   if (tenant.propertyId) supabaseResponse.headers.set('x-property-id', tenant.propertyId);
   if (tenant.propertySlug) supabaseResponse.headers.set('x-property-slug', tenant.propertySlug);
