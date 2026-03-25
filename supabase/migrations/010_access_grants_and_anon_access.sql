@@ -251,3 +251,309 @@ BEGIN
     AND p3.deleted_at IS NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+-- =============================================================================
+-- Step 9: DROP all existing public SELECT policies (Section 5)
+-- =============================================================================
+
+-- Property-scoped
+DROP POLICY IF EXISTS "items_public_read" ON items;
+DROP POLICY IF EXISTS "item_updates_public_read" ON item_updates;
+DROP POLICY IF EXISTS "photos_public_read" ON photos;
+DROP POLICY IF EXISTS "location_history_public_read" ON location_history;
+
+-- Org-scoped
+DROP POLICY IF EXISTS "item_types_public_read" ON item_types;
+DROP POLICY IF EXISTS "custom_fields_public_read" ON custom_fields;
+DROP POLICY IF EXISTS "update_types_public_read" ON update_types;
+DROP POLICY IF EXISTS "species_public_read" ON species;
+DROP POLICY IF EXISTS "item_species_public_read" ON item_species;
+DROP POLICY IF EXISTS "update_species_public_read" ON update_species;
+
+-- Other
+DROP POLICY IF EXISTS "redirects_public_read" ON redirects;
+
+-- =============================================================================
+-- Step 10: Create new anon-aware SELECT policies (Section 5, lines 384-465)
+-- =============================================================================
+
+-- items: 3-path anon-aware SELECT
+CREATE POLICY "items_select" ON items FOR SELECT
+  TO anon, authenticated
+  USING (
+    -- Authenticated: user has access to this property
+    (auth.uid() IS NOT NULL AND property_id IN (
+      SELECT user_accessible_property_ids(auth.uid())
+    ))
+    OR
+    -- Anonymous via property_access_config
+    (auth.uid() IS NULL AND check_anon_access(property_id, 'items'))
+    OR
+    -- Anonymous via token
+    (auth.uid() IS NULL
+      AND current_setting('app.access_mode', true) = 'anonymous_token'
+      AND property_id::text = current_setting('app.current_property_id', true)
+      AND EXISTS (
+        SELECT 1 FROM anonymous_access_tokens aat
+        WHERE aat.id::text = current_setting('app.anonymous_token_id', true)
+          AND aat.is_active = true
+          AND aat.can_view_items = true
+          AND (aat.expires_at IS NULL OR aat.expires_at > now())
+      ))
+  );
+
+-- item_updates: 3-path anon-aware SELECT
+CREATE POLICY "item_updates_select" ON item_updates FOR SELECT
+  TO anon, authenticated
+  USING (
+    (auth.uid() IS NOT NULL AND property_id IN (
+      SELECT user_accessible_property_ids(auth.uid())
+    ))
+    OR
+    (auth.uid() IS NULL AND check_anon_access(property_id, 'items'))
+    OR
+    (auth.uid() IS NULL
+      AND current_setting('app.access_mode', true) = 'anonymous_token'
+      AND property_id::text = current_setting('app.current_property_id', true)
+      AND EXISTS (
+        SELECT 1 FROM anonymous_access_tokens aat
+        WHERE aat.id::text = current_setting('app.anonymous_token_id', true)
+          AND aat.is_active = true
+          AND aat.can_view_items = true
+          AND (aat.expires_at IS NULL OR aat.expires_at > now())
+      ))
+  );
+
+-- photos: 3-path anon-aware SELECT
+CREATE POLICY "photos_select" ON photos FOR SELECT
+  TO anon, authenticated
+  USING (
+    (auth.uid() IS NOT NULL AND property_id IN (
+      SELECT user_accessible_property_ids(auth.uid())
+    ))
+    OR
+    (auth.uid() IS NULL AND check_anon_access(property_id, 'items'))
+    OR
+    (auth.uid() IS NULL
+      AND current_setting('app.access_mode', true) = 'anonymous_token'
+      AND property_id::text = current_setting('app.current_property_id', true)
+      AND EXISTS (
+        SELECT 1 FROM anonymous_access_tokens aat
+        WHERE aat.id::text = current_setting('app.anonymous_token_id', true)
+          AND aat.is_active = true
+          AND aat.can_view_items = true
+          AND (aat.expires_at IS NULL OR aat.expires_at > now())
+      ))
+  );
+
+-- location_history: 3-path anon-aware SELECT
+CREATE POLICY "location_history_select" ON location_history FOR SELECT
+  TO anon, authenticated
+  USING (
+    (auth.uid() IS NOT NULL AND property_id IN (
+      SELECT user_accessible_property_ids(auth.uid())
+    ))
+    OR
+    (auth.uid() IS NULL AND check_anon_access(property_id, 'items'))
+    OR
+    (auth.uid() IS NULL
+      AND current_setting('app.access_mode', true) = 'anonymous_token'
+      AND property_id::text = current_setting('app.current_property_id', true)
+      AND EXISTS (
+        SELECT 1 FROM anonymous_access_tokens aat
+        WHERE aat.id::text = current_setting('app.anonymous_token_id', true)
+          AND aat.is_active = true
+          AND aat.can_view_items = true
+          AND (aat.expires_at IS NULL OR aat.expires_at > now())
+      ))
+  );
+
+-- Org-scoped: keep publicly readable (USING true)
+CREATE POLICY "item_types_public_read" ON item_types FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "custom_fields_public_read" ON custom_fields FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "update_types_public_read" ON update_types FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "species_public_read" ON species FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "item_species_public_read" ON item_species FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+CREATE POLICY "update_species_public_read" ON update_species FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+-- redirects: keep publicly readable
+CREATE POLICY "redirects_public_read" ON redirects FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+-- properties: anonymous read for publicly listed properties
+CREATE POLICY "properties_anon_read" ON properties FOR SELECT
+  TO anon, authenticated
+  USING (
+    is_publicly_listed = true
+    AND is_active = true
+    AND deleted_at IS NULL
+    AND EXISTS (
+      SELECT 1 FROM property_access_config pac
+      WHERE pac.property_id = properties.id
+        AND pac.anon_access_enabled = true
+    )
+  );
+
+-- =============================================================================
+-- Step 11: Drop profiles view and users.role column (Section 6, lines 474-482)
+-- =============================================================================
+
+DROP VIEW profiles;
+ALTER TABLE users DROP CONSTRAINT IF EXISTS profiles_role_check;
+ALTER TABLE users DROP COLUMN role;
+
+-- =============================================================================
+-- Step 12: Update storage.objects policies (Section 6, lines 516-540)
+-- =============================================================================
+
+-- item-photos: admin delete
+DROP POLICY IF EXISTS "Admins can delete item photos from storage" ON storage.objects;
+CREATE POLICY "Admins can delete item photos from storage"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'item-photos'
+    AND (is_platform_admin() OR EXISTS (SELECT 1 FROM user_org_admin_org_ids()))
+  );
+
+-- landing-assets: admin upload
+DROP POLICY IF EXISTS "Admin users can upload landing assets" ON storage.objects;
+CREATE POLICY "Admin users can upload landing assets"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (
+    bucket_id = 'landing-assets'
+    AND (is_platform_admin() OR EXISTS (SELECT 1 FROM user_org_admin_org_ids()))
+  );
+
+-- landing-assets: admin delete
+DROP POLICY IF EXISTS "Admin users can delete landing assets" ON storage.objects;
+CREATE POLICY "Admin users can delete landing assets"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (
+    bucket_id = 'landing-assets'
+    AND (is_platform_admin() OR EXISTS (SELECT 1 FROM user_org_admin_org_ids()))
+  );
+
+-- =============================================================================
+-- Step 13: Update handle_new_user() trigger — remove role (Section 6, lines 490-507)
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  IF new.is_anonymous = true THEN
+    RETURN new;
+  END IF;
+
+  INSERT INTO users (id, display_name, email, email_verified, full_name)
+  VALUES (
+    new.id,
+    new.raw_user_meta_data->>'display_name',
+    new.email,
+    (new.email_confirmed_at IS NOT NULL),
+    COALESCE(new.raw_user_meta_data->>'display_name', 'Unknown')
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =============================================================================
+-- Step 14: RLS for new tables (Section 7, lines 550-608)
+-- =============================================================================
+
+-- property_access_config
+ALTER TABLE property_access_config ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "property_access_config_org_read" ON property_access_config FOR SELECT
+  TO authenticated
+  USING (org_id IN (SELECT user_active_org_ids()));
+
+CREATE POLICY "property_access_config_anon_read" ON property_access_config FOR SELECT
+  TO anon
+  USING (anon_access_enabled = true);
+
+CREATE POLICY "property_access_config_admin_manage" ON property_access_config FOR ALL
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "property_access_config_platform_admin" ON property_access_config FOR ALL
+  TO authenticated
+  USING (is_platform_admin());
+
+-- temporary_access_grants
+ALTER TABLE temporary_access_grants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "temp_grants_read_own" ON temporary_access_grants FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
+
+CREATE POLICY "temp_grants_admin_manage" ON temporary_access_grants FOR ALL
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "temp_grants_platform_admin" ON temporary_access_grants FOR ALL
+  TO authenticated
+  USING (is_platform_admin());
+
+-- anonymous_access_tokens
+ALTER TABLE anonymous_access_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "anon_tokens_admin_manage" ON anonymous_access_tokens FOR ALL
+  TO authenticated
+  USING (org_id IN (SELECT user_org_admin_org_ids()));
+
+CREATE POLICY "anon_tokens_platform_admin" ON anonymous_access_tokens FOR ALL
+  TO authenticated
+  USING (is_platform_admin());
+
+-- =============================================================================
+-- Step 15: Indexes (Section 8, lines 618-637)
+-- =============================================================================
+
+-- property_access_config
+CREATE INDEX idx_property_access_config_org ON property_access_config (org_id);
+
+-- temporary_access_grants
+CREATE INDEX idx_temp_grants_user_active ON temporary_access_grants (user_id, status, valid_until)
+  WHERE status = 'active';
+CREATE INDEX idx_temp_grants_property_active ON temporary_access_grants (property_id, status)
+  WHERE status = 'active';
+CREATE INDEX idx_temp_grants_invite_token ON temporary_access_grants (invite_token)
+  WHERE invite_token IS NOT NULL;
+CREATE INDEX idx_temp_grants_status_expiry ON temporary_access_grants (status, valid_until)
+  WHERE status = 'active';
+
+-- anonymous_access_tokens
+CREATE INDEX idx_anon_tokens_token ON anonymous_access_tokens (token)
+  WHERE is_active = true;
+CREATE INDEX idx_anon_tokens_property ON anonymous_access_tokens (property_id)
+  WHERE is_active = true;
+
+-- =============================================================================
+-- Step 16: Triggers (Section 9, lines 645-651)
+-- =============================================================================
+
+CREATE TRIGGER property_access_config_updated_at
+  BEFORE UPDATE ON property_access_config
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+CREATE TRIGGER temporary_access_grants_updated_at
+  BEFORE UPDATE ON temporary_access_grants
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
