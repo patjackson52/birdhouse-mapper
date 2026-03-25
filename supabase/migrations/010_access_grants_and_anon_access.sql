@@ -2,6 +2,9 @@
 -- Spec: docs/superpowers/specs/2026-03-24-phase3-access-grants-anon-design.md
 -- Steps 1-8: Tables, functions, data migration
 
+-- Ensure pgcrypto is available for gen_random_bytes
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 -- =============================================================================
 -- Step 1: CREATE TABLE property_access_config (Section 1, lines 72-97)
 -- =============================================================================
@@ -85,7 +88,7 @@ CREATE TABLE anonymous_access_tokens (
   org_id          uuid NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
   property_id     uuid NOT NULL REFERENCES properties(id) ON DELETE CASCADE,
 
-  token           text UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+  token           text UNIQUE NOT NULL DEFAULT encode(extensions.gen_random_bytes(32), 'hex'),
 
   -- What this token allows (subset of property_access_config)
   can_view_map    boolean NOT NULL DEFAULT true,
@@ -418,6 +421,12 @@ CREATE POLICY "properties_anon_read" ON properties FOR SELECT
 
 DROP VIEW profiles;
 ALTER TABLE users DROP CONSTRAINT IF EXISTS profiles_role_check;
+
+-- Drop storage policies that depend on users.role BEFORE dropping the column
+DROP POLICY IF EXISTS "Admins can delete item photos from storage" ON storage.objects;
+DROP POLICY IF EXISTS "Admin users can upload landing assets" ON storage.objects;
+DROP POLICY IF EXISTS "Admin users can delete landing assets" ON storage.objects;
+
 ALTER TABLE users DROP COLUMN role;
 
 -- =============================================================================
