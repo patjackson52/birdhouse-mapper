@@ -46,7 +46,7 @@ export async function resolveTenant(
   if (platformDomain && !hostname.endsWith(platformDomain) && hostname !== 'localhost') {
     const { data: domain } = await supabase
       .from('custom_domains')
-      .select('org_id, property_id, orgs!inner(slug, is_active), properties(slug, is_active, deleted_at)')
+      .select('org_id, property_id, orgs!custom_domains_org_id_fkey!inner(slug, is_active), properties!custom_domains_property_id_fkey(slug, is_active, deleted_at)')
       .eq('domain', hostname)
       .eq('status', 'active')
       .eq('orgs.is_active', true)
