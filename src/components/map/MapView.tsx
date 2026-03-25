@@ -114,7 +114,7 @@ export default function MapView({
       {/* Fullscreen toggle */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-4 left-4 z-10 bg-white rounded-lg shadow-lg border border-sage-light p-2 text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-3 left-3 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light p-2.5 text-forest-dark hover:bg-sage-light transition-colors"
         aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
       >
@@ -124,7 +124,7 @@ export default function MapView({
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            strokeWidth={2}
+            strokeWidth={2.5}
           >
             <path
               strokeLinecap="round"
@@ -138,12 +138,12 @@ export default function MapView({
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
-            strokeWidth={2}
+            strokeWidth={2.5}
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0 0l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 0l-5 5"
+              d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
             />
           </svg>
         )}

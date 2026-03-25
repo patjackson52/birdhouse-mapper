@@ -36,7 +36,7 @@ export default function GoToFieldButton() {
   const label = config.siteName || config.locationName;
 
   return (
-    <div className="absolute top-4 left-14 z-[1000]">
+    <div className="absolute top-3 left-14 z-[1000]">
       <button
         onClick={() =>
           map.flyTo(
