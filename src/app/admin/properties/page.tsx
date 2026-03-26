@@ -286,6 +286,7 @@ export default function PropertiesPage() {
         />
       ) : (
         <div className="card overflow-hidden p-0">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-sage-light bg-sage-light">
@@ -357,6 +358,7 @@ export default function PropertiesPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

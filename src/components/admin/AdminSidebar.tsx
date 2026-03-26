@@ -12,9 +12,10 @@ interface AdminSidebarProps {
   title: string;
   items: SidebarItem[];
   backLink?: { label: string; href: string };
+  onNavClick?: () => void;
 }
 
-export function AdminSidebar({ title, items, backLink }: AdminSidebarProps) {
+export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -23,6 +24,7 @@ export function AdminSidebar({ title, items, backLink }: AdminSidebarProps) {
         <Link
           href={backLink.href}
           className="block px-4 py-2 text-xs text-golden hover:text-golden/80"
+          onClick={onNavClick}
         >
           ← {backLink.label}
         </Link>
@@ -43,6 +45,7 @@ export function AdminSidebar({ title, items, backLink }: AdminSidebarProps) {
                 ? 'bg-sage-light/50 text-forest-dark font-semibold border-l-3 border-golden'
                 : 'text-gray-600 hover:bg-sage-light/30'
             }`}
+            onClick={onNavClick}
           >
             {item.label}
           </Link>

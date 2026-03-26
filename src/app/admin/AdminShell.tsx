@@ -33,6 +33,7 @@ export function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const [orgName, setOrgName] = useState<string>(orgSlug);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Detect if we're on a property sub-route — the property layout handles its own sidebar
   const isPropertyRoute =
@@ -76,7 +77,22 @@ export function AdminShell({
       {/* Top header bar */}
       <div className="bg-amber-800 text-white flex-shrink-0">
         <div className="px-4 flex items-center justify-between h-12">
-          <span className="text-sm font-medium">Admin</span>
+          <div className="flex items-center gap-3">
+            {!isPropertyRoute && !isPropertyDomainRoot && (
+              <button
+                aria-label="Open menu"
+                onClick={() => setDrawerOpen(true)}
+                className="md:hidden text-white/80 hover:text-white transition-colors"
+              >
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <rect x="2" y="4" width="16" height="2" rx="1" />
+                  <rect x="2" y="9" width="16" height="2" rx="1" />
+                  <rect x="2" y="14" width="16" height="2" rx="1" />
+                </svg>
+              </button>
+            )}
+            <span className="text-sm font-medium">Admin</span>
+          </div>
           <button
             onClick={handleSignOut}
             className="text-white/60 hover:text-white text-sm transition-colors"
@@ -86,13 +102,33 @@ export function AdminShell({
         </div>
       </div>
 
+      {/* Mobile drawer overlay */}
+      {drawerOpen && !isPropertyRoute && !isPropertyDomainRoot && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute left-0 top-0 bottom-0 shadow-xl">
+            <AdminSidebar
+              title={orgName}
+              items={ORG_NAV_ITEMS}
+              onNavClick={() => setDrawerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Body: sidebar + content */}
       <div className="flex flex-1">
         {!isPropertyRoute && !isPropertyDomainRoot && (
-          <AdminSidebar
-            title={orgName}
-            items={ORG_NAV_ITEMS}
-          />
+          <div className="hidden md:block">
+            <AdminSidebar
+              title={orgName}
+              items={ORG_NAV_ITEMS}
+            />
+          </div>
         )}
         <main className="flex-1 overflow-auto">
           {children}
