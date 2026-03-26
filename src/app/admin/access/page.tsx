@@ -488,6 +488,7 @@ export default function AccessPage() {
             />
           ) : (
             <div className="card overflow-hidden p-0">
+              <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-sage-light bg-sage-light">
@@ -513,6 +514,7 @@ export default function AccessPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </section>
@@ -645,6 +647,7 @@ export default function AccessPage() {
               />
             ) : (
               <div className="card overflow-hidden p-0">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-sage-light bg-sage-light">
@@ -714,6 +717,7 @@ export default function AccessPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </section>
@@ -780,7 +784,7 @@ export default function AccessPage() {
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="label">Valid from</label>
                       <input
@@ -845,6 +849,7 @@ export default function AccessPage() {
               />
             ) : (
               <div className="card overflow-hidden p-0">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-sage-light bg-sage-light">
@@ -911,6 +916,7 @@ export default function AccessPage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </section>

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import AdminPage from '@/app/admin/page';
+import { AdminShell } from '@/app/admin/AdminShell';
 
 // Mock next/navigation
 const mockPush = vi.fn();
@@ -70,6 +71,37 @@ vi.mock('@/lib/supabase/client', () => ({
     },
   }),
 }));
+
+describe('AdminShell (mobile layout)', () => {
+  const defaultProps = {
+    orgId: 'org-1',
+    orgSlug: 'test-org',
+    propertyId: null,
+    propertySlug: null,
+    children: <div>content</div>,
+  };
+
+  it('renders hamburger button on mobile (md:hidden present)', () => {
+    render(<AdminShell {...defaultProps} />);
+    const hamburger = screen.getByLabelText('Open menu');
+    expect(hamburger).toBeInTheDocument();
+    expect(hamburger.className).toContain('md:hidden');
+  });
+
+  it('sidebar nav is wrapped in hidden md:block container (hidden on mobile)', () => {
+    render(<AdminShell {...defaultProps} />);
+    // The nav rendered in the desktop layout should be inside a hidden md:block wrapper
+    const nav = screen.getAllByRole('navigation')[0];
+    expect(nav.parentElement?.className).toContain('hidden');
+    expect(nav.parentElement?.className).toContain('md:block');
+  });
+
+  it('sidebar nav is present in the DOM for desktop', () => {
+    render(<AdminShell {...defaultProps} />);
+    const navElements = screen.getAllByRole('navigation');
+    expect(navElements.length).toBeGreaterThan(0);
+  });
+});
 
 describe('AdminPage (Org Dashboard)', () => {
   beforeEach(() => {
