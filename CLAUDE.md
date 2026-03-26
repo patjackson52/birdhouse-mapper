@@ -1,0 +1,33 @@
+# FieldMapper — Claude Code Instructions
+
+## Project Overview
+
+FieldMapper is a multi-tenant field mapping platform for conservation teams. Built with Next.js 14, Supabase, Tailwind CSS, and Leaflet.
+
+## Key Commands
+
+- `npm run dev` — Start dev server
+- `npm run build` — Production build
+- `npm run test` — Run tests (Vitest)
+- `npm run test -- --watch` — Watch mode
+- `npm run type-check` — TypeScript check (`tsc --noEmit`)
+
+## Architecture
+
+- **Multi-tenant:** Tenant resolution via middleware (custom domains, platform subdomains, default org)
+- **Auth:** Supabase Auth (email/password + Google OAuth)
+- **Database:** Supabase PostgreSQL with RLS policies
+- **Server actions:** `'use server'` files for mutations, `createClient()` from `@/lib/supabase/server` (synchronous)
+- **Client queries:** `createClient()` from `@/lib/supabase/client` (synchronous)
+
+## Conventions
+
+- Tailwind CSS with custom classes (`.card`, `.btn-primary`, `.btn-secondary`, `.input-field`, `.label`)
+- No external UI component library — all components custom-built
+- Server actions return `{ success: true }` or `{ error: string }`
+- Tests: Vitest + @testing-library/react, jsdom environment
+
+## Playbooks
+
+When completing issues that affect UI, follow the visual diff screenshot playbook:
+- [Visual Diff Screenshots](docs/playbooks/visual-diff-screenshots.md) — Capture before/after screenshots and include in PR descriptions
