@@ -91,17 +91,17 @@ export default function OrgDashboardPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-10">
-        <Link href="/admin/properties" className="card hover:shadow-md transition-shadow">
+        <Link href="/admin/properties" className="card py-4 md:py-6 hover:shadow-md transition-shadow">
           <p className="text-xs font-medium text-sage uppercase tracking-wide mb-1">Properties</p>
           <p className="text-3xl font-semibold text-forest-dark">{properties.length}</p>
         </Link>
 
-        <Link href="/admin/members" className="card hover:shadow-md transition-shadow">
+        <Link href="/admin/members" className="card py-4 md:py-6 hover:shadow-md transition-shadow">
           <p className="text-xs font-medium text-sage uppercase tracking-wide mb-1">Members</p>
           <p className="text-3xl font-semibold text-forest-dark">{membersCount}</p>
         </Link>
 
-        <Link href="/admin/domains" className="card hover:shadow-md transition-shadow">
+        <Link href="/admin/domains" className="card py-4 md:py-6 hover:shadow-md transition-shadow">
           <p className="text-xs font-medium text-sage uppercase tracking-wide mb-1">Custom Domains</p>
           <p className="text-3xl font-semibold text-forest-dark">{domainsCount}</p>
         </Link>
