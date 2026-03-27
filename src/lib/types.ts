@@ -135,6 +135,7 @@ export interface RolePermissions {
   attachments: { upload: boolean; delete_own: boolean; delete_any: boolean };
   reports: { view: boolean; export: boolean };
   modules: { tasks: boolean; volunteers: boolean; public_forms: boolean; qr_codes: boolean; reports: boolean };
+  ai_context: { view: boolean; download: boolean; upload: boolean; manage: boolean };
 }
 
 export interface Role {
