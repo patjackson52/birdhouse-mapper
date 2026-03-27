@@ -73,7 +73,7 @@ export function AdminShell({
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       {/* Top header bar */}
       <div className="bg-amber-800 text-white flex-shrink-0">
         <div className="px-4 flex items-center justify-between h-12">
