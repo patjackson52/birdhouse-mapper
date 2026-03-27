@@ -1,13 +1,12 @@
-import { test, expect, chromium } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { cleanupTestOrgs, createTestUser, deleteTestUser, createTestClient } from '../../fixtures/seed';
+import { cleanupTestOrgs } from '../../fixtures/seed';
 
 const ORG_PREFIX = 'E2E Onboard';
 const ONBOARD_AUTH = path.join(__dirname, '..', '..', '.auth', 'onboard-user.json');
 const SCREENSHOT_DIR = path.join(__dirname, '..', '..', 'screenshots', 'onboarding');
 
-let testUserId: string;
 
 function screenshotPath(name: string) {
   return path.join(SCREENSHOT_DIR, `${name}.png`);
@@ -37,47 +36,14 @@ async function navigateToStep(page: import('@playwright/test').Page, targetStep:
 }
 
 test.describe('Onboarding Wizard', () => {
-  // Create a fresh user without any org membership
+  // onboard-user.json is created by global-setup using the seeded onboard test user.
+  // We just ensure the screenshot directory exists here.
   test.beforeAll(async () => {
-    const email = `e2e-onboard-${Date.now()}@test.fieldmapper.org`;
-    const password = 'test-onboard-password-123!';
-
-    const user = await createTestUser(email, password);
-    testUserId = user.id;
-
-    // Log in via the login form to capture storage state
-    const browser = await chromium.launch();
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
-    await page.goto(`${baseURL}/login`);
-    await page.locator('#email').fill(email);
-    await page.locator('#password').fill(password);
-    await page.locator('button[type="submit"]').click();
-
-    // New user with no org — login should redirect to /onboard or stay on a page
-    // Wait for navigation to complete (could be /onboard, /map, or wherever)
-    await page.waitForLoadState('networkidle', { timeout: 15000 });
-
-    fs.mkdirSync(path.dirname(ONBOARD_AUTH), { recursive: true });
-    await context.storageState({ path: ONBOARD_AUTH });
-    await context.close();
-    await browser.close();
-
-    // Ensure screenshot directory exists
     fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
   });
 
   test.afterAll(async () => {
     await cleanupTestOrgs(ORG_PREFIX);
-    if (testUserId) {
-      await deleteTestUser(testUserId);
-    }
-    // Clean up auth state file
-    if (fs.existsSync(ONBOARD_AUTH)) {
-      fs.unlinkSync(ONBOARD_AUTH);
-    }
   });
 
   test.use({ storageState: ONBOARD_AUTH });

@@ -49,6 +49,17 @@ async function globalSetup(config: FullConfig) {
   await editorContext.storageState({ path: path.join(AUTH_DIR, 'editor.json') });
   await editorContext.close();
 
+  // Log in as onboard user (fresh user with no org membership)
+  const onboardContext = await browser.newContext();
+  const onboardPage = await onboardContext.newPage();
+  await onboardPage.goto(`${baseURL}/login`);
+  await onboardPage.locator('#email').fill(TEST_DATA.onboard.email);
+  await onboardPage.locator('#password').fill(TEST_DATA.onboard.password);
+  await onboardPage.locator('button[type="submit"]').click();
+  await onboardPage.waitForLoadState('networkidle', { timeout: 15000 });
+  await onboardContext.storageState({ path: path.join(AUTH_DIR, 'onboard-user.json') });
+  await onboardContext.close();
+
   await browser.close();
 }
 

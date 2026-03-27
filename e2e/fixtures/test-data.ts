@@ -19,6 +19,10 @@ export const TEST_DATA = {
     email: process.env.TEST_USER_EDITOR_EMAIL || 'editor@test.fieldmapper.org',
     password: process.env.TEST_USER_EDITOR_PASSWORD || 'test-editor-password',
   },
+  onboard: {
+    email: process.env.TEST_USER_ONBOARD_EMAIL || 'onboard@test.fieldmapper.org',
+    password: process.env.TEST_USER_ONBOARD_PASSWORD || 'test-onboard-password-123',
+  },
   itemTypes: ['Bird Box', 'Trail Marker'],
   entityType: {
     name: 'Species',
