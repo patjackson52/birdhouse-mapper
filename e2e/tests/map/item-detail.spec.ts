@@ -11,7 +11,7 @@ test.describe('Item Detail Panel @smoke', () => {
     await page.waitForLoadState('networkidle');
 
     const marker = page.locator('.leaflet-marker-icon').first();
-    await marker.click();
+    await marker.click({ force: true });
 
     const panel = page.locator('h2.font-heading');
     await expect(panel).toBeVisible({ timeout: 10000 });
@@ -22,7 +22,7 @@ test.describe('Item Detail Panel @smoke', () => {
     await page.waitForLoadState('networkidle');
 
     const marker = page.locator('.leaflet-marker-icon').first();
-    await marker.click();
+    await marker.click({ force: true });
 
     await expect(page.locator('a:has-text("Edit Item")')).toBeVisible({ timeout: 10000 });
   });

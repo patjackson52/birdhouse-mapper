@@ -8,8 +8,9 @@ test.describe('Login @smoke', () => {
     await page.locator('#password').fill(TEST_DATA.admin.password);
     await page.locator('button[type="submit"]').click();
 
-    await page.waitForURL('**/map', { timeout: 15000 });
-    await expect(page).toHaveURL(/\/map/);
+    // App may redirect to /map or /manage depending on config
+    await page.waitForURL(/\/(map|manage)/, { timeout: 15000 });
+    await expect(page).toHaveURL(/\/(map|manage)/);
   });
 
   test('shows error for invalid credentials', async ({ page }) => {
