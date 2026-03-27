@@ -11,6 +11,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
   const slug = params.slug as string;
   const [propertyName, setPropertyName] = useState(slug);
   const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -44,15 +45,60 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
     { label: 'Invites', href: `${base}/invites` },
   ];
 
+  const backLink = { label: 'Back to Org', href: '/admin' };
+
   return (
-    <div className="flex flex-1 -m-6">
-      <AdminSidebar
-        title={propertyName}
-        items={items}
-        backLink={{ label: 'Back to Org', href: '/admin' }}
-      />
-      <div className="flex-1 p-6">
-        {children}
+    <div className="flex flex-col flex-1">
+      {/* Mobile top nav bar */}
+      <div className="md:hidden bg-parchment border-b border-sage-light flex-shrink-0">
+        <div className="px-4 flex items-center h-12 gap-3">
+          <button
+            aria-label="Open menu"
+            onClick={() => setDrawerOpen(true)}
+            className="text-forest-dark/80 hover:text-forest-dark transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="4" width="16" height="2" rx="1" />
+              <rect x="2" y="9" width="16" height="2" rx="1" />
+              <rect x="2" y="14" width="16" height="2" rx="1" />
+            </svg>
+          </button>
+          <span className="text-sm font-medium text-forest-dark">{propertyName}</span>
+        </div>
+      </div>
+
+      {/* Mobile drawer overlay */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setDrawerOpen(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute left-0 top-0 bottom-0 shadow-xl">
+            <AdminSidebar
+              title={propertyName}
+              items={items}
+              backLink={backLink}
+              onNavClick={() => setDrawerOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Body: sidebar + content */}
+      <div className="flex flex-1">
+        {/* Desktop sidebar — hidden on mobile */}
+        <div className="hidden md:block">
+          <AdminSidebar
+            title={propertyName}
+            items={items}
+            backLink={backLink}
+          />
+        </div>
+        <div className="flex-1 p-6">
+          {children}
+        </div>
       </div>
     </div>
   );
