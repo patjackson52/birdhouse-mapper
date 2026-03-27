@@ -14,6 +14,6 @@ test.describe('Entity Types Admin @smoke', () => {
 
   test('shows existing entity types', async ({ page }) => {
     await page.goto(`/admin/properties/${TEST_DATA.property.slug}/entity-types`);
-    await expect(page.locator(`text=${TEST_DATA.entityType.name}`)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(`h3:has-text("${TEST_DATA.entityType.name}")`)).toBeVisible({ timeout: 10000 });
   });
 });
