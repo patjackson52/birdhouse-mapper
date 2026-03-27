@@ -621,3 +621,143 @@ export async function processUrlContext(
     return { error: message };
   }
 }
+
+// ---------------------------------------------------------------------------
+// analyzeFilesForOnboarding  (no DB — purely AI analysis + pre-fill)
+// ---------------------------------------------------------------------------
+
+export async function analyzeFilesForOnboarding(
+  parsedFiles: ParsedFileData[]
+): Promise<
+  | {
+      success: true;
+      preFill: OnboardingPreFill;
+      orgProfile: string;
+      fileSummaries: Array<{ fileName: string; summary: string }>;
+    }
+  | { error: string }
+> {
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated.' };
+  }
+
+  if (parsedFiles.length === 0) {
+    return { error: 'No files to analyze.' };
+  }
+
+  try {
+    const { generateText } = await import('ai');
+    const { anthropic } = await import('@ai-sdk/anthropic');
+
+    // Step 1: Analyze each file individually
+    const fileSummaries: Array<{ fileName: string; summary: string }> = [];
+
+    for (const parsed of parsedFiles) {
+      const systemPrompt = buildFileAnalysisPrompt('');
+      const userMessage = buildFileAnalysisUserMessage(parsed);
+
+      const isImage = parsed.mimeType.startsWith('image/');
+      const isPdf = parsed.mimeType === 'application/pdf';
+
+      let messageContent: string;
+      if (isImage && parsed.base64Content) {
+        messageContent = `${userMessage}\n\nImage data (base64): data:${parsed.mimeType};base64,${parsed.base64Content}`;
+      } else if (isPdf && parsed.base64Content) {
+        messageContent = `${userMessage}\n\nPDF content (base64, mimeType: ${parsed.mimeType}): ${parsed.base64Content}`;
+      } else {
+        messageContent = userMessage;
+      }
+
+      const { text } = await generateText({
+        model: anthropic('claude-sonnet-4-6'),
+        system: systemPrompt,
+        messages: [{ role: 'user', content: messageContent }],
+        maxOutputTokens: 2000,
+      });
+
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]) as FileAnalysisResult;
+        fileSummaries.push({
+          fileName: parsed.fileName,
+          summary: result.content_summary,
+        });
+      } else {
+        fileSummaries.push({
+          fileName: parsed.fileName,
+          summary: '(analysis failed)',
+        });
+      }
+    }
+
+    // Step 2: Synthesize org profile from all summaries
+    const synthPrompt = buildOrgSynthesisPrompt();
+    const summaryBlock = fileSummaries
+      .map(
+        (fs, i) =>
+          `item_id: onboard-${i}\nfilename: ${fs.fileName}\nsummary: ${fs.summary}`
+      )
+      .join('\n\n---\n\n');
+
+    const { text: synthText } = await generateText({
+      model: anthropic('claude-sonnet-4-6'),
+      system: synthPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: `Organization ID: onboarding\n\nFile summaries:\n\n${summaryBlock}`,
+        },
+      ],
+      maxOutputTokens: 1500,
+    });
+
+    let orgProfile = '';
+    const synthMatch = synthText.match(/\{[\s\S]*\}/);
+    if (synthMatch) {
+      const synthResult = JSON.parse(synthMatch[0]) as {
+        org_profile: string;
+      };
+      orgProfile = synthResult.org_profile;
+    }
+
+    // Step 3: Generate pre-fill suggestions
+    const preFillPrompt = buildOnboardingPreFillPrompt();
+    const orgContext = orgProfile
+      ? `<org-context>\n${orgProfile}\n</org-context>`
+      : '';
+
+    const itemDetails = fileSummaries
+      .map((fs) => `- ${fs.fileName}: ${fs.summary}`)
+      .join('\n');
+
+    const { text: preFillText } = await generateText({
+      model: anthropic('claude-sonnet-4-6'),
+      system: preFillPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: `${orgContext}\n\nUploaded files:\n${itemDetails}`,
+        },
+      ],
+      maxOutputTokens: 2000,
+    });
+
+    const preFillMatch = preFillText.match(/\{[\s\S]*\}/);
+    if (!preFillMatch) {
+      return { error: 'Failed to generate onboarding suggestions.' };
+    }
+    const preFill = JSON.parse(preFillMatch[0]) as OnboardingPreFill;
+
+    return { success: true, preFill, orgProfile, fileSummaries };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'Onboarding analysis failed',
+    };
+  }
+}
