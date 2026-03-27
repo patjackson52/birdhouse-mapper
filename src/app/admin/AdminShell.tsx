@@ -18,6 +18,7 @@ const ORG_NAV_ITEMS = [
   { label: 'Properties', href: '/admin/properties' },
   { label: 'Members', href: '/admin/members' },
   { label: 'Roles', href: '/admin/roles' },
+  { label: 'AI Context', href: '/admin/ai-context' },
   { label: 'Domains', href: '/admin/domains' },
   { label: 'Access & Tokens', href: '/admin/access' },
   { label: 'Org Settings', href: '/admin/settings' },
