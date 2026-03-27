@@ -232,30 +232,56 @@ export interface Invite {
   org_id: string;
 }
 
-export interface Species {
+export type EntityFieldType = 'text' | 'number' | 'dropdown' | 'date' | 'url';
+
+export type EntityLinkTarget = 'items' | 'updates';
+
+export interface EntityType {
   id: string;
+  org_id: string;
   name: string;
-  scientific_name: string | null;
-  description: string | null;
-  photo_path: string | null;
-  conservation_status: string | null;
-  category: string | null;
-  external_link: string | null;
+  icon: string;
+  color: string;
+  link_to: EntityLinkTarget[];
   sort_order: number;
   created_at: string;
   updated_at: string;
-  org_id: string;
 }
 
-export interface ItemSpecies {
+export interface EntityTypeField {
+  id: string;
+  entity_type_id: string;
+  org_id: string;
+  name: string;
+  field_type: EntityFieldType;
+  options: string[] | null;
+  required: boolean;
+  sort_order: number;
+}
+
+export interface Entity {
+  id: string;
+  entity_type_id: string;
+  org_id: string;
+  name: string;
+  description: string | null;
+  photo_path: string | null;
+  external_link: string | null;
+  custom_field_values: Record<string, unknown>;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemEntity {
   item_id: string;
-  species_id: string;
+  entity_id: string;
   org_id: string;
 }
 
-export interface UpdateSpecies {
+export interface UpdateEntity {
   update_id: string;
-  species_id: string;
+  entity_id: string;
   org_id: string;
 }
 
@@ -355,10 +381,10 @@ export interface CustomDomain {
 
 export interface ItemWithDetails extends Item {
   item_type: ItemType;
-  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[]; species: Species[] })[];
+  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[]; entities: (Entity & { entity_type: EntityType })[] })[];
   photos: Photo[];
   custom_fields: CustomField[];
-  species: Species[];
+  entities: (Entity & { entity_type: EntityType })[];
 }
 
 // ======================
@@ -440,21 +466,33 @@ export interface Database {
         Update: Partial<Omit<PropertyMembership, 'id' | 'created_at'>>;
         Relationships: [];
       };
-      species: {
-        Row: Species;
-        Insert: Omit<Species, 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Omit<Species, 'id' | 'created_at'>>;
+      entity_types: {
+        Row: EntityType;
+        Insert: Omit<EntityType, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<EntityType, 'id' | 'created_at'>>;
         Relationships: [];
       };
-      item_species: {
-        Row: ItemSpecies;
-        Insert: ItemSpecies;
+      entity_type_fields: {
+        Row: EntityTypeField;
+        Insert: Omit<EntityTypeField, 'id'>;
+        Update: Partial<Omit<EntityTypeField, 'id'>>;
+        Relationships: [];
+      };
+      entities: {
+        Row: Entity;
+        Insert: Omit<Entity, 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Omit<Entity, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      item_entities: {
+        Row: ItemEntity;
+        Insert: ItemEntity;
         Update: never;
         Relationships: [];
       };
-      update_species: {
-        Row: UpdateSpecies;
-        Insert: UpdateSpecies;
+      update_entities: {
+        Row: UpdateEntity;
+        Insert: UpdateEntity;
         Update: never;
         Relationships: [];
       };

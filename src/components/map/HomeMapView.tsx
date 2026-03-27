@@ -10,7 +10,8 @@ import type {
   ItemType,
   CustomField,
   UpdateType,
-  Species,
+  Entity,
+  EntityType,
 } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 import DetailPanel from "@/components/item/DetailPanel";
@@ -97,7 +98,7 @@ function HomeMapViewContent() {
   async function handleMarkerClick(item: Item) {
     const supabase = createClient();
 
-    const [updateRes, photoRes, updateTypeRes, itemSpeciesRes] = await Promise.all([
+    const [updateRes, photoRes, updateTypeRes, itemEntitiesRes] = await Promise.all([
       supabase
         .from("item_updates")
         .select("*")
@@ -109,8 +110,8 @@ function HomeMapViewContent() {
         .select("*")
         .order("sort_order", { ascending: true }),
       supabase
-        .from("item_species")
-        .select("species_id, species(*)")
+        .from("item_entities")
+        .select("entity_id, entities(*, entity_types(*))")
         .eq("item_id", item.id),
     ]);
 
@@ -121,23 +122,23 @@ function HomeMapViewContent() {
       (f) => f.item_type_id === item.item_type_id,
     );
 
-    const itemSpecies: Species[] = ((itemSpeciesRes.data || []) as unknown as { species_id: string; species: Species }[]).map(
-      (row) => row.species
+    const itemEntities: (Entity & { entity_type: EntityType })[] = ((itemEntitiesRes.data || []) as unknown as { entity_id: string; entities: Entity & { entity_types: EntityType } }[]).map(
+      (row) => ({ ...row.entities, entity_type: row.entities.entity_types })
     );
 
-    // Fetch species for each update
+    // Fetch entities for each update
     const updateIds = (updateRes.data || []).map((u) => u.id);
-    const updateSpeciesRes = updateIds.length > 0
+    const updateEntitiesRes = updateIds.length > 0
       ? await supabase
-          .from('update_species')
-          .select('update_id, species_id, species(*)')
+          .from('update_entities')
+          .select('update_id, entity_id, entities(*, entity_types(*))')
           .in('update_id', updateIds)
       : { data: [] };
 
-    const updateSpeciesMap = new Map<string, Species[]>();
-    for (const row of ((updateSpeciesRes.data || []) as unknown as { update_id: string; species_id: string; species: Species }[])) {
-      if (!updateSpeciesMap.has(row.update_id)) updateSpeciesMap.set(row.update_id, []);
-      updateSpeciesMap.get(row.update_id)!.push(row.species);
+    const updateEntitiesMap = new Map<string, (Entity & { entity_type: EntityType })[]>();
+    for (const row of ((updateEntitiesRes.data || []) as unknown as { update_id: string; entity_id: string; entities: Entity & { entity_types: EntityType } }[])) {
+      if (!updateEntitiesMap.has(row.update_id)) updateEntitiesMap.set(row.update_id, []);
+      updateEntitiesMap.get(row.update_id)!.push({ ...row.entities, entity_type: row.entities.entity_types });
     }
 
     setSelectedItem({
@@ -147,11 +148,11 @@ function HomeMapViewContent() {
         ...u,
         update_type: typeMap.get(u.update_type_id)!,
         photos: [],
-        species: updateSpeciesMap.get(u.id) || [],
+        entities: updateEntitiesMap.get(u.id) || [],
       })),
       photos: photoRes.data || [],
       custom_fields: fields,
-      species: itemSpecies,
+      entities: itemEntities,
     });
   }
 

@@ -15,17 +15,17 @@ function createStatsClient() {
 export const fetchLandingStats = unstable_cache(
   async (): Promise<StatItem[] | null> => {
     const supabase = createStatsClient();
-    const [itemRes, typeRes, updateRes, speciesRes] = await Promise.all([
+    const [itemRes, typeRes, updateRes, entitiesRes] = await Promise.all([
       supabase.from('items').select('id', { count: 'exact', head: true }).neq('status', 'removed'),
       supabase.from('item_types').select('id', { count: 'exact', head: true }),
       supabase.from('item_updates').select('id', { count: 'exact', head: true }),
-      supabase.from('species').select('id', { count: 'exact', head: true }),
+      supabase.from('entities').select('id', { count: 'exact', head: true }),
     ]);
     const stats: StatItem[] = [];
     if (itemRes.count && itemRes.count > 0) stats.push({ label: 'Items', value: String(itemRes.count) });
     if (typeRes.count && typeRes.count > 0) stats.push({ label: 'Types', value: String(typeRes.count) });
     if (updateRes.count && updateRes.count > 0) stats.push({ label: 'Updates', value: String(updateRes.count) });
-    if (speciesRes.count && speciesRes.count > 0) stats.push({ label: 'Species', value: String(speciesRes.count) });
+    if (entitiesRes.count && entitiesRes.count > 0) stats.push({ label: 'Entities', value: String(entitiesRes.count) });
     if (stats.length < 2) return null;
     return stats;
   },

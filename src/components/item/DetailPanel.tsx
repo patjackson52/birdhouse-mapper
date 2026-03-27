@@ -85,21 +85,29 @@ export default function DetailPanel({ item, onClose, isAuthenticated }: DetailPa
         </div>
       )}
 
-      {/* Species */}
-      {item.species && item.species.length > 0 && (
-        <div className="mb-3">
-          <span className="text-xs font-medium text-sage uppercase tracking-wide">
-            Species
-          </span>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {item.species.map((s) => (
-              <span key={s.id} className="inline-flex items-center gap-1 bg-forest/10 text-forest-dark text-xs px-2 py-1 rounded-full">
-                {s.name}
-              </span>
-            ))}
+      {/* Entities grouped by type */}
+      {item.entities && item.entities.length > 0 && (() => {
+        const grouped = new Map<string, { type: { id: string; name: string; icon: string }; entities: typeof item.entities }>();
+        for (const e of item.entities) {
+          const key = e.entity_type.id;
+          if (!grouped.has(key)) grouped.set(key, { type: e.entity_type, entities: [] });
+          grouped.get(key)!.entities.push(e);
+        }
+        return Array.from(grouped.values()).map(({ type, entities }) => (
+          <div key={type.id} className="mb-3">
+            <span className="text-xs font-medium text-sage uppercase tracking-wide">
+              {type.icon} {type.name}
+            </span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {entities.map((e) => (
+                <span key={e.id} className="inline-flex items-center gap-1 bg-forest/10 text-forest-dark text-xs px-2 py-1 rounded-full">
+                  {e.name}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        ));
+      })()}
 
       {item.description && (
         <div className="mb-4">

@@ -22,7 +22,7 @@ export default function EditItemPage() {
       item_type_id: string;
       custom_field_values: Record<string, unknown>;
     };
-    initialSpeciesIds: string[];
+    initialEntityIds: Record<string, string[]>;
     initialPhotos: Photo[];
     isAdmin: boolean;
   } | null>(null);
@@ -39,12 +39,12 @@ export default function EditItemPage() {
 
       const [
         { data: item, error: itemError },
-        { data: itemSpecies },
+        { data: itemEntities },
         { data: photos },
         { data: userRow },
       ] = await Promise.all([
         supabase.from('items').select('*').eq('id', id).single(),
-        supabase.from('item_species').select('species_id').eq('item_id', id),
+        supabase.from('item_entities').select('entity_id, entities(entity_type_id)').eq('item_id', id),
         supabase.from('photos').select('*').eq('item_id', id),
         supabase.from('users').select('is_platform_admin').eq('id', user.id).single(),
       ]);
@@ -76,7 +76,14 @@ export default function EditItemPage() {
           item_type_id: item.item_type_id,
           custom_field_values: item.custom_field_values ?? {},
         },
-        initialSpeciesIds: (itemSpecies ?? []).map((s: { species_id: string }) => s.species_id),
+        initialEntityIds: (itemEntities ?? []).reduce((acc: Record<string, string[]>, row: any) => {
+          const typeId = row.entities?.entity_type_id;
+          if (typeId) {
+            if (!acc[typeId]) acc[typeId] = [];
+            acc[typeId].push(row.entity_id);
+          }
+          return acc;
+        }, {} as Record<string, string[]>),
         initialPhotos: photos ?? [],
         isAdmin,
       });
@@ -106,7 +113,7 @@ export default function EditItemPage() {
       <EditItemForm
         itemId={id}
         initialData={formProps.initialData}
-        initialSpeciesIds={formProps.initialSpeciesIds}
+        initialEntityIds={formProps.initialEntityIds}
         initialPhotos={formProps.initialPhotos}
         isAdmin={formProps.isAdmin}
       />

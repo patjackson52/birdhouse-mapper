@@ -9,7 +9,7 @@ import type {
   ItemType,
   CustomField,
   UpdateType,
-  Species,
+  Entity,
   Invite,
   Org,
   Database,
@@ -110,9 +110,9 @@ describe('Phase 2 types', () => {
       expect(true).toBe(true);
     });
 
-    it('Species has org_id', () => {
-      const sp = {} as Species;
-      const _orgId: string = sp.org_id;
+    it('Entity has org_id', () => {
+      const ent = {} as Entity;
+      const _orgId: string = ent.org_id;
       expect(true).toBe(true);
     });
 
