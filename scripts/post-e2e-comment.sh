@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/visual-lib.sh"
+
 RESULTS_FILE="e2e/test-results/results.json"
+RESULTS_DIR="e2e/test-results"
 MARKER="<!-- e2e-results -->"
 
 # Find PR number from the deployment ref
@@ -44,16 +48,22 @@ else
   STATUS_TEXT="$PASSED/$TOTAL passed, $FAILED failed"
 fi
 
-# Check for visual diffs
-VISUAL_DIFFS=$(find e2e/test-results -name '*-diff.png' 2>/dev/null | wc -l | tr -d ' ')
-VISUAL_TOTAL=$(find e2e/test-results -name '*-expected.png' 2>/dev/null | wc -l | tr -d ' ')
-if [ "$VISUAL_DIFFS" -eq 0 ] && [ "$VISUAL_TOTAL" -gt 0 ]; then
-  VISUAL_STATUS="✅ $VISUAL_TOTAL/$VISUAL_TOTAL screenshots match baseline"
-elif [ "$VISUAL_DIFFS" -gt 0 ]; then
-  VISUAL_MATCH=$(( VISUAL_TOTAL - VISUAL_DIFFS ))
-  VISUAL_STATUS="⚠️ $VISUAL_MATCH/$VISUAL_TOTAL match, $VISUAL_DIFFS diff(s) detected"
+# Discover visual diffs
+discover_images "$RESULTS_DIR"
+VISUAL_SUMMARY=$(build_summary)
+
+# Build image table if there are diffs or new screenshots
+IMAGE_BASE_URL="${REPORT_URL:-}/visual-diffs"
+DIFF_TABLE=$(build_diff_table "$IMAGE_BASE_URL")
+
+if [ -n "$DIFF_TABLE" ]; then
+  VISUAL_SECTION="### Visual Regression
+${VISUAL_SUMMARY}
+
+${DIFF_TABLE}"
 else
-  VISUAL_STATUS="No visual tests ran"
+  VISUAL_SECTION="### Visual Regression
+✅ ${VISUAL_SUMMARY}"
 fi
 
 # Build failure table
@@ -83,8 +93,7 @@ BODY="${MARKER}
 **Duration:** ${DURATION_M}m ${DURATION_REMAINDER}s | **Browsers:** Chromium, Firefox, WebKit
 ${FAILURE_TABLE}
 
-### Visual Regression
-${VISUAL_STATUS}
+${VISUAL_SECTION}
 
 📎 [Full Report with Screenshots](${REPORT_URL:-https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID}) · [CI Run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
 

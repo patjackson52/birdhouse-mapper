@@ -131,6 +131,15 @@ jobs:
           TEST_USER_EDITOR_PASSWORD: test-editor-password-123
           CI: true
 
+      - name: Collect visual diff images
+        if: always()
+        run: |
+          mkdir -p playwright-report/visual-diffs
+          find e2e/test-results -name '*-actual.png' -o -name '*-expected.png' -o -name '*-diff.png' | while read f; do
+            cp "$f" playwright-report/visual-diffs/
+          done
+          echo "Collected $(ls playwright-report/visual-diffs/*.png 2>/dev/null | wc -l | tr -d ' ') visual diff images"
+
       - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
