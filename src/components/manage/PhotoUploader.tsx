@@ -54,7 +54,7 @@ export default function PhotoUploader({
             <button
               type="button"
               onClick={() => removePreview(i)}
-              className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/70"
+              className="absolute top-0.5 right-0.5 w-8 h-8 min-w-[44px] min-h-[44px] bg-black/50 text-white rounded-full flex items-center justify-center text-xs hover:bg-black/70"
             >
               &times;
             </button>
