@@ -1,12 +1,15 @@
 name: E2E Tests
 
 on:
-  deployment_status:
+  push:
+    branches: ['*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   playwright:
     name: Playwright E2E
-    if: github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -24,7 +27,7 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium firefox webkit
+        run: npx playwright install --with-deps chromium
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -61,7 +64,6 @@ jobs:
           API_URL="${{ steps.supabase.outputs.api_url }}"
           SERVICE_KEY="${{ steps.supabase.outputs.service_role_key }}"
 
-          # Create test users
           curl -sf -X POST "${API_URL}/auth/v1/admin/users" \
             -H "apikey: ${SERVICE_KEY}" \
             -H "Authorization: Bearer ${SERVICE_KEY}" \
@@ -74,7 +76,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"email":"editor@test.fieldmapper.org","password":"test-editor-password-123","email_confirm":true}'
 
-          # Create public.users rows manually (trigger was disabled)
+          # Create public.users rows manually
           PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
             INSERT INTO public.users (id, email, email_verified, full_name, display_name)
             SELECT id, email, true, email, split_part(email, '@', 1)
@@ -90,17 +92,35 @@ jobs:
 
       - name: Seed test data
         run: |
-          # Delete any auto-created default org
           PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
             DELETE FROM orgs WHERE slug = 'default' AND setup_complete = false;
           "
           PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
             -f supabase/scripts/seed-test-db.sql --quiet
 
-      - name: Run E2E tests
-        run: npx playwright test --config=e2e/playwright.config.ts
+      - name: Build and start app
+        run: npm run build && npm start &
         env:
-          PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+
+      - name: Wait for app to be ready
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf -o /dev/null http://localhost:3000; then
+              echo "App is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "App failed to start"
+          exit 1
+
+      - name: Run E2E tests
+        run: npx playwright test --config=e2e/playwright.config.ts --project=chromium
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
           TEST_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
           TEST_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
           TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
@@ -121,9 +141,11 @@ jobs:
           retention-days: 14
 
       - name: Post PR comment
-        if: always()
-        run: bash scripts/post-e2e-comment.sh
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          if [ -n "$PR_NUMBER" ]; then
+            DEPLOYMENT_REF="${{ github.head_ref }}" DEPLOYMENT_URL="http://localhost:3000" bash scripts/post-e2e-comment.sh
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DEPLOYMENT_URL: ${{ github.event.deployment_status.target_url }}
-          DEPLOYMENT_REF: ${{ github.event.deployment.ref }}
