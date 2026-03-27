@@ -54,7 +54,7 @@ VISUAL_SUMMARY=$(build_summary)
 
 # Build image table if there are diffs or new screenshots
 IMAGE_BASE_URL="${REPORT_URL:-}/visual-diffs"
-DIFF_TABLE=$(build_diff_table "$IMAGE_BASE_URL" "$RESULTS_DIR")
+DIFF_TABLE=$(build_diff_table "$IMAGE_BASE_URL")
 
 if [ -n "$DIFF_TABLE" ]; then
   VISUAL_SECTION="### Visual Regression

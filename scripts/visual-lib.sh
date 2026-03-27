@@ -55,6 +55,9 @@ discover_images() {
       DIFF_NAMES+=("$basename")
     elif [ ! -f "$expected" ]; then
       NEW_NAMES+=("$basename")
+    else
+      # actual + expected exist but no diff = match (test passed comparison)
+      MATCH_COUNT=$((MATCH_COUNT + 1))
     fi
   done
 
@@ -85,10 +88,8 @@ discover_images() {
 
 # Build a markdown table of visual diffs for GitHub comments.
 # Args: $1 = base URL for images (Pages URL or relative path)
-#        $2 = results dir (to locate files)
 build_diff_table() {
   local base_url="$1"
-  local results_dir="$2"
   local table=""
 
   if [ ${#DIFF_NAMES[@]} -eq 0 ] && [ ${#NEW_NAMES[@]} -eq 0 ]; then

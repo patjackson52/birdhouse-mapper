@@ -35,7 +35,7 @@ SUMMARY=$(build_summary)
 # CI mode: post to GitHub issue
 if [ -n "$ISSUE" ] && [ -n "${REPORT_URL:-}" ]; then
   IMAGE_BASE_URL="${REPORT_URL}/visual-diffs"
-  DIFF_TABLE=$(build_diff_table "$IMAGE_BASE_URL" "$RESULTS_DIR")
+  DIFF_TABLE=$(build_diff_table "$IMAGE_BASE_URL")
 
   MARKER="<!-- visual-diff-${TEST_FILTER:-all} -->"
 
