@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual Diff Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: #0d1117; color: #e6edf3; padding: 2rem; }
+    h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+    .summary { margin-bottom: 2rem; padding: 1rem; background: #161b22; border-radius: 8px; border: 1px solid #30363d; }
+    .test-card { margin-bottom: 2rem; border: 1px solid #30363d; border-radius: 8px; overflow: hidden; }
+    .test-card h2 { padding: 0.75rem 1rem; background: #161b22; font-size: 1rem; border-bottom: 1px solid #30363d; }
+    .test-card .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px; font-size: 0.75rem; margin-left: 0.5rem; }
+    .badge-diff { background: #da3633; }
+    .badge-new { background: #1f6feb; }
+    .images { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; padding: 1rem; }
+    .images figure { margin: 0; }
+    .images figcaption { font-size: 0.85rem; color: #8b949e; margin-bottom: 0.5rem; font-weight: 600; }
+    .images img { max-width: 100%; border: 1px solid #30363d; border-radius: 4px; background: #fff; }
+    .no-diffs { padding: 2rem; text-align: center; color: #3fb950; font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <h1>Visual Diff Report</h1>
+  {{CONTENT}}
+</body>
+</html>
