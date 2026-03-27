@@ -1,4 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
+import path from 'path';
+import fs from 'fs';
+
+// Load .env.test.local if it exists
+const envPath = path.join(__dirname, '..', '..', '.env.test.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const [key, ...rest] = trimmed.split('=');
+    if (key && !process.env[key]) {
+      process.env[key] = rest.join('=');
+    }
+  }
+}
 
 /**
  * Service-role Supabase client for test data setup/teardown.

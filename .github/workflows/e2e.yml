@@ -8,7 +8,7 @@ jobs:
     name: Playwright E2E
     if: github.event.deployment_status.state == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -26,17 +26,52 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium firefox webkit
 
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase
+        run: supabase start
+
+      - name: Get Supabase credentials
+        id: supabase
+        run: |
+          echo "api_url=$(supabase status | grep 'API URL' | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+          echo "anon_key=$(supabase status | grep 'anon key' | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+          echo "service_role_key=$(supabase status | grep 'service_role key' | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
+
+      - name: Create test users
+        run: |
+          API_URL="${{ steps.supabase.outputs.api_url }}"
+          SERVICE_KEY="${{ steps.supabase.outputs.service_role_key }}"
+          curl -s -X POST "${API_URL}/auth/v1/admin/users" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@test.fieldmapper.org","password":"test-admin-password-123","email_confirm":true}'
+          curl -s -X POST "${API_URL}/auth/v1/admin/users" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"editor@test.fieldmapper.org","password":"test-editor-password-123","email_confirm":true}'
+
+      - name: Seed test data
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
+            -f supabase/scripts/seed-test-db.sql --quiet
+
       - name: Run E2E tests
         run: npx playwright test --config=e2e/playwright.config.ts
         env:
           PLAYWRIGHT_BASE_URL: ${{ github.event.deployment_status.target_url }}
-          TEST_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
-          TEST_SUPABASE_ANON_KEY: ${{ secrets.TEST_SUPABASE_ANON_KEY }}
-          TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
-          TEST_USER_ADMIN_EMAIL: ${{ secrets.TEST_USER_ADMIN_EMAIL }}
-          TEST_USER_ADMIN_PASSWORD: ${{ secrets.TEST_USER_ADMIN_PASSWORD }}
-          TEST_USER_EDITOR_EMAIL: ${{ secrets.TEST_USER_EDITOR_EMAIL }}
-          TEST_USER_EDITOR_PASSWORD: ${{ secrets.TEST_USER_EDITOR_PASSWORD }}
+          TEST_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
+          TEST_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
+          TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          TEST_USER_ADMIN_EMAIL: admin@test.fieldmapper.org
+          TEST_USER_ADMIN_PASSWORD: test-admin-password-123
+          TEST_USER_EDITOR_EMAIL: editor@test.fieldmapper.org
+          TEST_USER_EDITOR_PASSWORD: test-editor-password-123
           CI: true
 
       - name: Upload test results
