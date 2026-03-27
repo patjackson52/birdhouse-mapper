@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Footer from '@/components/layout/Footer';
@@ -18,6 +18,18 @@ function LoginForm() {
   );
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [existingUser, setExistingUser] = useState<string | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) {
+        setExistingUser(user.email);
+      }
+      setCheckingSession(false);
+    });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -57,6 +69,52 @@ function LoginForm() {
       setGoogleLoading(false);
     }
     // On success the browser navigates away; no need to reset loading state
+  }
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setExistingUser(null);
+  }
+
+  if (checkingSession) {
+    return (
+      <div className="w-full max-w-sm flex justify-center py-16">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+      </div>
+    );
+  }
+
+  if (existingUser) {
+    return (
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <span className="text-4xl mb-3 block">📍</span>
+          <h1 className="font-heading text-2xl font-semibold text-forest-dark">
+            Welcome back
+          </h1>
+        </div>
+        <div className="card space-y-4 text-center">
+          <p className="text-sm text-gray-600">
+            You&apos;re signed in as
+          </p>
+          <p className="font-medium text-gray-900">{existingUser}</p>
+          <a
+            href="/"
+            className="btn-primary w-full block text-center"
+          >
+            Continue to your organization &rarr;
+          </a>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Sign in as a different account
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
