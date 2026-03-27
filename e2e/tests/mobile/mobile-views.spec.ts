@@ -67,7 +67,7 @@ test.describe('Mobile Views', () => {
     test('admin page loads', async ({ page }) => {
       await page.goto('/admin');
       await page.waitForLoadState('networkidle');
-      await expect(page.locator('main, [role="main"], body')).toBeVisible();
+      await expect(page.getByRole('main').first()).toBeVisible();
     });
 
     test('admin page has no horizontal overflow', async ({ page }) => {
