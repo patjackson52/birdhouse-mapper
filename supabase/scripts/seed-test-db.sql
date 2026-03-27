@@ -1,4 +1,17 @@
 -- seed-test-db.sql — Seed data for the field-mapper-test Supabase project
+-- Disable ALL auto-populate triggers during seeding (we provide org_id/property_id explicitly)
+ALTER TABLE item_types DISABLE TRIGGER item_types_auto_org;
+ALTER TABLE custom_fields DISABLE TRIGGER custom_fields_auto_org;
+ALTER TABLE update_types DISABLE TRIGGER update_types_auto_org;
+ALTER TABLE items DISABLE TRIGGER items_auto_org_property;
+ALTER TABLE item_updates DISABLE TRIGGER item_updates_auto_org_property;
+ALTER TABLE photos DISABLE TRIGGER photos_auto_org_property;
+ALTER TABLE location_history DISABLE TRIGGER location_history_auto_org_property;
+ALTER TABLE entity_types DISABLE TRIGGER entity_types_auto_org;
+ALTER TABLE entity_type_fields DISABLE TRIGGER entity_type_fields_auto_org;
+ALTER TABLE entities DISABLE TRIGGER entities_auto_org;
+ALTER TABLE item_entities DISABLE TRIGGER item_entities_auto_org;
+ALTER TABLE update_entities DISABLE TRIGGER update_entities_auto_org;
 -- Run this AFTER all migrations have been applied and AFTER the two test users
 -- have been created via Supabase Auth dashboard:
 --   admin@test.fieldmapper.org
@@ -345,3 +358,17 @@ VALUES (
   '00000000-0000-0000-0000-000000000200',
   true, true, true, true
 );
+
+-- Re-enable all triggers
+ALTER TABLE item_types ENABLE TRIGGER item_types_auto_org;
+ALTER TABLE custom_fields ENABLE TRIGGER custom_fields_auto_org;
+ALTER TABLE update_types ENABLE TRIGGER update_types_auto_org;
+ALTER TABLE items ENABLE TRIGGER items_auto_org_property;
+ALTER TABLE item_updates ENABLE TRIGGER item_updates_auto_org_property;
+ALTER TABLE photos ENABLE TRIGGER photos_auto_org_property;
+ALTER TABLE location_history ENABLE TRIGGER location_history_auto_org_property;
+ALTER TABLE entity_types ENABLE TRIGGER entity_types_auto_org;
+ALTER TABLE entity_type_fields ENABLE TRIGGER entity_type_fields_auto_org;
+ALTER TABLE entities ENABLE TRIGGER entities_auto_org;
+ALTER TABLE item_entities ENABLE TRIGGER item_entities_auto_org;
+ALTER TABLE update_entities ENABLE TRIGGER update_entities_auto_org;

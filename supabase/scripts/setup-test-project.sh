@@ -71,6 +71,22 @@ echo "   API URL:     $API_URL"
 echo "   Anon key:    ${ANON_KEY:0:20}..."
 echo "   Service key:  ${SERVICE_KEY:0:20}..."
 
+# ----- Step 2b: Fix auth.users schema for newer GoTrue -----
+echo ""
+echo ">> Patching auth.users schema for GoTrue compatibility..."
+PGHOST="${PGHOST:-127.0.0.1}"
+PGPORT="${PGPORT:-54322}"
+PGPASSWORD=postgres psql -h "$PGHOST" -p "$PGPORT" -U supabase_auth_admin -d postgres --quiet <<'AUTHSQL'
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS display_name text;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS full_name text;
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_verified boolean DEFAULT false;
+AUTHSQL
+echo "   Done."
+
+# Restart auth to pick up schema changes
+docker restart supabase_auth_birdhouse-mapper > /dev/null 2>&1
+sleep 3
+
 # ----- Step 3: Create test users -----
 echo ""
 echo ">> Creating test users..."
