@@ -86,7 +86,7 @@ ${FAILURE_TABLE}
 ### Visual Regression
 ${VISUAL_STATUS}
 
-📎 [Full Report](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+📎 [Full Report with Screenshots](${REPORT_URL:-https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID}) · [CI Run](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
 
 # Check if we already posted a comment on this PR
 EXISTING=$(gh pr view "$PR_NUMBER" --json comments --jq ".comments[] | select(.body | contains(\"$MARKER\")) | .id" 2>/dev/null | head -1 || echo "")
