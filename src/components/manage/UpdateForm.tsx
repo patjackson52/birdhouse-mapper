@@ -151,7 +151,7 @@ export default function UpdateForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6 pb-24 md:pb-0">
       {error && (
         <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
           {error}
@@ -228,6 +228,7 @@ export default function UpdateForm() {
           onChange={(e) => setContent(e.target.value)}
           className="input-field min-h-[100px]"
           placeholder="What did you observe? What work was done?"
+          enterKeyHint="done"
         />
       </div>
 
@@ -241,17 +242,19 @@ export default function UpdateForm() {
         <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
       </div>
 
-      <div className="flex gap-3">
-        <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? 'Saving...' : 'Add Update'}
-        </button>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="btn-secondary"
-        >
-          Cancel
-        </button>
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-2px_8px_rgba(0,0,0,0.12)] p-4 pb-safe md:relative md:shadow-none md:p-0 md:bg-transparent">
+        <div className="flex gap-3">
+          <button type="submit" disabled={saving} className="btn-primary">
+            {saving ? 'Saving...' : 'Add Update'}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="btn-secondary"
+          >
+            Cancel
+          </button>
+        </div>
       </div>
     </form>
   );

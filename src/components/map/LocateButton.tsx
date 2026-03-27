@@ -31,7 +31,7 @@ export default function LocateButton({ onLocate }: LocateButtonProps) {
     <>
       <button
         onClick={handleClick}
-        className="absolute bottom-20 md:bottom-6 right-4 z-10 bg-white rounded-lg shadow-lg border border-sage-light p-2.5 text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute bottom-20 md:bottom-6 right-4 z-10 bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
         aria-label="Locate me"
         title={isDenied ? 'Location denied' : 'Go to my location'}
       >

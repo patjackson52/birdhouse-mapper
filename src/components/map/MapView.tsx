@@ -12,6 +12,7 @@ import UserLocationLayer from "./UserLocationLayer";
 import LocateButton from "./LocateButton";
 import GoToFieldButton from "./GoToFieldButton";
 import { useUserLocation } from "@/lib/location/provider";
+import QuickAddSheet from "./QuickAddSheet";
 
 interface MapViewProps {
   items: Item[];
@@ -47,10 +48,12 @@ export default function MapView({
 }: MapViewProps) {
   const config = useConfig();
   const theme = useTheme();
+  const { position } = useUserLocation();
   const center: [number, number] = [config.mapCenter.lat, config.mapCenter.lng];
   const zoom = config.mapCenter.zoom;
   const [fullscreen, setFullscreen] = useState(false);
   const [flyToUserTrigger, setFlyToUserTrigger] = useState(0);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   // Build a lookup map for item types
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
@@ -114,13 +117,13 @@ export default function MapView({
       {/* Fullscreen toggle */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-3 left-3 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light p-2.5 text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-3 left-3 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
         aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
       >
         {fullscreen ? (
           <svg
-            className="w-5 h-5"
+            className="w-6 h-6"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -134,7 +137,7 @@ export default function MapView({
           </svg>
         ) : (
           <svg
-            className="w-5 h-5"
+            className="w-6 h-6"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -151,6 +154,21 @@ export default function MapView({
 
       <LocateButton onLocate={() => setFlyToUserTrigger((n) => n + 1)} />
       <MapLegend itemTypes={itemTypes} />
+
+      {/* Quick-add FAB */}
+      <button
+        onClick={() => setQuickAddOpen(true)}
+        className="fixed bottom-24 right-4 z-30 bg-green-600 hover:bg-green-700 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-light"
+        aria-label="Quick add item"
+      >
+        +
+      </button>
+
+      <QuickAddSheet
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        defaultLocation={position ?? undefined}
+      />
     </div>
   );
 }

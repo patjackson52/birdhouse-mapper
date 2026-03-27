@@ -36,7 +36,7 @@ export default function GoToFieldButton() {
   const label = config.siteName || config.locationName;
 
   return (
-    <div className="absolute top-3 left-14 z-[1000]">
+    <div className="absolute top-3 right-4 md:left-14 md:right-auto z-[1000]">
       <button
         onClick={() =>
           map.flyTo(
@@ -45,7 +45,7 @@ export default function GoToFieldButton() {
             { duration: 1 },
           )
         }
-        className="flex items-center gap-1.5 bg-white rounded-lg shadow-lg border border-sage-light px-3 py-2 text-sm font-medium text-forest-dark hover:bg-sage-light transition-colors"
+        className="flex items-center gap-1.5 bg-white rounded-lg shadow-lg border border-sage-light px-3 py-2 min-w-[44px] min-h-[44px] text-sm font-medium text-forest-dark hover:bg-sage-light transition-colors"
         aria-label={`Go to ${label}`}
       >
         <svg
