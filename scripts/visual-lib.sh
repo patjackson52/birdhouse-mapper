@@ -100,15 +100,19 @@ build_diff_table() {
   table="| Screen | Expected | Actual | Diff |
 |--------|----------|--------|------|"
 
-  for name in "${DIFF_NAMES[@]}"; do
-    table="$table
+  if [ ${#DIFF_NAMES[@]} -gt 0 ]; then
+    for name in "${DIFF_NAMES[@]}"; do
+      table="$table
 | ${name} | ![expected](${base_url}/${name}-expected.png) | ![actual](${base_url}/${name}-actual.png) | ![diff](${base_url}/${name}-diff.png) |"
-  done
+    done
+  fi
 
-  for name in "${NEW_NAMES[@]}"; do
-    table="$table
+  if [ ${#NEW_NAMES[@]} -gt 0 ]; then
+    for name in "${NEW_NAMES[@]}"; do
+      table="$table
 | ${name} | _New — no baseline_ | ![actual](${base_url}/${name}-actual.png) | — |"
-  done
+    done
+  fi
 
   echo "$table"
 }

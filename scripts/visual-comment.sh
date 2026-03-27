@@ -80,15 +80,19 @@ rm -rf "$REPORT_DIR"
 mkdir -p "$REPORT_DIR"
 
 # Copy images to report directory
-for name in "${DIFF_NAMES[@]}"; do
-  find "$RESULTS_DIR" -name "${name}-actual.png" -exec cp {} "$REPORT_DIR/" \;
-  find "$RESULTS_DIR" -name "${name}-expected.png" -exec cp {} "$REPORT_DIR/" \;
-  find "$RESULTS_DIR" -name "${name}-diff.png" -exec cp {} "$REPORT_DIR/" \;
-done
+if [ ${#DIFF_NAMES[@]} -gt 0 ]; then
+  for name in "${DIFF_NAMES[@]}"; do
+    find "$RESULTS_DIR" -name "${name}-actual.png" -exec cp {} "$REPORT_DIR/" \;
+    find "$RESULTS_DIR" -name "${name}-expected.png" -exec cp {} "$REPORT_DIR/" \;
+    find "$RESULTS_DIR" -name "${name}-diff.png" -exec cp {} "$REPORT_DIR/" \;
+  done
+fi
 
-for name in "${NEW_NAMES[@]}"; do
-  find "$RESULTS_DIR" -name "${name}-actual.png" -exec cp {} "$REPORT_DIR/" \;
-done
+if [ ${#NEW_NAMES[@]} -gt 0 ]; then
+  for name in "${NEW_NAMES[@]}"; do
+    find "$RESULTS_DIR" -name "${name}-actual.png" -exec cp {} "$REPORT_DIR/" \;
+  done
+fi
 
 # Build HTML content
 CONTENT=""
@@ -99,8 +103,9 @@ if [ ${#DIFF_NAMES[@]} -eq 0 ] && [ ${#NEW_NAMES[@]} -eq 0 ]; then
   CONTENT="$CONTENT<div class=\"no-diffs\">All visual tests match their baselines.</div>"
 fi
 
-for name in "${DIFF_NAMES[@]}"; do
-  CONTENT="$CONTENT
+if [ ${#DIFF_NAMES[@]} -gt 0 ]; then
+  for name in "${DIFF_NAMES[@]}"; do
+    CONTENT="$CONTENT
 <div class=\"test-card\">
   <h2>${name} <span class=\"badge badge-diff\">DIFF</span></h2>
   <div class=\"images\">
@@ -109,17 +114,20 @@ for name in "${DIFF_NAMES[@]}"; do
     <figure><figcaption>Diff</figcaption><img src=\"${name}-diff.png\" alt=\"diff\"></figure>
   </div>
 </div>"
-done
+  done
+fi
 
-for name in "${NEW_NAMES[@]}"; do
-  CONTENT="$CONTENT
+if [ ${#NEW_NAMES[@]} -gt 0 ]; then
+  for name in "${NEW_NAMES[@]}"; do
+    CONTENT="$CONTENT
 <div class=\"test-card\">
   <h2>${name} <span class=\"badge badge-new\">NEW</span></h2>
   <div class=\"images\">
     <figure><figcaption>Actual (no baseline)</figcaption><img src=\"${name}-actual.png\" alt=\"actual\"></figure>
   </div>
 </div>"
-done
+  done
+fi
 
 # Generate HTML from template — split on placeholder, insert content between halves
 {
