@@ -132,7 +132,7 @@ export default function MapView({
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M9 9L4.5 4.5m0 0v3.375m0-3.375h3.375m5.25 0L18 4.5m0 0h-3.375m3.375 0v3.375M9 15L4.5 19.5m0 0v-3.375m0 3.375h3.375m5.25 0L18 19.5m0 0h-3.375m3.375 0v-3.375"
+              d="M9 9V4.5m0 0H4.5M9 4.5l-5.25 5.25M9 15v4.5m0 0H4.5M9 19.5l-5.25-5.25M15 9h4.5m0 0V4.5M19.5 9l-5.25-5.25M15 15h4.5m0 0v4.5M19.5 15l-5.25 5.25"
             />
           </svg>
         ) : (
