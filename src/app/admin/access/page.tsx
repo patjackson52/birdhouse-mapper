@@ -472,7 +472,7 @@ export default function AccessPage() {
               : 'text-sage hover:text-forest-dark'
           }`}
         >
-          Tokens &amp; Grants
+          Tokens & Grants
         </button>
       </div>
 
@@ -642,8 +642,6 @@ export default function AccessPage() {
               <EmptyState
                 title="No tokens"
                 description="Create an anonymous access token to allow public access to properties."
-                actionLabel="+ Create Token"
-                onAction={() => setShowCreateToken(true)}
               />
             ) : (
               <div className="card overflow-hidden p-0">
@@ -844,8 +842,6 @@ export default function AccessPage() {
               <EmptyState
                 title="No grants"
                 description="Create a temporary access grant to give time-limited access to a user."
-                actionLabel="+ Create Grant"
-                onAction={() => setShowCreateGrant(true)}
               />
             ) : (
               <div className="card overflow-hidden p-0">
