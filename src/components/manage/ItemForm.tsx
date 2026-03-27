@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { ItemStatus, ItemType, CustomField } from '@/lib/types';
+import type { ItemStatus, ItemType, CustomField, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
-import SpeciesSelect from './SpeciesSelect';
+import EntitySelect from './EntitySelect';
 
 const LocationPicker = dynamic(() => import('./LocationPicker'), {
   ssr: false,
@@ -34,7 +34,8 @@ export default function ItemForm() {
   const [status, setStatus] = useState<ItemStatus>('planned');
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [photos, setPhotos] = useState<File[]>([]);
-  const [selectedSpeciesIds, setSelectedSpeciesIds] = useState<string[]>([]);
+  const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<Record<string, string[]>>({});
 
   // Fetch item types and custom fields
   useEffect(() => {
@@ -58,6 +59,14 @@ export default function ItemForm() {
         .order('sort_order', { ascending: true });
 
       if (fields) setCustomFields(fields);
+
+      // Fetch entity types that link to items
+      const { data: etData } = await supabase
+        .from('entity_types')
+        .select('*')
+        .contains('link_to', ['items'])
+        .order('sort_order', { ascending: true });
+      if (etData) setEntityTypes(etData);
     }
 
     fetchTypes();
@@ -134,10 +143,11 @@ export default function ItemForm() {
         }
       }
 
-      // Save species associations (batch insert)
-      if (selectedSpeciesIds.length > 0) {
-        await supabase.from('item_species').insert(
-          selectedSpeciesIds.map((speciesId) => ({ item_id: item.id, species_id: speciesId }))
+      // Save entity associations (batch insert per entity type)
+      const allEntityIds = Object.values(selectedEntityIds).flat();
+      if (allEntityIds.length > 0) {
+        await supabase.from('item_entities').insert(
+          allEntityIds.map((entityId) => ({ item_id: item.id, entity_id: entityId }))
         );
       }
 
@@ -304,10 +314,17 @@ export default function ItemForm() {
         <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} />
       </div>
 
-      <div>
-        <label className="label">Species</label>
-        <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
-      </div>
+      {entityTypes.map((et) => (
+        <div key={et.id}>
+          <label className="label">{et.icon} {et.name}</label>
+          <EntitySelect
+            entityTypeId={et.id}
+            entityTypeName={et.name}
+            selectedIds={selectedEntityIds[et.id] || []}
+            onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+          />
+        </div>
+      ))}
 
       <div className="flex gap-3">
         <button type="submit" disabled={saving} className="btn-primary">

@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Item, UpdateType } from '@/lib/types';
+import type { Item, UpdateType, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
-import SpeciesSelect from './SpeciesSelect';
+import EntitySelect from './EntitySelect';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem } from '@/lib/location/utils';
 
@@ -27,7 +27,8 @@ export default function UpdateForm() {
     new Date().toISOString().split('T')[0]
   );
   const [photos, setPhotos] = useState<File[]>([]);
-  const [selectedSpeciesIds, setSelectedSpeciesIds] = useState<string[]>([]);
+  const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -52,6 +53,14 @@ export default function UpdateForm() {
         const firstGlobal = typeData.find((t) => t.is_global);
         if (firstGlobal) setUpdateTypeId(firstGlobal.id);
       }
+
+      // Fetch entity types that link to updates
+      const { data: etData } = await supabase
+        .from('entity_types')
+        .select('*')
+        .contains('link_to', ['updates'])
+        .order('sort_order', { ascending: true });
+      if (etData) setEntityTypes(etData);
     }
 
     fetchData();
@@ -135,10 +144,11 @@ export default function UpdateForm() {
         }
       }
 
-      // Save species associations (batch insert)
-      if (selectedSpeciesIds.length > 0) {
-        await supabase.from('update_species').insert(
-          selectedSpeciesIds.map((speciesId) => ({ update_id: update.id, species_id: speciesId }))
+      // Save entity associations (batch insert)
+      const allEntityIds = Object.values(selectedEntityIds).flat();
+      if (allEntityIds.length > 0) {
+        await supabase.from('update_entities').insert(
+          allEntityIds.map((entityId) => ({ update_id: update.id, entity_id: entityId }))
         );
       }
 
@@ -236,10 +246,17 @@ export default function UpdateForm() {
         <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} />
       </div>
 
-      <div>
-        <label className="label">Species Observed</label>
-        <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
-      </div>
+      {entityTypes.map((et) => (
+        <div key={et.id}>
+          <label className="label">{et.icon} {et.name}</label>
+          <EntitySelect
+            entityTypeId={et.id}
+            entityTypeName={et.name}
+            selectedIds={selectedEntityIds[et.id] || []}
+            onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+          />
+        </div>
+      ))}
 
       <div className="flex gap-3">
         <button type="submit" disabled={saving} className="btn-primary">

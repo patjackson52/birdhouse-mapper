@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type {
   Item, ItemType, CustomField, UpdateType, ItemUpdate,
   ItemWithDetails, Photo, ItemStatus, FieldType,
-  Species, ItemSpecies, UpdateSpecies,
+  EntityType, EntityTypeField, Entity, ItemEntity, UpdateEntity,
+  EntityFieldType, EntityLinkTarget,
 } from '../types';
 
 describe('Item type structure', () => {
@@ -152,7 +153,7 @@ describe('ItemWithDetails composite type', () => {
           property_id: 'prop-1',
           update_type: updateType,
           photos: [],
-          species: [],
+          entities: [],
         },
       ],
       photos: [],
@@ -162,7 +163,7 @@ describe('ItemWithDetails composite type', () => {
           field_type: 'dropdown', options: ['Chickadee'], required: false, sort_order: 0, org_id: 'org-1',
         },
       ],
-      species: [],
+      entities: [],
     };
 
     expect(detailed.item_type.name).toBe('Bird Box');
@@ -172,64 +173,143 @@ describe('ItemWithDetails composite type', () => {
   });
 });
 
-describe('Species structure', () => {
-  it('accepts a valid Species object', () => {
-    const species: Species = {
-      id: 'sp-1',
-      name: 'Black-capped Chickadee',
-      scientific_name: 'Poecile atricapillus',
-      description: 'Small songbird',
-      photo_path: 'species/sp-1/1710720000000.jpg',
-      conservation_status: 'Least Concern',
-      category: 'Songbirds',
-      external_link: 'https://example.com/chickadee',
+describe('EntityType structure', () => {
+  it('accepts a valid EntityType', () => {
+    const et: EntityType = {
+      id: 'et-1',
+      org_id: 'org-1',
+      name: 'Species',
+      icon: '🐦',
+      color: '#5D7F3A',
+      link_to: ['items', 'updates'],
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-      org_id: 'org-1',
     };
-    expect(species.name).toBe('Black-capped Chickadee');
-    expect(species.scientific_name).toBe('Poecile atricapillus');
+    expect(et.name).toBe('Species');
+    expect(et.link_to).toContain('items');
+    expect(et.link_to).toContain('updates');
+  });
+
+  it('enforces EntityLinkTarget values', () => {
+    const targets: EntityLinkTarget[] = ['items', 'updates'];
+    expect(targets).toHaveLength(2);
+  });
+
+  it('enforces EntityFieldType values', () => {
+    const types: EntityFieldType[] = ['text', 'number', 'dropdown', 'date', 'url'];
+    expect(types).toHaveLength(5);
+  });
+});
+
+describe('EntityTypeField structure', () => {
+  it('accepts a text field', () => {
+    const field: EntityTypeField = {
+      id: 'etf-1',
+      entity_type_id: 'et-1',
+      org_id: 'org-1',
+      name: 'Scientific Name',
+      field_type: 'text',
+      options: null,
+      required: false,
+      sort_order: 0,
+    };
+    expect(field.field_type).toBe('text');
+    expect(field.options).toBeNull();
+  });
+
+  it('accepts a dropdown field with options', () => {
+    const field: EntityTypeField = {
+      id: 'etf-2',
+      entity_type_id: 'et-1',
+      org_id: 'org-1',
+      name: 'Conservation Status',
+      field_type: 'dropdown',
+      options: ['LC', 'NT', 'VU', 'EN', 'CR'],
+      required: false,
+      sort_order: 1,
+    };
+    expect(field.options).toHaveLength(5);
+  });
+
+  it('accepts each field type', () => {
+    const types: EntityFieldType[] = ['text', 'number', 'dropdown', 'date', 'url'];
+    types.forEach((t) => {
+      const field: EntityTypeField = {
+        id: `etf-${t}`, entity_type_id: 'et-1', org_id: 'org-1',
+        name: `Test ${t}`, field_type: t, options: null, required: false, sort_order: 0,
+      };
+      expect(field.field_type).toBe(t);
+    });
+  });
+});
+
+describe('Entity structure', () => {
+  it('accepts a valid Entity', () => {
+    const entity: Entity = {
+      id: 'ent-1',
+      entity_type_id: 'et-1',
+      org_id: 'org-1',
+      name: 'Black-capped Chickadee',
+      description: 'Small songbird',
+      photo_path: 'entities/ent-1/1710720000000.jpg',
+      external_link: 'https://example.com/chickadee',
+      custom_field_values: { 'etf-1': 'Poecile atricapillus', 'etf-2': 'LC' },
+      sort_order: 0,
+      created_at: '2025-01-01T00:00:00Z',
+      updated_at: '2025-01-01T00:00:00Z',
+    };
+    expect(entity.name).toBe('Black-capped Chickadee');
+    expect(entity.custom_field_values['etf-1']).toBe('Poecile atricapillus');
   });
 
   it('accepts nullable fields as null', () => {
-    const species: Species = {
-      id: 'sp-2',
-      name: 'Unknown Bird',
-      scientific_name: null,
+    const entity: Entity = {
+      id: 'ent-2',
+      entity_type_id: 'et-1',
+      org_id: 'org-1',
+      name: 'Unknown',
       description: null,
       photo_path: null,
-      conservation_status: null,
-      category: null,
       external_link: null,
+      custom_field_values: {},
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
-      org_id: 'org-1',
     };
-    expect(species.scientific_name).toBeNull();
+    expect(entity.description).toBeNull();
+    expect(entity.photo_path).toBeNull();
   });
 });
 
 describe('Join table structures', () => {
-  it('accepts ItemSpecies', () => {
-    const is: ItemSpecies = { item_id: 'item-1', species_id: 'sp-1', org_id: 'org-1' };
-    expect(is.item_id).toBe('item-1');
+  it('accepts ItemEntity', () => {
+    const ie: ItemEntity = { item_id: 'item-1', entity_id: 'ent-1', org_id: 'org-1' };
+    expect(ie.item_id).toBe('item-1');
+    expect(ie.entity_id).toBe('ent-1');
   });
 
-  it('accepts UpdateSpecies', () => {
-    const us: UpdateSpecies = { update_id: 'upd-1', species_id: 'sp-1', org_id: 'org-1' };
-    expect(us.update_id).toBe('upd-1');
+  it('accepts UpdateEntity', () => {
+    const ue: UpdateEntity = { update_id: 'upd-1', entity_id: 'ent-1', org_id: 'org-1' };
+    expect(ue.update_id).toBe('upd-1');
+    expect(ue.entity_id).toBe('ent-1');
   });
 });
 
-describe('ItemWithDetails with species', () => {
-  it('includes species on item and on updates', () => {
-    const species: Species = {
-      id: 'sp-1', name: 'Chickadee', scientific_name: null,
-      description: null, photo_path: null, conservation_status: null,
-      category: null, external_link: null, sort_order: 0,
-      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z', org_id: 'org-1',
+describe('ItemWithDetails with entities', () => {
+  it('includes entities on item and on updates', () => {
+    const entityType: EntityType = {
+      id: 'et-1', org_id: 'org-1', name: 'Species', icon: '🐦', color: '#5D7F3A',
+      link_to: ['items', 'updates'], sort_order: 0,
+      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
+    };
+
+    const entity: Entity & { entity_type: EntityType } = {
+      id: 'ent-1', entity_type_id: 'et-1', org_id: 'org-1',
+      name: 'Chickadee', description: null, photo_path: null,
+      external_link: null, custom_field_values: {}, sort_order: 0,
+      created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
+      entity_type: entityType,
     };
 
     const itemType: ItemType = {
@@ -254,15 +334,16 @@ describe('ItemWithDetails with species', () => {
         content: 'Saw a bird', update_date: '2025-04-01',
         created_at: '2025-04-01T00:00:00Z', created_by: null,
         org_id: 'org-1', property_id: 'prop-1',
-        update_type: updateType, photos: [], species: [species],
+        update_type: updateType, photos: [], entities: [entity],
       }],
       photos: [],
       custom_fields: [],
-      species: [species],
+      entities: [entity],
     };
 
-    expect(detailed.species).toHaveLength(1);
-    expect(detailed.species[0].name).toBe('Chickadee');
-    expect(detailed.updates[0].species).toHaveLength(1);
+    expect(detailed.entities).toHaveLength(1);
+    expect(detailed.entities[0].name).toBe('Chickadee');
+    expect(detailed.entities[0].entity_type.name).toBe('Species');
+    expect(detailed.updates[0].entities).toHaveLength(1);
   });
 });

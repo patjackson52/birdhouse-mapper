@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { ItemStatus, ItemType, CustomField, Photo } from '@/lib/types';
+import type { ItemStatus, ItemType, CustomField, Photo, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
-import SpeciesSelect from './SpeciesSelect';
+import EntitySelect from '@/components/manage/EntitySelect';
 
 const LocationPicker = dynamic(() => import('./LocationPicker'), {
   ssr: false,
@@ -30,7 +30,7 @@ interface EditItemFormProps {
     item_type_id: string;
     custom_field_values: Record<string, unknown>;
   };
-  initialSpeciesIds: string[];
+  initialEntityIds: Record<string, string[]>;
   initialPhotos: Photo[];
   isAdmin: boolean;
 }
@@ -38,7 +38,7 @@ interface EditItemFormProps {
 export default function EditItemForm({
   itemId,
   initialData,
-  initialSpeciesIds,
+  initialEntityIds,
   initialPhotos,
   isAdmin,
 }: EditItemFormProps) {
@@ -67,7 +67,10 @@ export default function EditItemForm({
   });
 
   const [photos, setPhotos] = useState<File[]>([]);
-  const [selectedSpeciesIds, setSelectedSpeciesIds] = useState<string[]>(initialSpeciesIds);
+  const [selectedEntityIds, setSelectedEntityIds] = useState<Record<string, string[]>>(initialEntityIds);
+
+  // Entity types that link to items
+  const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
 
   // Track existing photos and which ones to remove
   const [existingPhotos] = useState<Photo[]>(initialPhotos);
@@ -99,6 +102,20 @@ export default function EditItemForm({
     }
 
     fetchTypes();
+  }, []);
+
+  // Fetch entity types linked to items
+  useEffect(() => {
+    async function fetchEntityTypes() {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('entity_types')
+        .select('*')
+        .contains('link_to', ['items'])
+        .order('sort_order');
+      if (data) setEntityTypes(data);
+    }
+    fetchEntityTypes();
   }, []);
 
   // Fields for the selected type
@@ -189,13 +206,13 @@ export default function EditItemForm({
         if (historyError) throw historyError;
       }
 
-      // Update species: delete all existing, then insert current selection
-      await supabase.from('item_species').delete().eq('item_id', itemId);
+      // Update entities: delete all existing, then insert current selection
+      await supabase.from('item_entities').delete().eq('item_id', itemId);
 
-      if (selectedSpeciesIds.length > 0) {
-        await supabase.from('item_species').insert(
-          selectedSpeciesIds.map((speciesId) => ({ item_id: itemId, species_id: speciesId }))
-        );
+      const allEntityIds = Object.values(selectedEntityIds).flat();
+      const entityRows = allEntityIds.map((entityId) => ({ item_id: itemId, entity_id: entityId }));
+      if (entityRows.length > 0) {
+        await supabase.from('item_entities').insert(entityRows);
       }
 
       // Handle photo removals
@@ -471,10 +488,17 @@ export default function EditItemForm({
         />
       </div>
 
-      <div>
-        <label className="label">Species</label>
-        <SpeciesSelect selectedIds={selectedSpeciesIds} onChange={setSelectedSpeciesIds} />
-      </div>
+      {entityTypes.map((et) => (
+        <div key={et.id}>
+          <label className="label">{et.icon} {et.name}</label>
+          <EntitySelect
+            entityTypeId={et.id}
+            entityTypeName={et.name}
+            selectedIds={selectedEntityIds[et.id] || []}
+            onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+          />
+        </div>
+      ))}
 
       <div className="flex gap-3">
         <button type="submit" disabled={saving} className="btn-primary">

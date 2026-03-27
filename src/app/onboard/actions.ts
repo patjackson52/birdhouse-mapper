@@ -3,6 +3,14 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
 
+export interface EntityTypeSuggestion {
+  name: string;
+  icon: string;
+  color: string;
+  link_to: string[];
+  fields: Array<{ name: string; field_type: string; options?: string[]; required?: boolean }>;
+}
+
 export interface OnboardConfig {
   orgName: string;
   orgSlug: string;
@@ -15,6 +23,7 @@ export interface OnboardConfig {
   overlayConfig?: unknown;
   itemTypes: Array<{ name: string; icon: string; color: string }>;
   aboutContent: string;
+  entityTypes?: EntityTypeSuggestion[];
 }
 
 /**
@@ -257,6 +266,50 @@ export async function onboardCreateOrg(
     }
   }
 
+  // Step 8b: Create entity types from config
+  if (config.entityTypes && config.entityTypes.length > 0) {
+    for (let i = 0; i < config.entityTypes.length; i++) {
+      const et = config.entityTypes[i];
+
+      const { data: entityType, error: etError } = await service
+        .from('entity_types')
+        .insert({
+          org_id: orgId,
+          name: et.name,
+          icon: et.icon,
+          color: et.color,
+          link_to: et.link_to,
+          sort_order: i,
+        })
+        .select('id')
+        .single();
+
+      if (etError) {
+        return { error: `Failed to create entity type "${et.name}": ${etError.message}` };
+      }
+
+      if (et.fields.length > 0) {
+        const fieldRows = et.fields.map((f, fi) => ({
+          entity_type_id: entityType.id,
+          org_id: orgId,
+          name: f.name,
+          field_type: f.field_type,
+          options: f.options && f.options.length > 0 ? f.options : null,
+          required: f.required ?? false,
+          sort_order: fi,
+        }));
+
+        const { error: fieldsError } = await service
+          .from('entity_type_fields')
+          .insert(fieldRows);
+
+        if (fieldsError) {
+          return { error: `Failed to create fields for "${et.name}": ${fieldsError.message}` };
+        }
+      }
+    }
+  }
+
   // Step 9: Generate default landing page
   const landingPage = createDefaultLandingPage(
     config.orgName,
@@ -275,4 +328,77 @@ export async function onboardCreateOrg(
   }
 
   return { success: true, orgSlug: org.slug };
+}
+
+/**
+ * Uses AI to suggest entity types based on the org's description and item types.
+ */
+export async function generateEntityTypeSuggestions(input: {
+  orgName: string;
+  itemTypes: string[];
+  userPrompt: string;
+}): Promise<{ suggestions: EntityTypeSuggestion[] } | { error: string }> {
+  try {
+    const { generateText } = await import('ai');
+    const { anthropic } = await import('@ai-sdk/anthropic');
+
+    const systemPrompt = `You are helping set up a field mapping application for "${input.orgName}".
+They track these item types: ${input.itemTypes.join(', ')}.
+
+Based on the user's description, suggest 1-3 entity types that would be useful to track.
+Entity types are rich, reusable records that can be linked to items and/or updates.
+
+Each entity type automatically has: name, description, photo, and external_link fields.
+You should suggest additional custom fields specific to each entity type.
+
+Valid field types: text, number, dropdown, date, url
+For dropdown fields, provide an "options" array.
+
+Respond with ONLY a valid JSON array. Example:
+[
+  {
+    "name": "Species",
+    "icon": "🐦",
+    "color": "#5D7F3A",
+    "link_to": ["items", "updates"],
+    "fields": [
+      { "name": "Scientific Name", "field_type": "text", "required": false },
+      { "name": "Conservation Status", "field_type": "dropdown", "options": ["LC", "NT", "VU", "EN", "CR"], "required": false }
+    ]
+  }
+]`;
+
+    const { text } = await generateText({
+      model: anthropic('claude-sonnet-4-6'),
+      system: systemPrompt,
+      messages: [{ role: 'user', content: input.userPrompt }],
+      maxOutputTokens: 1500,
+    });
+
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) {
+      return { error: 'Failed to parse AI response.' };
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as EntityTypeSuggestion[];
+
+    const validated = parsed
+      .filter((et) => et.name && et.icon && Array.isArray(et.link_to) && Array.isArray(et.fields))
+      .map((et) => ({
+        name: et.name,
+        icon: et.icon,
+        color: et.color || '#5D7F3A',
+        link_to: et.link_to.filter((t: string) => ['items', 'updates'].includes(t)),
+        fields: (et.fields || []).map((f) => ({
+          name: f.name,
+          field_type: ['text', 'number', 'dropdown', 'date', 'url'].includes(f.field_type) ? f.field_type : 'text',
+          options: f.options,
+          required: f.required ?? false,
+        })),
+      }));
+
+    return { suggestions: validated };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : 'Failed to generate suggestions.' };
+  }
 }

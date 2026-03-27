@@ -1,8 +1,8 @@
-import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo, Species } from '@/lib/types';
+import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo, Entity, EntityType } from '@/lib/types';
 import { formatShortDate } from '@/lib/utils';
 
 interface UpdateTimelineProps {
-  updates: (ItemUpdate & { update_type?: UpdateTypeRecord; photos?: Photo[]; species?: Species[] })[];
+  updates: (ItemUpdate & { update_type?: UpdateTypeRecord; photos?: Photo[]; entities?: (Entity & { entity_type: EntityType })[] })[];
 }
 
 export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
@@ -43,15 +43,24 @@ export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
                 {update.content}
               </p>
             )}
-            {update.species && update.species.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {update.species.map((s) => (
-                  <span key={s.id} className="inline-flex items-center bg-forest/10 text-forest-dark text-[10px] px-1.5 py-0.5 rounded-full">
-                    {s.name}
-                  </span>
-                ))}
-              </div>
-            )}
+            {update.entities && update.entities.length > 0 && (() => {
+              const grouped = new Map<string, { type: { id: string; name: string; icon: string }; entities: NonNullable<typeof update.entities> }>();
+              for (const e of update.entities) {
+                const key = e.entity_type.id;
+                if (!grouped.has(key)) grouped.set(key, { type: e.entity_type, entities: [] });
+                grouped.get(key)!.entities.push(e);
+              }
+              return Array.from(grouped.values()).map(({ type, entities }) => (
+                <div key={type.id} className="flex flex-wrap items-center gap-1 mt-1">
+                  <span className="text-[10px] text-sage">{type.icon}</span>
+                  {entities.map((e) => (
+                    <span key={e.id} className="inline-flex items-center bg-forest/10 text-forest-dark text-[10px] px-1.5 py-0.5 rounded-full">
+                      {e.name}
+                    </span>
+                  ))}
+                </div>
+              ));
+            })()}
           </div>
         </div>
       ))}

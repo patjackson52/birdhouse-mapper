@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import PlatformNav from '@/components/platform/PlatformNav';
 import { createClient } from '@/lib/supabase/client';
-import { onboardCreateOrg } from './actions';
+import { onboardCreateOrg, generateEntityTypeSuggestions } from './actions';
+import type { EntityTypeSuggestion } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
 
-type Step = 'welcome' | 'name' | 'theme' | 'custommap' | 'items' | 'about' | 'review';
-const STEPS: Step[] = ['welcome', 'name', 'theme', 'custommap', 'items', 'about', 'review'];
+type Step = 'welcome' | 'name' | 'theme' | 'custommap' | 'items' | 'entities' | 'about' | 'review';
+const STEPS: Step[] = ['welcome', 'name', 'theme', 'custommap', 'items', 'entities', 'about', 'review'];
 
 interface ItemTypeEntry {
   name: string;
@@ -39,6 +40,9 @@ export default function OnboardPage() {
     { name: 'Bird Box', icon: '\u{1F3E0}', color: '#5D7F3A' },
   ]);
   const [aboutContent, setAboutContent] = useState('# About\n\nDescribe your project here.');
+  const [entityTypeSuggestions, setEntityTypeSuggestions] = useState<EntityTypeSuggestion[]>([]);
+  const [entityPrompt, setEntityPrompt] = useState('');
+  const [generatingEntities, setGeneratingEntities] = useState(false);
 
   // Guard: redirect if user already has an org
   useEffect(() => {
@@ -125,6 +129,7 @@ export default function OnboardPage() {
         themePreset,
         itemTypes: itemTypes.filter((t) => t.name.trim()),
         aboutContent,
+        entityTypes: entityTypeSuggestions.length > 0 ? entityTypeSuggestions : undefined,
       });
 
       if ('error' in result) {
@@ -438,6 +443,108 @@ export default function OnboardPage() {
             </div>
           )}
 
+          {step === 'entities' && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-900">
+                Entity Types
+              </h2>
+              <p className="text-sm text-gray-500">
+                Entity types are non-spatial records (like species, volunteers, or equipment) that link to your items.
+                Describe what you track and we&apos;ll suggest entity types with fields.
+              </p>
+              <div className="rounded-lg bg-gray-50 border border-gray-100 px-4 py-3 text-sm text-gray-600">
+                Your item types: {itemTypes.filter(t => t.name.trim()).map(t => `${t.icon} ${t.name}`).join(', ') || 'None'}
+              </div>
+              <div>
+                <label htmlFor="entity-prompt" className="block text-sm font-medium text-gray-700 mb-1">
+                  What do you track?
+                </label>
+                <input
+                  id="entity-prompt"
+                  type="text"
+                  value={entityPrompt}
+                  onChange={(e) => setEntityPrompt(e.target.value)}
+                  className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  placeholder="We track bird species that nest in our boxes, and the volunteers who maintain them"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={generatingEntities || !entityPrompt.trim()}
+                onClick={async () => {
+                  setGeneratingEntities(true);
+                  setError('');
+                  const result = await generateEntityTypeSuggestions({
+                    orgName,
+                    itemTypes: itemTypes.filter(t => t.name.trim()).map(t => t.name),
+                    userPrompt: entityPrompt,
+                  });
+                  if ('error' in result) {
+                    setError(result.error);
+                  } else {
+                    setEntityTypeSuggestions(result.suggestions);
+                  }
+                  setGeneratingEntities(false);
+                }}
+                className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {generatingEntities ? 'Generating...' : 'Generate Suggestions'}
+              </button>
+
+              {entityTypeSuggestions.length > 0 && (
+                <div className="space-y-4">
+                  {entityTypeSuggestions.map((et, i) => (
+                    <div key={i} className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">{et.icon}</span>
+                          <span className="font-medium text-gray-900">{et.name}</span>
+                          <span
+                            className="inline-block w-4 h-4 rounded-full border border-gray-200"
+                            style={{ backgroundColor: et.color }}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEntityTypeSuggestions(entityTypeSuggestions.filter((_, j) => j !== i))}
+                          className="text-red-500 hover:text-red-700 text-sm"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {et.link_to.length > 0 && (
+                        <p className="text-xs text-gray-500">
+                          Links to: {et.link_to.join(', ')}
+                        </p>
+                      )}
+                      <div className="text-xs text-gray-600">
+                        <span className="font-medium">Fields:</span>
+                        <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                          {et.fields.map((f, fi) => (
+                            <li key={fi}>
+                              {f.name} <span className="text-gray-400">({f.field_type}{f.required ? ', required' : ''})</span>
+                              {f.options && f.options.length > 0 && (
+                                <span className="text-gray-400"> [{f.options.join(', ')}]</span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={next}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Skip — I&apos;ll add entity types later
+              </button>
+            </div>
+          )}
+
           {step === 'about' && (
             <div className="space-y-6">
               <h2 className="text-xl font-semibold text-gray-900">
@@ -488,6 +595,14 @@ export default function OnboardPage() {
                   <span className="text-gray-500">Item Types</span>
                   <span className="text-gray-900">
                     {itemTypes.filter((t) => t.name.trim()).map((t) => `${t.icon} ${t.name}`).join(', ') || '\u2014'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100">
+                  <span className="text-gray-500">Entity Types</span>
+                  <span className="text-gray-900">
+                    {entityTypeSuggestions.length > 0
+                      ? entityTypeSuggestions.map((et) => `${et.icon} ${et.name}`).join(', ')
+                      : '\u2014'}
                   </span>
                 </div>
               </div>
