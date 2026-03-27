@@ -131,15 +131,15 @@ export default function EntityTypesPage() {
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1 flex-wrap">
               <a
                 href={`entities/${et.id}`}
-                className="text-xs text-forest hover:text-forest-dark"
+                className="text-xs text-forest hover:text-forest-dark py-2 px-3 min-h-[44px] flex items-center"
               >
                 Manage
               </a>
-              <button onClick={() => setEditing(et)} className="text-xs text-forest hover:text-forest-dark">Edit</button>
-              <button onClick={() => handleDelete(et)} className="text-xs text-red-600 hover:text-red-800">Delete</button>
+              <button onClick={() => setEditing(et)} className="text-xs text-forest hover:text-forest-dark py-2 px-3 min-h-[44px] flex items-center">Edit</button>
+              <button onClick={() => handleDelete(et)} className="text-xs text-red-600 hover:text-red-800 py-2 px-3 min-h-[44px] flex items-center">Delete</button>
             </div>
           </div>
         ))}

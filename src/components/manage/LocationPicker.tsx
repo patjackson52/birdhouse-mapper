@@ -114,7 +114,7 @@ function CoordinateInputs({
   const inputBase = 'input-field w-28 text-xs py-1 px-2';
 
   return (
-    <div className={`flex items-center gap-2 ${className ?? ''}`}>
+    <div className={`flex items-center gap-2 flex-wrap ${className ?? ''}`}>
       <label className="text-xs text-sage font-medium">Lat</label>
       <input
         type="text"
