@@ -11,6 +11,10 @@ FieldMapper is a multi-tenant field mapping platform for conservation teams. Bui
 - `npm run test` — Run tests (Vitest)
 - `npm run test -- --watch` — Watch mode
 - `npm run type-check` — TypeScript check (`tsc --noEmit`)
+- `npm run test:e2e` — Run full Playwright E2E suite
+- `npm run test:e2e:smoke` — Run smoke subset (~5 tests, <30s)
+- `npx playwright test --config=e2e/playwright.config.ts --ui` — Interactive Playwright UI
+- `npx playwright test --config=e2e/playwright.config.ts e2e/tests/visual/ --update-snapshots` — Regenerate visual baselines
 
 ## Architecture
 

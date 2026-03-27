@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "PrePush": [
+      {
+        "command": "npx playwright test --config=e2e/playwright.config.ts --grep @smoke --reporter=line --project=chromium",
+        "timeout": 60000
+      }
+    ]
+  }
+}
