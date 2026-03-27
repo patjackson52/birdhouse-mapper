@@ -56,3 +56,27 @@ export async function cleanupTestItem(itemName: string) {
   const client = createTestClient();
   await client.from('items').delete().like('name', `${itemName}%`);
 }
+
+/**
+ * Create a throwaway Supabase auth user for testing.
+ * Uses the admin API — requires service role key.
+ * Returns the user object with id.
+ */
+export async function createTestUser(email: string, password: string) {
+  const client = createTestClient();
+  const { data, error } = await client.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+  if (error) throw new Error(`Failed to create test user: ${error.message}`);
+  return data.user;
+}
+
+/**
+ * Delete a throwaway test user by ID.
+ */
+export async function deleteTestUser(userId: string) {
+  const client = createTestClient();
+  await client.auth.admin.deleteUser(userId);
+}

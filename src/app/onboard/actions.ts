@@ -2,6 +2,8 @@
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
+import { buildOrgContextBlock } from '@/lib/ai-context/context-provider';
+import type { AiContextSummary } from '@/lib/ai-context/types';
 
 export interface EntityTypeSuggestion {
   name: string;
@@ -42,6 +44,7 @@ function getDefaultPermissions(baseRole: string): Record<string, unknown> {
         attachments: { upload: true, delete_own: true, delete_any: true },
         reports: { view: true, export: true },
         modules: { tasks: true, volunteers: true, public_forms: true, qr_codes: true, reports: true },
+        ai_context: { view: true, download: true, upload: true, manage: true },
       };
     case 'org_staff':
       return {
@@ -53,6 +56,7 @@ function getDefaultPermissions(baseRole: string): Record<string, unknown> {
         attachments: { upload: true, delete_own: true, delete_any: false },
         reports: { view: true, export: false },
         modules: { tasks: true, volunteers: false, public_forms: false, qr_codes: false, reports: false },
+        ai_context: { view: true, download: true, upload: true, manage: false },
       };
     case 'contributor':
       return {
@@ -64,6 +68,7 @@ function getDefaultPermissions(baseRole: string): Record<string, unknown> {
         attachments: { upload: true, delete_own: true, delete_any: false },
         reports: { view: false, export: false },
         modules: { tasks: true, volunteers: false, public_forms: false, qr_codes: false, reports: false },
+        ai_context: { view: true, download: true, upload: false, manage: false },
       };
     case 'viewer':
     default:
@@ -76,6 +81,7 @@ function getDefaultPermissions(baseRole: string): Record<string, unknown> {
         attachments: { upload: false, delete_own: false, delete_any: false },
         reports: { view: false, export: false },
         modules: { tasks: false, volunteers: false, public_forms: false, qr_codes: false, reports: false },
+        ai_context: { view: false, download: false, upload: false, manage: false },
       };
   }
 }
@@ -337,14 +343,16 @@ export async function generateEntityTypeSuggestions(input: {
   orgName: string;
   itemTypes: string[];
   userPrompt: string;
+  orgContext?: AiContextSummary | null;
 }): Promise<{ suggestions: EntityTypeSuggestion[] } | { error: string }> {
   try {
     const { generateText } = await import('ai');
     const { anthropic } = await import('@ai-sdk/anthropic');
 
+    const contextBlock = buildOrgContextBlock(input.orgContext ?? null);
     const systemPrompt = `You are helping set up a field mapping application for "${input.orgName}".
 They track these item types: ${input.itemTypes.join(', ')}.
-
+${contextBlock ? `\n${contextBlock}\n` : ''}
 Based on the user's description, suggest 1-3 entity types that would be useful to track.
 Entity types are rich, reusable records that can be linked to items and/or updates.
 

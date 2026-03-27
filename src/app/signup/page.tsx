@@ -48,7 +48,12 @@ export default function SignUpPage() {
     });
 
     if (signUpError) {
-      setError(signUpError.message);
+      // Provide a friendlier message for the common database trigger failure
+      if (signUpError.message.includes('Database error')) {
+        setError('Account creation failed. Please try again or contact support if the issue persists.');
+      } else {
+        setError(signUpError.message);
+      }
       setLoading(false);
       return;
     }

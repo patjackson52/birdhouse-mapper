@@ -243,6 +243,45 @@ describe('resolveTenant', () => {
       const fromCalls = client._calls.filter((c: any) => c.method === 'from');
       expect(fromCalls.some((c: any) => c.args[0] === 'custom_domains')).toBe(false);
     });
+
+    it('does not query custom_domains for *.vercel.app hostnames', async () => {
+      process.env.PLATFORM_DOMAIN = 'fieldmapper.org';
+      const client = createMockClient({
+        orgs: { id: 'org-1', slug: 'default', default_property_id: 'prop-1' },
+      });
+
+      await resolveTenant('birdhouse-mapper-git-my-branch-user.vercel.app', '/', client);
+
+      // Should skip Signal A (no custom_domains lookup) and fall through to Signal D
+      const fromCalls = client._calls.filter((c: any) => c.method === 'from');
+      expect(fromCalls.some((c: any) => c.args[0] === 'custom_domains')).toBe(false);
+    });
+
+    it('returns default org for *.vercel.app preview URL', async () => {
+      process.env.PLATFORM_DOMAIN = 'fieldmapper.org';
+      const client = createMockClient({
+        orgs: { id: 'org-1', slug: 'default', default_property_id: 'prop-1' },
+      });
+
+      const result = await resolveTenant('birdhouse-mapper-git-my-branch-user.vercel.app', '/', client);
+
+      expect(result?.source).toBe('default');
+      expect(result?.orgId).toBe('org-1');
+    });
+
+    it('does not query custom_domains when VERCEL_ENV is preview', async () => {
+      process.env.PLATFORM_DOMAIN = 'fieldmapper.org';
+      process.env.VERCEL_ENV = 'preview';
+      const client = createMockClient({
+        orgs: { id: 'org-1', slug: 'default', default_property_id: 'prop-1' },
+      });
+
+      await resolveTenant('some-random-host.example.com', '/', client);
+
+      const fromCalls = client._calls.filter((c: any) => c.method === 'from');
+      expect(fromCalls.some((c: any) => c.args[0] === 'custom_domains')).toBe(false);
+      delete process.env.VERCEL_ENV;
+    });
   });
 
   // =========================================================================

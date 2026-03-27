@@ -138,6 +138,7 @@ describe('Multi-tenant types', () => {
           qr_codes: false,
           reports: false,
         },
+        ai_context: { view: false, download: false, upload: false, manage: false },
       };
       expect(Object.keys(perms)).toEqual([
         'org',
@@ -148,6 +149,7 @@ describe('Multi-tenant types', () => {
         'attachments',
         'reports',
         'modules',
+        'ai_context',
       ]);
     });
   });
@@ -202,6 +204,7 @@ describe('Multi-tenant types', () => {
             qr_codes: true,
             reports: true,
           },
+          ai_context: { view: true, download: true, upload: true, manage: true },
         },
         is_default_new_member_role: false,
         is_public_role: false,

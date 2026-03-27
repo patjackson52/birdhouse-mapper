@@ -43,7 +43,14 @@ export async function resolveTenant(
   }
 
   // Signal A: Custom domain lookup
-  if (platformDomain && !hostname.endsWith(platformDomain) && hostname !== 'localhost') {
+  // Skip for Vercel preview/dev deployments — they should fall through to Signal D (default org)
+  // like localhost does. VERCEL_ENV is automatically set by Vercel on preview/branch deployments.
+  const isVercelPreview =
+    hostname.endsWith('.vercel.app') ||
+    process.env.VERCEL_ENV === 'preview' ||
+    process.env.VERCEL_ENV === 'development';
+
+  if (platformDomain && !hostname.endsWith(platformDomain) && hostname !== 'localhost' && !isVercelPreview) {
     const { data: domain } = await supabase
       .from('custom_domains')
       .select('org_id, property_id, orgs!custom_domains_org_id_fkey!inner(slug, is_active), properties!custom_domains_property_id_fkey(slug, is_active, deleted_at)')
