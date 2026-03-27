@@ -13,6 +13,7 @@ function makeRole(overrides: Partial<RolePermissions> = {}): Role {
     attachments: { upload: false, delete_own: false, delete_any: false },
     reports: { view: false, export: false },
     modules: { tasks: false, volunteers: false, public_forms: false, qr_codes: false, reports: false },
+    ai_context: { view: false, download: false, upload: false, manage: false },
   };
   return {
     id: 'role-1', org_id: 'org-1', name: 'Test', description: null,
