@@ -82,6 +82,8 @@ export default async function InvitePage({
           token={params.token}
           displayName={result.invite!.display_name}
           sessionExpiresAt={result.invite!.session_expires_at}
+          roleName={result.invite!.role_name}
+          capabilities={result.invite!.capabilities}
         />
       </div>
       <Footer />

@@ -223,7 +223,7 @@ export interface Invite {
   token: string;
   created_by: string;
   display_name: string | null;
-  role: UserRole;
+  role_id: string;
   convertible: boolean;
   session_expires_at: string;
   expires_at: string;
