@@ -17,6 +17,7 @@
     "supabase:reset": "bash supabase/scripts/setup-test-project.sh --reset",
     "supabase:stop": "bash supabase/scripts/setup-test-project.sh --stop",
     "dev:local": "bash supabase/scripts/setup-test-project.sh && cp .env.dev.local .env.local && next dev",
+    "dev:e2e": "PGPASSWORD=postgres psql -h ${PGHOST:-127.0.0.1} -p ${PGPORT:-54322} -U postgres -d postgres -qc \"DELETE FROM orgs WHERE id != '00000000-0000-0000-0000-000000000100'\" && cp .env.e2e.local .env.local && next dev",
     "dev:cloud": "cp .env.dev.cloud .env.local && next dev"
   },
   "dependencies": {
