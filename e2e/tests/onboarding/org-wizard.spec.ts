@@ -21,7 +21,7 @@ async function navigateToStep(page: import('@playwright/test').Page, targetStep:
 
   // Click "Set up manually" to go to step 1 (name)
   await page.locator('button:has-text("Set up manually")').click();
-  await expect(page.locator('text=Name & Location')).toBeVisible();
+  await expect(page.locator('text=Name & Location').first()).toBeVisible();
 
   if (targetStep === 1) return;
 
@@ -60,7 +60,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Click Set up manually → Step 2: Name & Location
     await page.locator('button:has-text("Set up manually")').click();
-    await expect(page.locator('text=Name & Location')).toBeVisible();
+    await expect(page.locator('text=Name & Location').first()).toBeVisible();
     await expect(page.locator('text=Step 1 of 7')).toBeVisible();
 
     await page.locator('#onboard-name').fill(`${ORG_PREFIX} Screenshot`);
@@ -92,7 +92,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Click Next → Step 5: Item Types
     await page.locator('button:has-text("Next")').click();
-    await expect(page.locator('text=Item Types')).toBeVisible();
+    await expect(page.locator('text=Item Types').first()).toBeVisible();
     // Verify default Bird Box entry exists
     const itemNameInput = page.locator('input[placeholder="Type name (e.g., Bird Box)"]');
     await expect(itemNameInput).toHaveValue('Bird Box');
@@ -100,14 +100,14 @@ test.describe('Onboarding Wizard', () => {
 
     // Click Next → Step 6: Entity Types
     await page.locator('button:has-text("Next")').click();
-    await expect(page.locator('text=Entity Types')).toBeVisible();
+    await expect(page.locator('text=Entity Types').first()).toBeVisible();
     await expect(page.locator('#entity-prompt')).toBeVisible();
     await expect(page.locator('button:has-text("Skip")')).toBeVisible();
     await page.screenshot({ path: screenshotPath('step-6-entity-types'), fullPage: true });
 
     // Click Skip → Step 7: About Page
     await page.locator('button:has-text("Skip")').click();
-    await expect(page.locator('text=About Page')).toBeVisible();
+    await expect(page.locator('text=About Page').first()).toBeVisible();
     const textarea = page.locator('textarea');
     await expect(textarea).toBeVisible();
     // Edit the about content
@@ -117,7 +117,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Click Next → Step 8: Review & Launch
     await page.locator('button:has-text("Next")').click();
-    await expect(page.locator('text=Review & Launch')).toBeVisible();
+    await expect(page.locator('text=Review & Launch').first()).toBeVisible();
 
     // Verify summary shows our entered data
     await expect(page.locator(`text=${ORG_PREFIX} Screenshot`)).toBeVisible();
@@ -136,7 +136,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Go to name step
     await page.locator('button:has-text("Set up manually")').click();
-    await expect(page.locator('text=Name & Location')).toBeVisible();
+    await expect(page.locator('text=Name & Location').first()).toBeVisible();
 
     // Fill in data
     await page.locator('#onboard-name').fill('Back Test Org');
@@ -148,7 +148,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Go back to name
     await page.locator('button:has-text("Back")').click();
-    await expect(page.locator('text=Name & Location')).toBeVisible();
+    await expect(page.locator('text=Name & Location').first()).toBeVisible();
 
     // Verify data is preserved
     await expect(page.locator('#onboard-name')).toHaveValue('Back Test Org');
@@ -161,7 +161,7 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboard');
     await page.waitForSelector('text=set up your organization', { timeout: 20000 });
     await page.locator('button:has-text("Set up manually")').click();
-    await expect(page.locator('text=Name & Location')).toBeVisible();
+    await expect(page.locator('text=Name & Location').first()).toBeVisible();
 
     // Leave name empty, click Next
     await page.locator('button:has-text("Next")').click();
@@ -191,7 +191,7 @@ test.describe('Onboarding Wizard', () => {
   test('blocks Next when item type name is empty', async ({ page }) => {
     // Navigate to item types step (step 5)
     await navigateToStep(page, 4);
-    await expect(page.locator('text=Item Types')).toBeVisible();
+    await expect(page.locator('text=Item Types').first()).toBeVisible();
 
     // Clear the default item type name
     const itemNameInput = page.locator('input[placeholder="Type name (e.g., Bird Box)"]');
@@ -231,19 +231,19 @@ test.describe('Onboarding Wizard', () => {
     await page.locator('button:has-text("Next")').click();
 
     // Step 5: Item Types — keep default Bird Box
-    await expect(page.locator('text=Item Types')).toBeVisible();
+    await expect(page.locator('text=Item Types').first()).toBeVisible();
     await page.locator('button:has-text("Next")').click();
 
     // Step 6: Entity Types — skip
-    await expect(page.locator('text=Entity Types')).toBeVisible();
+    await expect(page.locator('text=Entity Types').first()).toBeVisible();
     await page.locator('button:has-text("Skip")').click();
 
     // Step 7: About — keep default
-    await expect(page.locator('text=About Page')).toBeVisible();
+    await expect(page.locator('text=About Page').first()).toBeVisible();
     await page.locator('button:has-text("Next")').click();
 
     // Step 8: Review — verify and launch
-    await expect(page.locator('text=Review & Launch')).toBeVisible();
+    await expect(page.locator('text=Review & Launch').first()).toBeVisible();
     await expect(page.locator(`text=${orgName}`)).toBeVisible();
 
     // Click Launch and wait for the saving state
