@@ -30,9 +30,11 @@ export async function resolveTenant(
   supabase: SupabaseClient
 ): Promise<TenantContext | null> {
   const platformDomain = process.env.PLATFORM_DOMAIN;
+  // Strip port from hostname for comparison (e.g. "localhost:3000" → "localhost")
+  const hostnameWithoutPort = hostname.replace(/:\d+$/, '');
 
   // Signal 0: Platform root — exact match on PLATFORM_DOMAIN with no subdomain
-  if (platformDomain && hostname === platformDomain) {
+  if (platformDomain && hostnameWithoutPort === platformDomain) {
     return {
       orgId: null,
       orgSlug: null,
@@ -50,7 +52,7 @@ export async function resolveTenant(
     process.env.VERCEL_ENV === 'preview' ||
     process.env.VERCEL_ENV === 'development';
 
-  if (platformDomain && !hostname.endsWith(platformDomain) && hostname !== 'localhost' && !isVercelPreview) {
+  if (platformDomain && !hostnameWithoutPort.endsWith(platformDomain) && hostnameWithoutPort !== 'localhost' && !isVercelPreview) {
     const { data: domain } = await supabase
       .from('custom_domains')
       .select('org_id, property_id, orgs!custom_domains_org_id_fkey!inner(slug, is_active), properties!custom_domains_property_id_fkey(slug, is_active, deleted_at)')
@@ -77,9 +79,9 @@ export async function resolveTenant(
   }
 
   // Signal B/C: Platform subdomain (+ optional property path)
-  if (platformDomain && hostname.endsWith(platformDomain)) {
-    const subdomain = hostname.replace(`.${platformDomain}`, '');
-    if (subdomain && subdomain !== hostname) {
+  if (platformDomain && hostnameWithoutPort.endsWith(platformDomain)) {
+    const subdomain = hostnameWithoutPort.replace(`.${platformDomain}`, '');
+    if (subdomain && subdomain !== hostnameWithoutPort) {
       const { data: org } = await supabase
         .from('orgs')
         .select('id, slug, default_property_id')

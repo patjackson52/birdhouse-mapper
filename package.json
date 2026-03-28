@@ -12,7 +12,12 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "test:e2e:smoke": "playwright test --config=e2e/playwright.config.ts --grep @smoke --reporter=line",
-    "visual:comment": "bash scripts/visual-comment.sh"
+    "visual:comment": "bash scripts/visual-comment.sh",
+    "supabase:setup": "bash supabase/scripts/setup-test-project.sh",
+    "supabase:reset": "bash supabase/scripts/setup-test-project.sh --reset",
+    "supabase:stop": "bash supabase/scripts/setup-test-project.sh --stop",
+    "dev:local": "bash supabase/scripts/setup-test-project.sh && cp .env.dev.local .env.local && next dev",
+    "dev:cloud": "cp .env.dev.cloud .env.local && next dev"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.64",

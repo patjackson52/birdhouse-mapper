@@ -33,10 +33,6 @@ export async function GET(request: Request) {
       }
     );
 
-    // Clear any existing session so the code exchange creates a clean session
-    // for the verified user — prevents stale sessions from interfering
-    await supabase.auth.signOut();
-
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
