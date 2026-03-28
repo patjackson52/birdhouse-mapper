@@ -57,7 +57,20 @@ async function globalSetup(config: FullConfig) {
   if (existing) {
     await supabaseAdmin.auth.admin.deleteUser(existing.id);
   }
-  await createTestUser(TEST_DATA.onboard.email, TEST_DATA.onboard.password);
+  const newUser = await createTestUser(TEST_DATA.onboard.email, TEST_DATA.onboard.password);
+
+  // Explicitly upsert the onboard user into public.users to ensure the FK is satisfied.
+  // The handle_new_user trigger may silently fail in test environments.
+  if (newUser?.id) {
+    await supabaseAdmin.from('users').upsert({
+      id: newUser.id,
+      email: TEST_DATA.onboard.email,
+      email_verified: true,
+      display_name: 'E2E Onboard User',
+      full_name: 'E2E Onboard User',
+      role: 'editor',
+    }, { onConflict: 'id' });
+  }
 
   const onboardContext = await browser.newContext();
   const onboardPage = await onboardContext.newPage();
