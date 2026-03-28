@@ -111,6 +111,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.service_role_key }}
+          # PLATFORM_DOMAIN intentionally NOT set — tenant resolution uses
+          # Signal D (default org fallback) to pick the seeded test org.
+          # Local dev:e2e uses the same approach.
 
       - name: Wait for app to be ready
         run: |

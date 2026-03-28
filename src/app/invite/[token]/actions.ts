@@ -82,12 +82,12 @@ export async function completeInviteClaim(
   const name = displayName.trim() || invite.display_name || 'Guest';
 
   // Insert profile via service role
+  // Note: users.role was dropped in migration 010; roles now live in org_memberships.
   const { error: profileError } = await service
     .from('users')
     .insert({
       id: userId,
       display_name: name,
-      role: invite.role,
       is_temporary: true,
       session_expires_at: invite.session_expires_at,
       invite_id: invite.id,
@@ -96,7 +96,7 @@ export async function completeInviteClaim(
   if (profileError) {
     // Clean up orphaned anonymous auth user
     await service.auth.admin.deleteUser(userId);
-    return { error: 'Failed to create profile. Please try again.' };
+    return { error: `Failed to create profile: ${profileError.message}` };
   }
 
   // Mark invite as claimed
