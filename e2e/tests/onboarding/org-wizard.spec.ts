@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
-import { cleanupTestOrgs } from '../../fixtures/seed';
+import { cleanupTestOrgs, createTestClient } from '../../fixtures/seed';
 
 const ORG_PREFIX = 'E2E Onboard';
 const ONBOARD_AUTH = path.join(__dirname, '..', '..', '.auth', 'onboard-user.json');
