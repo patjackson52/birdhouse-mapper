@@ -1,17 +1,23 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Item, UpdateType, EntityType } from '@/lib/types';
+import type { Item, ItemType, UpdateType, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem } from '@/lib/location/utils';
+import StatusBadge from '@/components/item/StatusBadge';
 
 export default function UpdateForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedItemId = searchParams.get('item') ?? null;
+  const isLocked = preselectedItemId !== null;
+
   const [items, setItems] = useState<Item[]>([]);
+  const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [updateTypes, setUpdateTypes] = useState<UpdateType[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +26,8 @@ export default function UpdateForm() {
   const [autoSelected, setAutoSelected] = useState(false);
   const hasAttemptedAutoSelect = useRef(false);
 
-  const [itemId, setItemId] = useState('');
+  // When locked, seed itemId immediately from URL param
+  const [itemId, setItemId] = useState(preselectedItemId ?? '');
   const [updateTypeId, setUpdateTypeId] = useState('');
   const [content, setContent] = useState('');
   const [updateDate, setUpdateDate] = useState(
@@ -54,6 +61,12 @@ export default function UpdateForm() {
         if (firstGlobal) setUpdateTypeId(firstGlobal.id);
       }
 
+      // Fetch item types for context card icon
+      const { data: itData } = await supabase
+        .from('item_types')
+        .select('*');
+      if (itData) setItemTypes(itData);
+
       // Fetch entity types that link to updates
       const { data: etData } = await supabase
         .from('entity_types')
@@ -66,8 +79,9 @@ export default function UpdateForm() {
     fetchData();
   }, []);
 
-  // Auto-select nearest item if within 100m
+  // Auto-select nearest item if within 100m (only when not locked)
   useEffect(() => {
+    if (isLocked) return;
     if (hasAttemptedAutoSelect.current) return;
     if (!position || items.length === 0) return;
 
@@ -88,13 +102,25 @@ export default function UpdateForm() {
       setItemId(nearest.id);
       setAutoSelected(true);
     }
-  }, [position, items]);
+  }, [position, items, isLocked]);
 
   // Filter update types: show global ones + ones specific to the selected item's type
   const selectedItem = items.find((i) => i.id === itemId);
+  const selectedItemType = selectedItem
+    ? itemTypes.find((t) => t.id === selectedItem.item_type_id)
+    : undefined;
+
   const availableUpdateTypes = updateTypes.filter(
     (t) => t.is_global || (selectedItem && t.item_type_id === selectedItem.item_type_id)
   );
+
+  function handleCancel() {
+    if (isLocked && preselectedItemId) {
+      router.push(`/?item=${preselectedItemId}`);
+    } else {
+      router.back();
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -168,30 +194,55 @@ export default function UpdateForm() {
         </div>
       )}
 
-      <div>
-        <label htmlFor="item" className="label">
-          Item *
-        </label>
-        <select
-          id="item"
-          value={itemId}
-          onChange={(e) => { setItemId(e.target.value); setAutoSelected(false); }}
-          className="input-field"
-          required
+      {isLocked ? (
+        /* Locked item context card */
+        <div
+          className="flex items-center gap-3 rounded-lg border border-sage-light bg-sage-50 px-3 py-2.5"
+          data-testid="locked-item-card"
         >
-          <option value="">Select an item...</option>
-          {items.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-        {autoSelected && (
-          <p className="text-xs text-forest mt-1">
-            Auto-selected — you appear to be near this item
-          </p>
-        )}
-      </div>
+          {selectedItemType && (
+            <span className="text-xl leading-none" aria-hidden="true">
+              {selectedItemType.icon}
+            </span>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-sm font-medium text-forest-dark">
+              {selectedItem?.name ?? '…'}
+            </span>
+            {selectedItem && (
+              <span className="mt-0.5">
+                <StatusBadge status={selectedItem.status} />
+              </span>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Open item select dropdown (default / standalone flow) */
+        <div>
+          <label htmlFor="item" className="label">
+            Item *
+          </label>
+          <select
+            id="item"
+            value={itemId}
+            onChange={(e) => { setItemId(e.target.value); setAutoSelected(false); }}
+            className="input-field"
+            required
+          >
+            <option value="">Select an item...</option>
+            {items.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+          {autoSelected && (
+            <p className="text-xs text-forest mt-1">
+              Auto-selected — you appear to be near this item
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -266,7 +317,7 @@ export default function UpdateForm() {
           </button>
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={handleCancel}
             className="btn-secondary"
           >
             Cancel
