@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import PlatformNav from '@/components/platform/PlatformNav';
 import PlatformFooter from '@/components/platform/PlatformFooter';
@@ -13,6 +13,18 @@ export default function SignUpPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [existingUser, setExistingUser] = useState<string | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email) {
+        setExistingUser(user.email);
+      }
+      setCheckingSession(false);
+    });
+  }, []);
 
   async function handleGoogleSignUp() {
     setError('');
@@ -62,12 +74,45 @@ export default function SignUpPage() {
     setLoading(false);
   }
 
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setExistingUser(null);
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <PlatformNav minimal />
 
       <main className="flex flex-1 items-start justify-center px-4 pt-16 pb-16">
         <div className="w-full max-w-md mx-auto mt-0 p-8 bg-white shadow-lg rounded-xl">
+          {checkingSession ? (
+            <div className="flex justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+            </div>
+          ) : existingUser ? (
+            <div className="text-center space-y-4">
+              <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
+              <p className="text-sm text-gray-600">
+                You&apos;re signed in as
+              </p>
+              <p className="font-medium text-gray-900">{existingUser}</p>
+              <a
+                href="/"
+                className="block w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors text-center"
+              >
+                Continue to your organization &rarr;
+              </a>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Sign up with a different account
+              </button>
+            </div>
+          ) : (
+          <>
           <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">
             Start your free trial
           </h1>
@@ -176,6 +221,8 @@ export default function SignUpPage() {
               Sign in
             </Link>
           </p>
+          </>
+          )}
         </div>
       </main>
 
