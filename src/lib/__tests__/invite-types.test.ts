@@ -61,7 +61,7 @@ describe('Profile with temp account fields', () => {
     const profile: Profile = {
       id: 'user-2',
       display_name: 'Volunteer',
-      role_id: 'role-1',
+      role: 'editor',
       created_at: '2026-03-20T10:05:00Z',
       is_temporary: true,
       session_expires_at: '2026-03-20T23:59:00Z',
@@ -76,7 +76,7 @@ describe('Profile with temp account fields', () => {
     const profile: Profile = {
       id: 'user-3',
       display_name: 'Past Volunteer',
-      role_id: 'role-1',
+      role: 'editor',
       created_at: '2026-03-19T10:00:00Z',
       is_temporary: true,
       session_expires_at: '2026-03-19T23:59:00Z',
