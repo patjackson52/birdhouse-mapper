@@ -79,11 +79,17 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"email":"editor@test.fieldmapper.org","password":"test-editor-password-123","email_confirm":true}'
 
+          curl -sf -X POST "${API_URL}/auth/v1/admin/users" \
+            -H "apikey: ${SERVICE_KEY}" \
+            -H "Authorization: Bearer ${SERVICE_KEY}" \
+            -H "Content-Type: application/json" \
+            -d '{"email":"onboard@test.fieldmapper.org","password":"test-onboard-password-123","email_confirm":true}'
+
           PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
             INSERT INTO public.users (id, email, email_verified, full_name, display_name)
             SELECT id, email, true, email, split_part(email, '@', 1)
             FROM auth.users
-            WHERE email IN ('admin@test.fieldmapper.org', 'editor@test.fieldmapper.org')
+            WHERE email IN ('admin@test.fieldmapper.org', 'editor@test.fieldmapper.org', 'onboard@test.fieldmapper.org')
             ON CONFLICT (id) DO NOTHING;
           "
 
@@ -129,6 +135,8 @@ jobs:
           TEST_USER_ADMIN_PASSWORD: test-admin-password-123
           TEST_USER_EDITOR_EMAIL: editor@test.fieldmapper.org
           TEST_USER_EDITOR_PASSWORD: test-editor-password-123
+          TEST_USER_ONBOARD_EMAIL: onboard@test.fieldmapper.org
+          TEST_USER_ONBOARD_PASSWORD: test-onboard-password-123
           CI: true
 
       - name: Collect visual diff images
