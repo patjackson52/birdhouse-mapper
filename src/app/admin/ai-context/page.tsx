@@ -225,7 +225,8 @@ export default function AiContextPage() {
     await loadData(orgId);
   }
 
-  async function handleUrlSubmit(url: string) {
+  async function handleUrlSubmit(urls: string[]) {
+    const url = urls[urls.length - 1]; // process the most recently added URL
     if (!orgId) return;
 
     setUploading(true);
