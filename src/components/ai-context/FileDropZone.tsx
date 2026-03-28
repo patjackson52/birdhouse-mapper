@@ -7,7 +7,7 @@ import { getSupportedExtensions } from '@/lib/ai-context/parsers';
 
 interface FileDropZoneProps {
   onFilesSelected: (files: File[]) => void;
-  onUrlSubmit?: (url: string) => void;
+  onUrlSubmit?: (urls: string[]) => void;
   onTextSubmit?: (text: string, label: string) => void;
   disabled?: boolean;
 }
@@ -70,6 +70,7 @@ export default function FileDropZone({
   const [activeTab, setActiveTab] = useState<Tab>('files');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [urlInput, setUrlInput] = useState('');
+  const [addedUrls, setAddedUrls] = useState<string[]>([]);
   const [textInput, setTextInput] = useState('');
   const [textLabel, setTextLabel] = useState('');
 
@@ -109,9 +110,17 @@ export default function FileDropZone({
 
   function handleAddUrl() {
     const trimmed = urlInput.trim();
-    if (!trimmed || !onUrlSubmit) return;
-    onUrlSubmit(trimmed);
+    if (!trimmed) return;
+    const updated = [...addedUrls, trimmed];
+    setAddedUrls(updated);
     setUrlInput('');
+    onUrlSubmit?.(updated);
+  }
+
+  function removeUrl(index: number) {
+    const updated = addedUrls.filter((_, i) => i !== index);
+    setAddedUrls(updated);
+    onUrlSubmit?.(updated);
   }
 
   function handleAddText() {
@@ -236,6 +245,34 @@ export default function FileDropZone({
           <p className="text-xs text-stone-400">
             Enter a URL pointing to a supported file (GeoJSON, CSV, KML, etc.)
           </p>
+
+          {/* Added URLs list */}
+          {addedUrls.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-stone-500 font-medium">
+                {addedUrls.length} {addedUrls.length === 1 ? 'URL' : 'URLs'} added
+              </p>
+              <ul className="space-y-2">
+                {addedUrls.map((url, index) => (
+                  <li key={`${url}-${index}`} className="flex items-center gap-3 p-2 bg-stone-50 rounded-md">
+                    <Globe className="w-5 h-5 text-blue-500 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-stone-800 truncate">{url}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeUrl(index)}
+                      disabled={disabled}
+                      className="p-1 text-stone-400 hover:text-red-500 transition-colors rounded disabled:cursor-not-allowed"
+                      aria-label={`Remove ${url}`}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
