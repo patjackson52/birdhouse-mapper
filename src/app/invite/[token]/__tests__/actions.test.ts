@@ -8,6 +8,7 @@ let deletedAuthUsers: string[] = [];
 
 const validInvite = {
   id: 'invite-1',
+  org_id: 'org-100',
   display_name: 'Volunteer',
   role: 'editor',
   session_expires_at: new Date(Date.now() + 3600_000).toISOString(),
@@ -42,33 +43,50 @@ vi.mock('@/lib/supabase/server', () => ({
         },
       },
     },
-    from: (table: string) => ({
-      select: () => ({
-        eq: () => ({
-          single: () =>
-            Promise.resolve({
-              data: table === 'invites' ? mockInvite : null,
+    from: (table: string) => {
+      // Chainable mock that supports arbitrary .eq/.limit chains
+      const chainable = (): any => {
+        const c: any = {};
+        c.eq = () => c;
+        c.limit = () => c;
+        c.single = () => {
+          if (table === 'invites') {
+            return Promise.resolve({
+              data: mockInvite,
               error: mockInvite ? null : { message: 'not found' },
-            }),
-        }),
-      }),
-      insert: (payload: any) => {
-        inserts[table] = payload;
-        return Promise.resolve({ error: mockInsertError });
-      },
-      update: (payload: any) => {
-        updates[table] = payload;
-        return {
-          eq: () => Promise.resolve({ error: mockUpdateError }),
+            });
+          }
+          if (table === 'roles') {
+            return Promise.resolve({
+              data: { id: 'role-contributor-id' },
+              error: null,
+            });
+          }
+          return Promise.resolve({ data: null, error: null });
         };
-      },
-      delete: () => ({
-        eq: (col: string, val: string) => {
-          if (table === 'users') deletedUsers.push(val);
-          return Promise.resolve({ error: null });
+        return c;
+      };
+
+      return {
+        select: () => chainable(),
+        insert: (payload: any) => {
+          inserts[table] = payload;
+          return Promise.resolve({ error: mockInsertError });
         },
-      }),
-    }),
+        update: (payload: any) => {
+          updates[table] = payload;
+          return {
+            eq: () => Promise.resolve({ error: mockUpdateError }),
+          };
+        },
+        delete: () => ({
+          eq: (col: string, val: string) => {
+            if (table === 'users') deletedUsers.push(val);
+            return Promise.resolve({ error: null });
+          },
+        }),
+      };
+    },
   }),
 }));
 
@@ -130,6 +148,19 @@ describe('completeInviteClaim', () => {
     expect(result).toEqual({ success: true, convertible: true });
     expect(updates.invites.claimed_by).toBe('anon-user-1');
     expect(updates.invites.claimed_at).toBeDefined();
+  });
+
+  it('creates org_membership for the temp user', async () => {
+    await completeInviteClaim('raw-token', 'anon-user-1', 'Test');
+
+    expect(inserts.org_memberships).toBeDefined();
+    expect(inserts.org_memberships).toMatchObject({
+      org_id: 'org-100',
+      user_id: 'anon-user-1',
+      role_id: 'role-contributor-id',
+      status: 'active',
+    });
+    expect(inserts.org_memberships.joined_at).toBeDefined();
   });
 
   it('rejects non-anonymous auth users', async () => {

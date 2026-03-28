@@ -63,7 +63,7 @@ export async function completeInviteClaim(
   // Re-validate token (prevent race conditions)
   const { data: invite, error: inviteError } = await service
     .from('invites')
-    .select('id, display_name, role, session_expires_at, expires_at, claimed_by, convertible')
+    .select('id, org_id, display_name, role, session_expires_at, expires_at, claimed_by, convertible')
     .eq('token', tokenHash)
     .single();
 
@@ -97,6 +97,28 @@ export async function completeInviteClaim(
     // Clean up orphaned anonymous auth user
     await service.auth.admin.deleteUser(userId);
     return { error: `Failed to create profile: ${profileError.message}` };
+  }
+
+  // Grant org membership so RLS policies allow content access.
+  // Map invite role text → org_memberships base_role:
+  //   'editor' → 'contributor', 'admin' → 'org_admin'
+  const baseRole = invite.role === 'admin' ? 'org_admin' : 'contributor';
+  const { data: role } = await service
+    .from('roles')
+    .select('id')
+    .eq('org_id', invite.org_id)
+    .eq('base_role', baseRole)
+    .limit(1)
+    .single();
+
+  if (role) {
+    await service.from('org_memberships').insert({
+      org_id: invite.org_id,
+      user_id: userId,
+      role_id: role.id,
+      status: 'active',
+      joined_at: new Date().toISOString(),
+    });
   }
 
   // Mark invite as claimed
