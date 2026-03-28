@@ -266,11 +266,19 @@ test.describe('Onboarding Wizard', () => {
     expect(org!.name).toBe(orgName);
     expect(org!.slug).toBe(expectedSlug);
 
-    // Verify item types were created
-    const { data: itemTypes } = await client
-      .from('item_types')
-      .select('name')
-      .eq('org_id', org!.id);
+    // Verify item types were created (retry to allow for async completion)
+    let itemTypes: Array<{ name: string }> | null = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data } = await client
+        .from('item_types')
+        .select('name')
+        .eq('org_id', org!.id);
+      if (data && data.length > 0) {
+        itemTypes = data;
+        break;
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
 
     expect(itemTypes).not.toBeNull();
     expect(itemTypes!.length).toBeGreaterThanOrEqual(1);
