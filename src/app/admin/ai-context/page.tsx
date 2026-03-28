@@ -110,8 +110,20 @@ export default function AiContextPage() {
     init();
   }, [loadData]);
 
+  const MAX_FILE_SIZE_MB = 9;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   async function handleFilesSelected(files: File[]) {
     if (!orgId || files.length === 0) return;
+
+    // Client-side size guard (server limit is 10 MB including base64 overhead)
+    const oversized = files.filter((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversized.length > 0) {
+      setError(
+        `File${oversized.length > 1 ? 's' : ''} too large (max ${MAX_FILE_SIZE_MB} MB): ${oversized.map((f) => f.name).join(', ')}`
+      );
+      return;
+    }
 
     setUploading(true);
     setSummaryReady(false);
