@@ -82,8 +82,8 @@ vi.mock('@/lib/invites/tokens', () => ({
   hashToken: () => 'hashed-token-abc',
 }));
 
-// Must import AFTER mocks are set up
-const { createInvite } = await import('../actions');
+// vi.mock is hoisted by vitest, so regular imports work
+import { createInvite } from '../actions';
 
 const validOpts = {
   displayName: 'Test User',
