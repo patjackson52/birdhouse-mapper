@@ -27,43 +27,50 @@ A generic, open-source point-of-interest mapper template. Fork it, run the setup
 
 ## Getting Started
 
-### Prerequisites
+### Option A: Local Development (Recommended)
 
-- Node.js 18+
-- A Supabase project (free tier works)
-
-### Setup
-
-1. Clone and install:
+Prerequisites: Node.js 18+, Docker, [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
 
 ```bash
 git clone <your-fork-url>
 cd field-mapper
 npm install
+npm run dev:local         # starts local Supabase + Next.js in one command
 ```
 
-2. Create `.env.local` with your Supabase credentials:
+Local services:
+- **App:** http://localhost:3000
+- **Supabase Studio:** http://localhost:54323
+- **Mailpit (email testing):** http://localhost:54324
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
+**Test accounts** (created by setup script):
 
-3. Run the database migrations in your Supabase SQL editor:
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | admin@test.fieldmapper.org | test-admin-password-123 |
+| Editor | editor@test.fieldmapper.org | test-editor-password-123 |
 
-```
-supabase/migrations/001_initial_schema.sql    # Base tables
-supabase/migrations/002_generic_schema.sql    # Generic field mapper schema
-```
+> First run pulls Docker images and may take a few minutes. Subsequent starts are fast.
 
-4. Start the dev server:
+### Option B: Cloud Supabase
 
 ```bash
-npm run dev
+cp supabase/scripts/env.dev.cloud.example .env.dev.cloud
+# Edit .env.dev.cloud with your Supabase project credentials
+npm run dev:cloud         # copies config and starts Next.js
 ```
 
-5. Visit `http://localhost:3000` — the setup wizard will guide you through configuration.
+### Dev commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev:local` | Start local Supabase + Next.js (full local stack) |
+| `npm run dev:cloud` | Start Next.js against cloud Supabase |
+| `npm run dev` | Start Next.js with current `.env.local` (no env switching) |
+| `npm run supabase:setup` | Start local Supabase + seed data (no Next.js) |
+| `npm run supabase:reset` | Wipe local DB and re-seed from scratch |
+| `npm run supabase:stop` | Stop local Supabase Docker containers |
+| `npm run test:e2e` | Run E2E tests against local Supabase |
 
 ## Project Structure
 

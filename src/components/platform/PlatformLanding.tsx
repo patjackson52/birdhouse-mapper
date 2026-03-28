@@ -1,10 +1,12 @@
 import Link from 'next/link';
 import PlatformNav from '@/components/platform/PlatformNav';
 import PlatformFooter from '@/components/platform/PlatformFooter';
+import { AuthRedirectHandler } from '@/components/platform/AuthRedirectHandler';
 
 export function PlatformLanding() {
   return (
     <>
+      <AuthRedirectHandler />
       <PlatformNav />
 
       {/* Hero */}

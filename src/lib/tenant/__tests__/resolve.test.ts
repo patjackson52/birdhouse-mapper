@@ -438,8 +438,8 @@ describe('resolveTenant', () => {
       expect(result?.source).toBe('default');
     });
 
-    it('platform domain with port matches Signal 0', async () => {
-      process.env.PLATFORM_DOMAIN = 'localhost:3000';
+    it('platform domain with port in hostname matches Signal 0', async () => {
+      process.env.PLATFORM_DOMAIN = 'localhost';
       const client = createMockClient({});
 
       const result = await resolveTenant('localhost:3000', '/', client);
