@@ -6,17 +6,23 @@ import { useState, useEffect } from 'react';
 import { useConfig } from '@/lib/config/client';
 import { createClient } from '@/lib/supabase/client';
 
-export default function Navigation() {
+export default function Navigation({
+  isAuthenticated: initialAuth = false,
+}: {
+  isAuthenticated?: boolean;
+}) {
   const pathname = usePathname();
   const config = useConfig();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
 
+  // Keep auth state in sync for client-side navigations (login/logout)
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setIsAuthenticated(!!user);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session?.user);
     });
+    return () => subscription.unsubscribe();
   }, []);
 
   // Hide org navigation on platform pages — they render their own PlatformNav.

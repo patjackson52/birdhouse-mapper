@@ -29,6 +29,7 @@ vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: mockUser }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: vi.fn() } } }),
     },
   }),
 }));
@@ -91,7 +92,7 @@ describe('Navigation', () => {
     it('shows Manage and Settings when authenticated', async () => {
       mockUser = { id: 'user-1', email: 'test@test.com' };
       mockPathname = '/map';
-      render(<Navigation />);
+      render(<Navigation isAuthenticated={true} />);
 
       await waitFor(() => {
         // Desktop nav has text "Manage", mobile has "Manage" too

@@ -4,6 +4,7 @@ import { ConfigProvider } from '@/lib/config/client';
 import { getConfig } from '@/lib/config/server';
 import { resolveTheme, themeToCssVars } from '@/lib/config/themes';
 import { UserLocationProvider } from '@/lib/location/provider';
+import { createClient } from '@/lib/supabase/server';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 
@@ -42,6 +43,9 @@ export default async function RootLayout({
   const theme = resolveTheme(config.theme, config.mapStyle);
   const cssVars = themeToCssVars(theme);
 
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
   return (
     <html lang="en">
       <head>
@@ -50,7 +54,7 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col">
         <ConfigProvider config={config} theme={theme}>
           <UserLocationProvider>
-            <Navigation />
+            <Navigation isAuthenticated={!!user} />
             <main className="flex-1">{children}</main>
           </UserLocationProvider>
         </ConfigProvider>
