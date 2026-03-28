@@ -98,6 +98,15 @@ function HomeMapViewContent() {
   async function handleMarkerClick(item: Item) {
     const supabase = createClient();
 
+    // Fetch fresh item data (state may be stale after editing)
+    const { data: freshItem } = await supabase
+      .from('items')
+      .select('*')
+      .eq('id', item.id)
+      .single();
+
+    const currentItem = freshItem || item;
+
     const [updateRes, photoRes, updateTypeRes, itemEntitiesRes] = await Promise.all([
       supabase
         .from("item_updates")
@@ -117,9 +126,9 @@ function HomeMapViewContent() {
 
     const updateTypes = updateTypeRes.data || [];
     const typeMap = new Map(updateTypes.map((t) => [t.id, t]));
-    const itemType = itemTypes.find((t) => t.id === item.item_type_id);
+    const itemType = itemTypes.find((t) => t.id === currentItem.item_type_id);
     const fields = customFields.filter(
-      (f) => f.item_type_id === item.item_type_id,
+      (f) => f.item_type_id === currentItem.item_type_id,
     );
 
     const itemEntities: (Entity & { entity_type: EntityType })[] = ((itemEntitiesRes.data || []) as unknown as { entity_id: string; entities: Entity & { entity_types: EntityType } }[]).map(
@@ -142,7 +151,7 @@ function HomeMapViewContent() {
     }
 
     setSelectedItem({
-      ...item,
+      ...currentItem,
       item_type: itemType!,
       updates: (updateRes.data || []).map((u) => ({
         ...u,
