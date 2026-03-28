@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import GuestBadge from '@/components/manage/GuestBadge';
+import { usePermissions } from '@/lib/permissions/hooks';
 
 export default function ManageLayout({
   children,
@@ -13,6 +14,7 @@ export default function ManageLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { permissions } = usePermissions();
   const [guestExpiresAt, setGuestExpiresAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -43,10 +45,10 @@ export default function ManageLayout({
   }
 
   const tabs = [
-    { href: '/manage', label: 'Dashboard' },
-    { href: '/manage/add', label: 'Add Item' },
-    { href: '/manage/update', label: 'Add Update' },
-  ];
+    { href: '/manage', label: 'Dashboard', show: true },
+    { href: '/manage/add', label: 'Add Item', show: permissions.items.create },
+    { href: '/manage/update', label: 'Add Update', show: permissions.updates.create },
+  ].filter((t) => t.show);
 
   return (
     <div className="pb-20 md:pb-0">
