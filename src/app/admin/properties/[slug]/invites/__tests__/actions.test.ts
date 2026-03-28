@@ -59,6 +59,14 @@ vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: () => ({
     from: (table: string) => {
       insertedTable = table;
+      if (table === 'roles') {
+        // Role validation query: .select().eq().eq().single()
+        const roleChain: any = {};
+        roleChain.select = () => roleChain;
+        roleChain.eq = () => roleChain;
+        roleChain.single = () => Promise.resolve({ data: { id: 'role-contributor-id' }, error: null });
+        return roleChain;
+      }
       return mockServiceChain;
     },
   }),
@@ -89,6 +97,7 @@ const validOpts = {
   displayName: 'Test User',
   sessionExpiresAt: new Date(Date.now() + 3600_000).toISOString(),
   convertible: false,
+  roleId: 'role-contributor-id',
 };
 
 describe('createInvite', () => {
@@ -131,7 +140,7 @@ describe('createInvite', () => {
       token: 'hashed-token-abc',
       created_by: 'admin-user-id',
       display_name: 'Test User',
-      role: 'editor',
+      role_id: 'role-contributor-id',
       convertible: false,
     });
     expect(insertedPayload.session_expires_at).toBe(validOpts.sessionExpiresAt);

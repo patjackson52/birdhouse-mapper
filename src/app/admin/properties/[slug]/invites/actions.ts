@@ -26,10 +26,31 @@ async function isOrgAdmin(supabase: SupabaseClient, userId: string): Promise<boo
   return (data?.length ?? 0) > 0;
 }
 
+export async function getInviteRoles() {
+  const supabase = createClient();
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context', roles: [] };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated', roles: [] };
+
+  const service = createServiceClient();
+  const { data, error } = await service
+    .from('roles')
+    .select('id, name, base_role, permissions')
+    .eq('org_id', tenant.orgId)
+    .in('base_role', ['org_staff', 'contributor', 'viewer'])
+    .order('sort_order', { ascending: true });
+
+  if (error) return { error: error.message, roles: [] };
+  return { roles: data || [] };
+}
+
 export async function createInvite(opts: {
   displayName: string | null;
   sessionExpiresAt: string;
   convertible: boolean;
+  roleId: string;
 }) {
   const supabase = createClient();
   const service = createServiceClient();
@@ -42,6 +63,16 @@ export async function createInvite(opts: {
   if (!(await isOrgAdmin(supabase, user.id))) {
     return { error: 'Admin access required' };
   }
+
+  // Validate the role belongs to this org
+  const { data: role } = await service
+    .from('roles')
+    .select('id')
+    .eq('id', opts.roleId)
+    .eq('org_id', tenant.orgId)
+    .single();
+
+  if (!role) return { error: 'Invalid role for this organization' };
 
   const { count } = await service
     .from('invites')
@@ -65,7 +96,7 @@ export async function createInvite(opts: {
       token: tokenHash,
       created_by: user.id,
       display_name: opts.displayName || null,
-      role: 'editor',
+      role_id: opts.roleId,
       convertible: opts.convertible,
       session_expires_at: opts.sessionExpiresAt,
       expires_at: expiresAt,
@@ -92,9 +123,10 @@ export async function getInvites() {
   const { data, error } = await service
     .from('invites')
     .select(`
-      id, display_name, role, convertible,
+      id, display_name, convertible,
       session_expires_at, expires_at,
-      claimed_by, claimed_at, created_at
+      claimed_by, claimed_at, created_at,
+      role_id, roles!invites_role_id_fkey ( name )
     `)
     .order('created_at', { ascending: false });
 
@@ -121,6 +153,7 @@ export async function getInvites() {
   return {
     invites: data.map((invite) => ({
       ...invite,
+      roles: (invite as any).roles as { name: string } | null,
       claimed_display_name: invite.claimed_by
         ? profileMap[invite.claimed_by] || 'Guest'
         : null,

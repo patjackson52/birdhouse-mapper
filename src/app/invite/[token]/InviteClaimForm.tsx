@@ -8,10 +8,14 @@ export default function InviteClaimForm({
   token,
   displayName,
   sessionExpiresAt,
+  roleName,
+  capabilities,
 }: {
   token: string;
   displayName: string | null;
   sessionExpiresAt: string;
+  roleName: string;
+  capabilities: string[];
 }) {
   const [name, setName] = useState(displayName || '');
   const [loading, setLoading] = useState(false);
@@ -61,7 +65,7 @@ export default function InviteClaimForm({
               Welcome, {displayName}!
             </h1>
             <p className="text-sm text-sage mt-1">
-              You&apos;ve been invited to contribute
+              You&apos;ve been invited as <strong>{roleName}</strong>
             </p>
           </>
         ) : (
@@ -70,7 +74,7 @@ export default function InviteClaimForm({
               Welcome!
             </h1>
             <p className="text-sm text-sage mt-1">
-              You&apos;ve been invited to contribute
+              You&apos;ve been invited as <strong>{roleName}</strong>
             </p>
           </>
         )}
@@ -80,6 +84,20 @@ export default function InviteClaimForm({
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700 mb-4">
             {error}
+          </div>
+        )}
+
+        {capabilities.length > 0 && (
+          <div className="rounded-lg bg-forest/5 border border-forest/10 px-4 py-3 mb-4">
+            <div className="text-xs font-medium text-forest-dark mb-2">You&apos;ll be able to:</div>
+            <ul className="space-y-1">
+              {capabilities.map((cap) => (
+                <li key={cap} className="text-sm text-forest-dark/80 flex items-start gap-2">
+                  <span className="text-forest mt-0.5">✓</span>
+                  {cap}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

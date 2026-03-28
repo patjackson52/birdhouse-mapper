@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { createInvite, getInvites, convertAccount, revokeAccess } from './actions';
+import { createInvite, getInvites, getInviteRoles, convertAccount, revokeAccess } from './actions';
 import { formatShortDate } from '@/lib/utils';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
@@ -16,6 +16,13 @@ type InviteRow = {
   claimed_at: string | null;
   created_at: string;
   claimed_display_name: string | null;
+  roles: { name: string } | null;
+};
+
+type InviteRole = {
+  id: string;
+  name: string;
+  base_role: string;
 };
 
 type View = 'list' | 'create' | 'share' | 'convert';
@@ -39,7 +46,9 @@ export default function AdminInvitesPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>('list');
 
+  const [availableRoles, setAvailableRoles] = useState<InviteRole[]>([]);
   const [createName, setCreateName] = useState('');
+  const [createRoleId, setCreateRoleId] = useState('');
   const [createExpiry, setCreateExpiry] = useState('23:59');
   const [createConvertible, setCreateConvertible] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -56,8 +65,17 @@ export default function AdminInvitesPage() {
   const [convertError, setConvertError] = useState('');
 
   async function loadInvites() {
-    const result = await getInvites();
-    if (result.invites) setInvites(result.invites);
+    const [inviteResult, rolesResult] = await Promise.all([
+      getInvites(),
+      getInviteRoles(),
+    ]);
+    if (inviteResult.invites) setInvites(inviteResult.invites);
+    if (rolesResult.roles) {
+      setAvailableRoles(rolesResult.roles);
+      // Default to contributor role
+      const contributor = rolesResult.roles.find((r) => r.base_role === 'contributor');
+      if (contributor && !createRoleId) setCreateRoleId(contributor.id);
+    }
     setLoading(false);
   }
 
@@ -82,6 +100,7 @@ export default function AdminInvitesPage() {
       displayName: createName.trim() || null,
       sessionExpiresAt: expiryTime.toISOString(),
       convertible: createConvertible,
+      roleId: createRoleId,
     });
 
     setCreating(false);
@@ -149,6 +168,8 @@ export default function AdminInvitesPage() {
           <button
             onClick={() => {
               setCreateName('');
+              const contributor = availableRoles.find((r) => r.base_role === 'contributor');
+              if (contributor) setCreateRoleId(contributor.id);
               setCreateExpiry('23:59');
               setCreateConvertible(false);
               setCreateError('');
@@ -195,6 +216,23 @@ export default function AdminInvitesPage() {
               <p className="text-xs text-sage mt-1">
                 Leave blank to let the user enter their name
               </p>
+            </div>
+            <div>
+              <label htmlFor="invite-role" className="label">
+                Access Level
+              </label>
+              <select
+                id="invite-role"
+                value={createRoleId}
+                onChange={(e) => setCreateRoleId(e.target.value)}
+                className="input-field"
+              >
+                {availableRoles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label htmlFor="invite-expiry" className="label">
@@ -321,7 +359,7 @@ export default function AdminInvitesPage() {
               <tr className="border-b border-sage-light bg-sage-light">
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">Name</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase hidden sm:table-cell">Convertible</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase hidden sm:table-cell">Role</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-sage uppercase hidden sm:table-cell">Created</th>
                 <th className="text-right px-4 py-3 text-xs font-medium text-sage uppercase">Actions</th>
               </tr>
@@ -340,7 +378,7 @@ export default function AdminInvitesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-sage hidden sm:table-cell">
-                      {invite.convertible ? 'Yes' : 'No'}
+                      {invite.roles?.name || '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-sage hidden sm:table-cell">
                       {formatShortDate(invite.created_at)}

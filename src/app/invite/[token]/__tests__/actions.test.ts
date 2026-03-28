@@ -10,11 +10,19 @@ const validInvite = {
   id: 'invite-1',
   org_id: 'org-100',
   display_name: 'Volunteer',
-  role: 'editor',
+  role_id: 'role-contributor-id',
   session_expires_at: new Date(Date.now() + 3600_000).toISOString(),
   expires_at: new Date(Date.now() + 900_000).toISOString(),
   claimed_by: null,
   convertible: true,
+  roles: {
+    name: 'Contributor',
+    permissions: {
+      items: { view: true, create: false, edit_assigned: true },
+      updates: { view: true, create: true, edit_own: true },
+      attachments: { upload: true },
+    },
+  },
 };
 
 const expiredInvite = {
@@ -213,15 +221,18 @@ describe('validateInviteToken', () => {
     mockInvite = { ...validInvite };
   });
 
-  it('returns valid for unclaimed, unexpired invite', async () => {
+  it('returns valid for unclaimed, unexpired invite with role info', async () => {
     const result = await validateInviteToken('raw-token');
 
     expect(result.valid).toBe(true);
-    expect(result.invite).toEqual({
+    expect(result.invite).toMatchObject({
       id: validInvite.id,
       display_name: validInvite.display_name,
       session_expires_at: validInvite.session_expires_at,
+      role_name: 'Contributor',
     });
+    expect(result.invite!.capabilities).toContain('View items on the map');
+    expect(result.invite!.capabilities).toContain('Add observations');
   });
 
   it('returns not_found for missing invite', async () => {
