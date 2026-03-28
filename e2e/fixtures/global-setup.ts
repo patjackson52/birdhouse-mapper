@@ -50,14 +50,33 @@ async function globalSetup(config: FullConfig) {
   await editorContext.storageState({ path: path.join(AUTH_DIR, 'editor.json') });
   await editorContext.close();
 
-  // Onboard user: delete and recreate to guarantee clean state (no org memberships)
+  // Onboard user: ensure clean state by removing any org memberships from prior runs.
+  // We do NOT delete/recreate the user — the CI workflow pre-creates them via psql
+  // and the handle_new_user trigger ensures they exist in public.users.
   const supabaseAdmin = createTestClient();
-  const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
-  const existing = existingUser?.users?.find((u: any) => u.email === TEST_DATA.onboard.email);
-  if (existing) {
-    await supabaseAdmin.auth.admin.deleteUser(existing.id);
+  const { data: existingUserData } = await supabaseAdmin.auth.admin.listUsers();
+  const existingOnboard = existingUserData?.users?.find((u: any) => u.email === TEST_DATA.onboard.email);
+
+  if (!existingOnboard) {
+    // User doesn't exist yet — create them and upsert into public.users
+    const newUser = await createTestUser(TEST_DATA.onboard.email, TEST_DATA.onboard.password);
+    if (newUser?.id) {
+      await supabaseAdmin.from('users').upsert({
+        id: newUser.id,
+        email: TEST_DATA.onboard.email,
+        email_verified: true,
+        display_name: 'E2E Onboard User',
+        full_name: 'E2E Onboard User',
+        role: 'editor',
+      }, { onConflict: 'id' });
+    }
+  } else {
+    // User exists — just remove any org memberships from prior test runs
+    await supabaseAdmin
+      .from('org_memberships')
+      .delete()
+      .eq('user_id', existingOnboard.id);
   }
-  await createTestUser(TEST_DATA.onboard.email, TEST_DATA.onboard.password);
 
   const onboardContext = await browser.newContext();
   const onboardPage = await onboardContext.newPage();
