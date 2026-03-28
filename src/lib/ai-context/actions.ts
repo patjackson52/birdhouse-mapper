@@ -655,45 +655,58 @@ export async function analyzeFilesForOnboarding(
     const { generateText } = await import('ai');
     const { anthropic } = await import('@ai-sdk/anthropic');
 
-    // Step 1: Analyze each file individually
+    // Step 1: Analyze each file individually (per-file try/catch so one failure doesn't kill the batch)
     const fileSummaries: Array<{ fileName: string; summary: string }> = [];
 
     for (const parsed of parsedFiles) {
-      const systemPrompt = buildFileAnalysisPrompt('');
-      const userMessage = buildFileAnalysisUserMessage(parsed);
+      try {
+        const systemPrompt = buildFileAnalysisPrompt('');
+        const userMessage = buildFileAnalysisUserMessage(parsed);
 
-      const isImage = parsed.mimeType.startsWith('image/');
-      const isPdf = parsed.mimeType === 'application/pdf';
+        // Skip base64 content for large files to avoid payload/timeout issues
+        // Instead, just send the text description
+        let messageContent: string;
+        const isImage = parsed.mimeType.startsWith('image/');
+        const isPdf = parsed.mimeType === 'application/pdf';
 
-      let messageContent: string;
-      if (isImage && parsed.base64Content) {
-        messageContent = `${userMessage}\n\nImage data (base64): data:${parsed.mimeType};base64,${parsed.base64Content}`;
-      } else if (isPdf && parsed.base64Content) {
-        messageContent = `${userMessage}\n\nPDF content (base64, mimeType: ${parsed.mimeType}): ${parsed.base64Content}`;
-      } else {
-        messageContent = userMessage;
-      }
+        if ((isImage || isPdf) && parsed.base64Content && parsed.base64Content.length < 500_000) {
+          messageContent = `${userMessage}\n\n[Binary content: ${parsed.mimeType}, ${Math.round(parsed.base64Content.length * 0.75 / 1024)}KB]`;
+        } else {
+          messageContent = userMessage;
+        }
 
-      const { text } = await generateText({
-        model: anthropic('claude-sonnet-4-6'),
-        system: systemPrompt,
-        messages: [{ role: 'user', content: messageContent }],
-        maxOutputTokens: 2000,
-      });
+        const { text } = await generateText({
+          model: anthropic('claude-sonnet-4-6'),
+          system: systemPrompt,
+          messages: [{ role: 'user', content: messageContent }],
+          maxOutputTokens: 2000,
+        });
 
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const result = JSON.parse(jsonMatch[0]) as FileAnalysisResult;
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const result = JSON.parse(jsonMatch[0]) as FileAnalysisResult;
+          fileSummaries.push({
+            fileName: parsed.fileName,
+            summary: result.content_summary,
+          });
+        } else {
+          fileSummaries.push({
+            fileName: parsed.fileName,
+            summary: '(could not parse AI response)',
+          });
+        }
+      } catch (fileErr) {
         fileSummaries.push({
           fileName: parsed.fileName,
-          summary: result.content_summary,
-        });
-      } else {
-        fileSummaries.push({
-          fileName: parsed.fileName,
-          summary: '(analysis failed)',
+          summary: `(analysis error: ${fileErr instanceof Error ? fileErr.message : 'unknown'})`,
         });
       }
+    }
+
+    // If all files failed, return error
+    const allFailed = fileSummaries.every((fs) => fs.summary.startsWith('('));
+    if (allFailed) {
+      return { error: `All files failed analysis. ${fileSummaries[0]?.summary ?? 'Unknown error.'}` };
     }
 
     // Step 2: Synthesize org profile from all summaries

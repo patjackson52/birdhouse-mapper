@@ -502,6 +502,38 @@ export default function OnboardPage() {
                 orgProfile={aiOrgProfile}
               />
 
+              {error && (
+                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 space-y-3">
+                  <p className="text-sm text-red-700 font-medium">
+                    AI analysis failed
+                  </p>
+                  <p className="text-sm text-red-600">{error}</p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError('');
+                        setStep('ai-upload');
+                      }}
+                      className="text-sm font-medium text-red-700 hover:text-red-800 transition-colors"
+                    >
+                      &larr; Try again
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setError('');
+                        setOnboardPath('manual');
+                        setStep('name');
+                      }}
+                      className="text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      Set up manually instead
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {aiSummaryReady && preFillApplied && (
                 <p className="text-sm text-green-600 font-medium text-center">
                   Setup suggestions ready — moving to review...
