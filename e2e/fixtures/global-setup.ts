@@ -1,22 +1,9 @@
 import { chromium, type FullConfig } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
+// test-data loads .env.test.local on import — must be imported before seed
 import { TEST_DATA } from './test-data';
 import { createTestUser, deleteTestUser, createTestClient } from './seed';
-
-// Load .env.test.local if it exists (for local Docker setup)
-const envPath = path.join(__dirname, '..', '..', '.env.test.local');
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf-8');
-  for (const line of envContent.split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const [key, ...rest] = trimmed.split('=');
-    if (key && !process.env[key]) {
-      process.env[key] = rest.join('=');
-    }
-  }
-}
 
 const AUTH_DIR = path.join(__dirname, '..', '.auth');
 
