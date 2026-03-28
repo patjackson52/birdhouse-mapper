@@ -94,7 +94,7 @@ vi.mock('@/lib/invites/tokens', () => ({
   hashToken: (token: string) => `hashed-${token}`,
 }));
 
-const { completeInviteClaim, validateInviteToken } = await import('../actions');
+import { completeInviteClaim, validateInviteToken } from '../actions';
 
 describe('completeInviteClaim', () => {
   beforeEach(() => {
