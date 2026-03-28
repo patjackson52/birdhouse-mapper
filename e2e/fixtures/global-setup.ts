@@ -2,6 +2,7 @@ import { chromium, type FullConfig } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 import { TEST_DATA } from './test-data';
+import { createTestUser, deleteTestUser, createTestClient } from './seed';
 
 // Load .env.test.local if it exists (for local Docker setup)
 const envPath = path.join(__dirname, '..', '..', '.env.test.local');
@@ -49,7 +50,15 @@ async function globalSetup(config: FullConfig) {
   await editorContext.storageState({ path: path.join(AUTH_DIR, 'editor.json') });
   await editorContext.close();
 
-  // Log in as onboard user (fresh user with no org membership)
+  // Onboard user: delete and recreate to guarantee clean state (no org memberships)
+  const supabaseAdmin = createTestClient();
+  const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
+  const existing = existingUser?.users?.find((u: any) => u.email === TEST_DATA.onboard.email);
+  if (existing) {
+    await supabaseAdmin.auth.admin.deleteUser(existing.id);
+  }
+  await createTestUser(TEST_DATA.onboard.email, TEST_DATA.onboard.password);
+
   const onboardContext = await browser.newContext();
   const onboardPage = await onboardContext.newPage();
   await onboardPage.goto(`${baseURL}/login`);

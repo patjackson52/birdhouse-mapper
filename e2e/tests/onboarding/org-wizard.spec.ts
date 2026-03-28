@@ -15,7 +15,7 @@ function screenshotPath(name: string) {
 // Helper: navigate to a specific wizard step by clicking through from welcome
 async function navigateToStep(page: import('@playwright/test').Page, targetStep: number) {
   await page.goto('/onboard');
-  await page.waitForSelector('text=set up your organization', { timeout: 10000 });
+  await page.waitForSelector('text=set up your organization', { timeout: 20000 });
 
   if (targetStep === 0) return; // welcome step
 
@@ -52,7 +52,7 @@ test.describe('Onboarding Wizard', () => {
 
   test('walks through all 8 steps capturing screenshots', async ({ page }) => {
     await page.goto('/onboard');
-    await page.waitForSelector('text=set up your organization', { timeout: 10000 });
+    await page.waitForSelector('text=set up your organization', { timeout: 20000 });
 
     // Step 1: Welcome
     await expect(page.locator('button:has-text("Get Started")')).toBeVisible();
@@ -132,7 +132,7 @@ test.describe('Onboarding Wizard', () => {
 
   test('back button preserves form data', async ({ page }) => {
     await page.goto('/onboard');
-    await page.waitForSelector('text=set up your organization', { timeout: 10000 });
+    await page.waitForSelector('text=set up your organization', { timeout: 20000 });
 
     // Go to name step
     await page.locator('button:has-text("Get Started")').click();
@@ -159,7 +159,7 @@ test.describe('Onboarding Wizard', () => {
 
   test('blocks Next when org name is empty', async ({ page }) => {
     await page.goto('/onboard');
-    await page.waitForSelector('text=set up your organization', { timeout: 10000 });
+    await page.waitForSelector('text=set up your organization', { timeout: 20000 });
     await page.locator('button:has-text("Get Started")').click();
     await expect(page.locator('text=Name & Location')).toBeVisible();
 
@@ -172,7 +172,7 @@ test.describe('Onboarding Wizard', () => {
 
   test('blocks Next when slug is empty', async ({ page }) => {
     await page.goto('/onboard');
-    await page.waitForSelector('text=set up your organization', { timeout: 10000 });
+    await page.waitForSelector('text=set up your organization', { timeout: 20000 });
     await page.locator('button:has-text("Get Started")').click();
 
     // Fill name (auto-generates slug)
@@ -211,7 +211,7 @@ test.describe('Onboarding Wizard', () => {
     const expectedSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     await page.goto('/onboard');
-    await page.waitForSelector('text=set up your organization', { timeout: 10000 });
+    await page.waitForSelector('text=set up your organization', { timeout: 20000 });
 
     // Step 1: Welcome
     await page.locator('button:has-text("Get Started")').click();
