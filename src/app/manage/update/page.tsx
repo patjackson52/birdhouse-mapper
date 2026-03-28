@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import UpdateForm from '@/components/manage/UpdateForm';
 
 export default function AddUpdatePage() {
@@ -13,7 +14,9 @@ export default function AddUpdatePage() {
         include photos taken in the field.
       </p>
       <div className="card">
-        <UpdateForm />
+        <Suspense fallback={<div className="py-8 text-center text-sm text-sage">Loading…</div>}>
+          <UpdateForm />
+        </Suspense>
       </div>
     </div>
   );
