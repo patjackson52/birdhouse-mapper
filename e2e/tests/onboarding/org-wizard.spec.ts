@@ -86,7 +86,7 @@ test.describe('Onboarding Wizard', () => {
 
     // Click Next → Step 4: Custom Map Overlay
     await page.locator('button:has-text("Next")').click();
-    await expect(page.locator('text=Custom Map Overlay')).toBeVisible();
+    await expect(page.locator('text=Custom Map Overlay').first()).toBeVisible();
     await expect(page.locator('text=coming soon')).toBeVisible();
     await page.screenshot({ path: screenshotPath('step-4-custom-map'), fullPage: true });
 
@@ -227,7 +227,7 @@ test.describe('Onboarding Wizard', () => {
     await page.locator('button:has-text("Next")').click();
 
     // Step 4: Custom Map — skip
-    await expect(page.locator('text=Custom Map Overlay')).toBeVisible();
+    await expect(page.locator('text=Custom Map Overlay').first()).toBeVisible();
     await page.locator('button:has-text("Next")').click();
 
     // Step 5: Item Types — keep default Bird Box
