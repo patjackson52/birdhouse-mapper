@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import PlatformNav from '@/components/platform/PlatformNav';
 import { createClient } from '@/lib/supabase/client';
 import { onboardCreateOrg, generateEntityTypeSuggestions } from './actions';
+import { geocodeLocation } from '@/lib/location/geocoding';
 import type { EntityTypeSuggestion } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
 import FileDropZone from '@/components/ai-context/FileDropZone';
@@ -76,6 +77,9 @@ export default function OnboardPage() {
   const [aboutContent, setAboutContent] = useState(
     '# About\n\nDescribe your project here.'
   );
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeSuccess, setGeocodeSuccess] = useState('');
+
   const [entityTypeSuggestions, setEntityTypeSuggestions] = useState<
     EntityTypeSuggestion[]
   >([]);
@@ -131,6 +135,27 @@ export default function OnboardPage() {
         });
     });
   }, []);
+
+  useEffect(() => {
+    if (locationName.length < 3) return;
+    setGeocoding(true);
+    setGeocodeSuccess('');
+    const timer = setTimeout(async () => {
+      const result = await geocodeLocation(locationName);
+      setGeocoding(false);
+      if (result) {
+        setLat(result.lat);
+        setLng(result.lng);
+        setZoom(10);
+        setGeocodeSuccess(locationName);
+        setTimeout(() => setGeocodeSuccess(''), 3000);
+      }
+    }, 500);
+    return () => {
+      clearTimeout(timer);
+      setGeocoding(false);
+    };
+  }, [locationName]);
 
   const steps = onboardPath === 'ai' ? AI_STEPS : MANUAL_STEPS;
   const stepIndex = steps.indexOf(step);
@@ -686,6 +711,12 @@ export default function OnboardPage() {
                         placeholder="e.g., Fairbanks, AK"
                       />
                     </div>
+                    {geocoding && (
+                      <p className="text-xs text-indigo-500">📍 Auto-filling coordinates...</p>
+                    )}
+                    {!geocoding && geocodeSuccess && (
+                      <p className="text-xs text-green-600">📍 Coordinates updated for {geocodeSuccess}</p>
+                    )}
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label
@@ -1084,6 +1115,12 @@ export default function OnboardPage() {
                   placeholder="e.g., Fairbanks, AK"
                 />
               </div>
+              {geocoding && (
+                <p className="text-xs text-indigo-500">📍 Auto-filling coordinates...</p>
+              )}
+              {!geocoding && geocodeSuccess && (
+                <p className="text-xs text-green-600">📍 Coordinates updated for {geocodeSuccess}</p>
+              )}
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label
