@@ -147,7 +147,7 @@ Users can sign in with Google in addition to email/password. To enable it:
      https://your-app.vercel.app/api/auth/callback
      ```
 
-No additional environment variables are needed in `.env.local` — credentials live in Supabase.
+No additional environment variables needed in `.env.local` — credentials live in Supabase.
 
 New users who sign in with Google are automatically assigned the `editor` role via the database trigger. An admin can promote them to `admin` via `/admin`.
 
