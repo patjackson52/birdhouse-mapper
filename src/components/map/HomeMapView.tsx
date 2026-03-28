@@ -16,6 +16,7 @@ import type {
 import { createClient } from "@/lib/supabase/client";
 import DetailPanel from "@/components/item/DetailPanel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { usePermissions } from "@/lib/permissions/hooks";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
@@ -48,6 +49,7 @@ function HomeMapViewContent() {
     null,
   );
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { permissions } = usePermissions();
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const deepLinkedRef = useRef(false);
@@ -194,6 +196,8 @@ function HomeMapViewContent() {
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
         isAuthenticated={isAuthenticated}
+        canEditItem={permissions.items.edit_any || permissions.items.edit_assigned}
+        canAddUpdate={permissions.updates.create}
       />
     </div>
   );

@@ -6,10 +6,12 @@ import type { Item } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import StatusBadge from '@/components/item/StatusBadge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { usePermissions } from '@/lib/permissions/hooks';
 
 export default function ManageDashboard() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const { permissions } = usePermissions();
 
   useEffect(() => {
     async function fetchData() {
@@ -40,12 +42,16 @@ export default function ManageDashboard() {
           Management Dashboard
         </h1>
         <div className="flex gap-2">
-          <Link href="/manage/add" className="btn-primary text-sm">
-            Add Item
-          </Link>
-          <Link href="/manage/update" className="btn-secondary text-sm">
-            Add Update
-          </Link>
+          {permissions.items.create && (
+            <Link href="/manage/add" className="btn-primary text-sm">
+              Add Item
+            </Link>
+          )}
+          {permissions.updates.create && (
+            <Link href="/manage/update" className="btn-secondary text-sm">
+              Add Update
+            </Link>
+          )}
         </div>
       </div>
 

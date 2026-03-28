@@ -23,7 +23,32 @@ type InviteRole = {
   id: string;
   name: string;
   base_role: string;
+  permissions: Record<string, Record<string, boolean>>;
 };
+
+/** Map permission keys to human-readable labels */
+const CAPABILITY_LABELS: Record<string, string> = {
+  'items.view': 'View items on the map',
+  'items.create': 'Create new items',
+  'items.edit_any': 'Edit any item',
+  'items.edit_assigned': 'Edit items they created',
+  'updates.create': 'Add observations',
+  'updates.edit_own': 'Edit own observations',
+  'attachments.upload': 'Upload photos',
+};
+
+function getRoleCapabilities(permissions: Record<string, Record<string, boolean>>): string[] {
+  const caps: string[] = [];
+  for (const [category, actions] of Object.entries(permissions)) {
+    for (const [action, enabled] of Object.entries(actions)) {
+      const key = `${category}.${action}`;
+      if (enabled && CAPABILITY_LABELS[key]) {
+        caps.push(CAPABILITY_LABELS[key]);
+      }
+    }
+  }
+  return caps;
+}
 
 type View = 'list' | 'create' | 'share' | 'convert';
 
@@ -233,6 +258,23 @@ export default function AdminInvitesPage() {
                   </option>
                 ))}
               </select>
+              {createRoleId && (() => {
+                const selectedRole = availableRoles.find((r) => r.id === createRoleId);
+                const caps = selectedRole ? getRoleCapabilities(selectedRole.permissions) : [];
+                return caps.length > 0 ? (
+                  <div className="mt-2 rounded-lg bg-forest/5 border border-forest/10 px-3 py-2">
+                    <div className="text-xs font-medium text-forest-dark mb-1">This role allows:</div>
+                    <ul className="space-y-0.5">
+                      {caps.map((cap) => (
+                        <li key={cap} className="text-xs text-forest-dark/70 flex items-start gap-1.5">
+                          <span className="text-forest mt-px">✓</span>
+                          {cap}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null;
+              })()}
             </div>
             <div>
               <label htmlFor="invite-expiry" className="label">
