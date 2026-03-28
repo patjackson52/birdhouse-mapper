@@ -84,6 +84,7 @@ export default function OnboardPage() {
 
   // AI path state
   const [aiFiles, setAiFiles] = useState<File[]>([]);
+  const [aiUrls, setAiUrls] = useState<string[]>([]);
   const [aiProcessingItems, setAiProcessingItems] = useState<
     Array<{
       id: string;
@@ -201,10 +202,10 @@ export default function OnboardPage() {
 
   // AI analysis flow
   const runAiAnalysis = useCallback(async () => {
-    if (aiFiles.length === 0) return;
+    if (aiFiles.length === 0 && aiUrls.length === 0) return;
 
     // Initialize processing items
-    const items = aiFiles.map((file, i) => ({
+    const fileItems = aiFiles.map((file, i) => ({
       id: `onboard-${i}`,
       fileName: file.name,
       mimeType: file.type || 'application/octet-stream',
@@ -212,6 +213,15 @@ export default function OnboardPage() {
       contentSummary: null,
       geoCount: 0,
     }));
+    const urlItems = aiUrls.map((url, i) => ({
+      id: `onboard-url-${i}`,
+      fileName: url,
+      mimeType: 'text/html',
+      status: 'pending' as const,
+      contentSummary: null,
+      geoCount: 0,
+    }));
+    const items = [...fileItems, ...urlItems];
     setAiProcessingItems(items);
     setAiSummaryReady(false);
     setAiOrgProfile(null);
@@ -256,6 +266,31 @@ export default function OnboardPage() {
           )
         );
       }
+    }
+
+    // Add URL items as ParsedFileData (fetching happens server-side in analyzeFilesForOnboarding)
+    for (let i = 0; i < aiUrls.length; i++) {
+      const urlIndex = aiFiles.length + i;
+      setAiProcessingItems((prev) =>
+        prev.map((item, j) =>
+          j === urlIndex ? { ...item, status: 'processing' } : item
+        )
+      );
+      parsedFiles.push({
+        fileName: aiUrls[i],
+        mimeType: 'text/html',
+        fileSize: 0,
+        sourceType: 'url',
+        url: aiUrls[i],
+        textContent: `URL: ${aiUrls[i]}`,
+      });
+      setAiProcessingItems((prev) =>
+        prev.map((item, j) =>
+          j === urlIndex
+            ? { ...item, status: 'complete', contentSummary: 'URL queued' }
+            : item
+        )
+      );
     }
 
     // Now show "analyzing with AI" state
@@ -321,7 +356,7 @@ export default function OnboardPage() {
     setTimeout(() => {
       setStep('ai-review');
     }, 1500);
-  }, [aiFiles]);
+  }, [aiFiles, aiUrls]);
 
   async function handleLaunch() {
     if (!validateCurrentStep()) return;
@@ -460,6 +495,7 @@ export default function OnboardPage() {
 
               <FileDropZone
                 onFilesSelected={(files) => setAiFiles(files)}
+                onUrlSubmit={(urls) => setAiUrls(urls)}
                 disabled={false}
               />
 
@@ -469,7 +505,7 @@ export default function OnboardPage() {
                 </p>
               </div>
 
-              {aiFiles.length > 0 && (
+              {(aiFiles.length > 0 || aiUrls.length > 0) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -479,8 +515,16 @@ export default function OnboardPage() {
                   }}
                   className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors w-full"
                 >
-                  Analyze {aiFiles.length}{' '}
-                  {aiFiles.length === 1 ? 'file' : 'files'}
+                  {(() => {
+                    const total = aiFiles.length + aiUrls.length;
+                    if (aiFiles.length > 0 && aiUrls.length > 0) {
+                      return `Analyze ${aiFiles.length} ${aiFiles.length === 1 ? 'file' : 'files'} + ${aiUrls.length} ${aiUrls.length === 1 ? 'URL' : 'URLs'}`;
+                    }
+                    if (aiUrls.length > 0) {
+                      return `Analyze ${total} ${total === 1 ? 'URL' : 'URLs'}`;
+                    }
+                    return `Analyze ${total} ${total === 1 ? 'file' : 'files'}`;
+                  })()}
                 </button>
               )}
             </div>
