@@ -1,3 +1,20 @@
+import path from 'path';
+import fs from 'fs';
+
+// Load .env.test.local BEFORE reading process.env so passwords are available.
+const envPath = path.join(__dirname, '..', '..', '.env.test.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const [key, ...rest] = trimmed.split('=');
+    if (key && !process.env[key]) {
+      process.env[key] = rest.join('=');
+    }
+  }
+}
+
 /**
  * Constants matching the seed data in the test Supabase project.
  * These values are seeded once during project setup and never change.

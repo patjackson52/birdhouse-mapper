@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { getTenantContext } from '@/lib/tenant/server';
 import { generateToken, hashToken } from '@/lib/invites/tokens';
 import { INVITE_LINK_TTL_MS, MAX_ACTIVE_INVITES } from '@/lib/invites/constants';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -32,6 +33,8 @@ export async function createInvite(opts: {
 }) {
   const supabase = createClient();
   const service = createServiceClient();
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
@@ -58,6 +61,7 @@ export async function createInvite(opts: {
   const { error: insertError } = await service
     .from('invites')
     .insert({
+      org_id: tenant.orgId,
       token: tokenHash,
       created_by: user.id,
       display_name: opts.displayName || null,
