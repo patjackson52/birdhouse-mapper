@@ -96,7 +96,7 @@ export async function completeInviteClaim(
   if (profileError) {
     // Clean up orphaned anonymous auth user
     await service.auth.admin.deleteUser(userId);
-    return { error: 'Failed to create profile. Please try again.' };
+    return { error: `Failed to create profile: ${profileError.message}` };
   }
 
   // Mark invite as claimed

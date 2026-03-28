@@ -162,7 +162,7 @@ describe('completeInviteClaim', () => {
 
     const result = await completeInviteClaim('raw-token', 'anon-user-1', 'Test');
 
-    expect(result.error).toBe('Failed to create profile. Please try again.');
+    expect(result.error).toBe('Failed to create profile: insert failed');
     expect(deletedAuthUsers).toContain('anon-user-1');
   });
 
