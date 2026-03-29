@@ -5,19 +5,19 @@
 -- ======================
 
 ALTER TABLE redirects
-  ADD COLUMN org_id uuid REFERENCES orgs(id),
-  ADD COLUMN property_id uuid REFERENCES properties(id),
-  ADD COLUMN placement text,
-  ADD COLUMN label text;
+  ADD COLUMN IF NOT EXISTS org_id uuid REFERENCES orgs(id),
+  ADD COLUMN IF NOT EXISTS property_id uuid REFERENCES properties(id),
+  ADD COLUMN IF NOT EXISTS placement text,
+  ADD COLUMN IF NOT EXISTS label text;
 
 -- Index for admin queries: list all redirects for a property
-CREATE INDEX idx_redirects_property_id ON redirects(property_id);
+CREATE INDEX IF NOT EXISTS idx_redirects_property_id ON redirects(property_id);
 
 -- ======================
 -- Scan log table
 -- ======================
 
-CREATE TABLE redirect_scans (
+CREATE TABLE IF NOT EXISTS redirect_scans (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   redirect_slug text NOT NULL REFERENCES redirects(slug) ON DELETE CASCADE,
   scanned_at timestamptz NOT NULL DEFAULT now(),
@@ -25,8 +25,8 @@ CREATE TABLE redirect_scans (
   ip_hash text
 );
 
-CREATE INDEX idx_redirect_scans_slug ON redirect_scans(redirect_slug);
-CREATE INDEX idx_redirect_scans_scanned_at ON redirect_scans(scanned_at);
+CREATE INDEX IF NOT EXISTS idx_redirect_scans_slug ON redirect_scans(redirect_slug);
+CREATE INDEX IF NOT EXISTS idx_redirect_scans_scanned_at ON redirect_scans(scanned_at);
 
 -- ======================
 -- RLS policies for redirect_scans
@@ -36,6 +36,7 @@ ALTER TABLE redirect_scans ENABLE ROW LEVEL SECURITY;
 
 -- No public read — only admins via service client or RPC
 -- Admins can view scans for redirects in their org
+DROP POLICY IF EXISTS "Admins can view redirect_scans" ON redirect_scans;
 CREATE POLICY "Admins can view redirect_scans"
   ON redirect_scans FOR SELECT
   TO authenticated
@@ -85,6 +86,7 @@ DROP POLICY IF EXISTS "Admins can update redirects" ON redirects;
 DROP POLICY IF EXISTS "Admins can delete redirects" ON redirects;
 
 -- New org-scoped admin policies
+DROP POLICY IF EXISTS "Org admins can insert redirects" ON redirects;
 CREATE POLICY "Org admins can insert redirects"
   ON redirects FOR INSERT
   TO authenticated
@@ -99,6 +101,7 @@ CREATE POLICY "Org admins can insert redirects"
     )
   );
 
+DROP POLICY IF EXISTS "Org admins can update redirects" ON redirects;
 CREATE POLICY "Org admins can update redirects"
   ON redirects FOR UPDATE
   TO authenticated
@@ -113,6 +116,7 @@ CREATE POLICY "Org admins can update redirects"
     )
   );
 
+DROP POLICY IF EXISTS "Org admins can delete redirects" ON redirects;
 CREATE POLICY "Org admins can delete redirects"
   ON redirects FOR DELETE
   TO authenticated
