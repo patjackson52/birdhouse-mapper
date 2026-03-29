@@ -18,6 +18,7 @@ const PROPERTY_KEY_TO_COLUMN: Record<string, string> = {
   map_style: 'map_style',
   custom_map: 'custom_map',
   about_content: 'about_content',
+  about_page_enabled: 'about_page_enabled',
   footer_text: 'footer_text',
   footer_links: 'footer_links',
   custom_nav_items: 'custom_nav_items',

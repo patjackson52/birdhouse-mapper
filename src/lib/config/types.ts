@@ -7,6 +7,7 @@ export interface SiteConfig {
   mapCenter: { lat: number; lng: number; zoom: number };
   theme: { preset: string; overrides?: Record<string, string> };
   aboutContent: string;
+  aboutPageEnabled: boolean;
   logoUrl: string | null;
   faviconUrl: string | null;
   footerText: string;
@@ -52,6 +53,7 @@ export function buildSiteConfig(
     map_style: string | null;
     custom_map: unknown | null;
     about_content: string | null;
+    about_page_enabled: boolean | null;
     footer_text: string | null;
     footer_links: unknown | null;
     custom_nav_items: unknown | null;
@@ -70,6 +72,7 @@ export function buildSiteConfig(
     },
     theme: org.theme ?? { preset: 'forest' },
     aboutContent: property.about_content ?? '',
+    aboutPageEnabled: property.about_page_enabled ?? true,
     logoUrl: property.logo_url ?? org.logo_url,
     faviconUrl: org.favicon_url,
     footerText: property.footer_text ?? '',

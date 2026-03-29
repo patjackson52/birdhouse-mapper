@@ -7,6 +7,7 @@ export const DEFAULT_CONFIG: SiteConfig = {
   mapCenter: { lat: 0, lng: 0, zoom: 2 },
   theme: { preset: 'forest' },
   aboutContent: '# About\n\nDescribe your project here.',
+  aboutPageEnabled: true,
   logoUrl: null,
   faviconUrl: null,
   footerText: 'Built with Field Mapper',

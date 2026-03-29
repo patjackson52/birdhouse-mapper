@@ -291,15 +291,44 @@ function AppearanceTab({ config, onSave, saving }: TabProps) {
 // ======================
 
 function AboutTab({ config, onSave, saving }: TabProps) {
+  const [aboutEnabled, setAboutEnabled] = useState(config.aboutPageEnabled);
   const [aboutContent, setAboutContent] = useState(config.aboutContent);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    onSave([{ key: 'about_content', value: aboutContent }]);
+    onSave([
+      { key: 'about_page_enabled', value: aboutEnabled },
+      { key: 'about_content', value: aboutContent },
+    ]);
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex items-center justify-between p-4 bg-sage-light/50 rounded-lg">
+        <div>
+          <h3 className="text-sm font-medium text-forest-dark">About Page Visibility</h3>
+          <p className="text-xs text-sage mt-0.5">
+            {aboutEnabled
+              ? 'The about page is visible to visitors.'
+              : 'The about page is hidden. You can still edit content below.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={aboutEnabled}
+          onClick={() => setAboutEnabled(!aboutEnabled)}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+            aboutEnabled ? 'bg-forest' : 'bg-gray-200'
+          }`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${
+              aboutEnabled ? 'translate-x-5' : 'translate-x-0'
+            }`}
+          />
+        </button>
+      </div>
       <div>
         <label htmlFor="about" className="label">About Page Content (Markdown)</label>
         <textarea
