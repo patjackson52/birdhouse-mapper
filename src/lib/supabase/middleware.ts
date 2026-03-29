@@ -124,14 +124,37 @@ export async function updateSession(request: NextRequest) {
     if (slug) {
       const { data } = await supabase
         .from('redirects')
-        .select('destination_url')
+        .select('destination_url, property_id')
         .eq('slug', slug)
         .single();
 
-      if (data?.destination_url) {
-        // Increment scan count in the background (fire-and-forget)
-        supabase.rpc('increment_scan_count', { slug_param: slug });
-        return NextResponse.redirect(data.destination_url, 302);
+      if (data) {
+        // Build destination: if property_id is set, resolve to property landing page
+        // Otherwise fall back to destination_url
+        let destination = data.destination_url;
+        if (data.property_id && tenant?.orgId) {
+          // Redirect to the property's landing page on the current host
+          const url = request.nextUrl.clone();
+          url.pathname = '/';
+          url.search = '';
+          destination = url.toString();
+        }
+
+        // Hash IP for privacy-safe analytics
+        const forwarded = request.headers.get('x-forwarded-for');
+        const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
+        const { createHash } = await import('crypto');
+        const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 16);
+        const userAgent = request.headers.get('user-agent') || null;
+
+        // Log scan in the background (fire-and-forget)
+        supabase.rpc('log_scan', {
+          slug_param: slug,
+          user_agent_param: userAgent,
+          ip_hash_param: ipHash,
+        });
+
+        return NextResponse.redirect(destination, 302);
       }
     }
     // Slug not found — return 404

@@ -35,6 +35,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
     { label: 'Data', href: `${base}/data` },
     { label: 'Settings', href: `${base}/settings` },
     { label: 'Landing Page', href: `${base}/landing` },
+    { label: 'QR Codes', href: `${base}/qr-codes` },
     { label: 'Types', href: `${base}/types` },
     { label: 'Entity Types', href: `${base}/entity-types` },
     ...entityTypes.map((et) => ({
