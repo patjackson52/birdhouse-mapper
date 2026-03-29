@@ -31,7 +31,7 @@ export default function Navigation({
     return null;
   }
 
-  const publicLinks = config.landingPage?.enabled
+  const baseLinks = config.landingPage?.enabled
     ? [
         { href: '/', label: 'Home', icon: HomeIcon },
         { href: '/map', label: 'Map', icon: MapIcon },
@@ -43,6 +43,10 @@ export default function Navigation({
         { href: '/list', label: 'List', icon: ListIcon },
         { href: '/about', label: 'About', icon: InfoIcon },
       ];
+
+  const publicLinks = baseLinks.filter(
+    (link) => link.href !== '/about' || config.aboutPageEnabled
+  );
 
   const isManage = pathname.startsWith('/manage') || pathname.startsWith('/admin');
 

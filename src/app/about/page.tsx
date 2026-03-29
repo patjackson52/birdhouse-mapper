@@ -1,9 +1,14 @@
+import { redirect } from 'next/navigation';
 import { getConfig } from '@/lib/config/server';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export default async function AboutPage() {
   const config = await getConfig();
+
+  if (!config.aboutPageEnabled) {
+    redirect('/');
+  }
 
   return (
     <div className="pb-20 md:pb-0">

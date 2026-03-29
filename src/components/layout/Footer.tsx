@@ -31,11 +31,13 @@ export default function Footer() {
                   List View
                 </Link>
               </li>
-              <li>
-                <Link href="/about" className="hover:text-golden transition-colors">
-                  About
-                </Link>
-              </li>
+              {config.aboutPageEnabled && (
+                <li>
+                  <Link href="/about" className="hover:text-golden transition-colors">
+                    About
+                  </Link>
+                </li>
+              )}
               {config.footerLinks.map((link) => (
                 <li key={link.url}>
                   <a
