@@ -122,7 +122,7 @@ export function AdminShell({
       )}
 
       {/* Body: sidebar + content */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {!isPropertyRoute && !isPropertyDomainRoot && (
           <div className="hidden md:block">
             <AdminSidebar
@@ -131,7 +131,7 @@ export function AdminShell({
             />
           </div>
         )}
-        <main className="flex-1 overflow-auto">
+        <main className="flex-1 overflow-auto flex flex-col">
           {children}
         </main>
       </div>

@@ -19,7 +19,7 @@ export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSideba
   const pathname = usePathname();
 
   return (
-    <nav className="w-56 bg-parchment border-r border-sage-light flex-shrink-0 min-h-screen">
+    <nav className="w-56 bg-parchment border-r border-sage-light flex-shrink-0 h-full overflow-auto">
       {backLink && (
         <Link
           href={backLink.href}
