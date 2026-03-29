@@ -140,11 +140,12 @@ export async function updateSession(request: NextRequest) {
           destination = url.toString();
         }
 
-        // Hash IP for privacy-safe analytics
+        // Hash IP for privacy-safe analytics (Web Crypto API for Edge Runtime)
         const forwarded = request.headers.get('x-forwarded-for');
         const ip = forwarded?.split(',')[0]?.trim() || 'unknown';
-        const { createHash } = await import('crypto');
-        const ipHash = createHash('sha256').update(ip).digest('hex').slice(0, 16);
+        const ipBytes = new TextEncoder().encode(ip);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', ipBytes);
+        const ipHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
         const userAgent = request.headers.get('user-agent') || null;
 
         // Log scan in the background (fire-and-forget)
