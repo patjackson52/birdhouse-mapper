@@ -48,7 +48,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
   const backLink = { label: 'Back to Org', href: '/admin' };
 
   return (
-    <div className="flex flex-col flex-1">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Mobile top nav bar */}
       <div className="md:hidden bg-parchment border-b border-sage-light flex-shrink-0">
         <div className="px-4 flex items-center h-12 gap-3">
@@ -87,7 +87,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
       )}
 
       {/* Body: sidebar + content */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-h-0">
         {/* Desktop sidebar — hidden on mobile */}
         <div className="hidden md:block">
           <AdminSidebar
@@ -96,7 +96,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
             backLink={backLink}
           />
         </div>
-        <div className="flex-1 p-6">
+        <div className="flex-1 overflow-auto p-6">
           {children}
         </div>
       </div>
