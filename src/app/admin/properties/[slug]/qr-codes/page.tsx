@@ -48,7 +48,7 @@ export default function QrCodesPage() {
     setLoading(true);
     const result = await getQrCodes(propId);
     if ('qrCodes' in result) {
-      setQrCodes(result.qrCodes);
+      setQrCodes(result.qrCodes ?? []);
     }
     setLoading(false);
   }
@@ -68,7 +68,7 @@ export default function QrCodesPage() {
     });
 
     if ('error' in result) {
-      setError(result.error);
+      setError(result.error ?? 'Unknown error');
     } else {
       setPlacement('');
       setLabel('');
@@ -81,7 +81,7 @@ export default function QrCodesPage() {
     if (!propertyId) return;
     const result = await deleteQrCode(qrSlug);
     if ('error' in result) {
-      setError(result.error);
+      setError(result.error ?? 'Unknown error');
     } else {
       await loadQrCodes(propertyId);
     }
@@ -97,7 +97,7 @@ export default function QrCodesPage() {
     setStatsLoading(true);
     const result = await getQrCodeStats(qrSlug);
     if ('dailyCounts' in result) {
-      setStats(result.dailyCounts);
+      setStats(result.dailyCounts ?? null);
     }
     setStatsLoading(false);
   }
