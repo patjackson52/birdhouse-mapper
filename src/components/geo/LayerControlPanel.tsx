@@ -18,7 +18,7 @@ export default function LayerControlPanel({ layers, visibleLayerIds, onToggleLay
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="absolute top-3 right-3 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-3 right-3 z-20 bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
         aria-label="Toggle layers"
         title="Geo Layers"
       >
@@ -28,7 +28,7 @@ export default function LayerControlPanel({ layers, visibleLayerIds, onToggleLay
       </button>
 
       {open && (
-        <div className="absolute top-16 right-3 z-[1000] bg-white rounded-xl shadow-xl border border-sage-light w-64 max-h-[50vh] overflow-y-auto md:w-72">
+        <div className="absolute top-16 right-3 z-20 bg-white rounded-xl shadow-xl border border-sage-light w-64 max-h-[50vh] overflow-y-auto md:w-72">
           <div className="p-3 border-b border-gray-100">
             <h3 className="font-semibold text-sm text-forest-dark">Layers</h3>
           </div>
