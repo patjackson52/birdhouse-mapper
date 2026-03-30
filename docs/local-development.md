@@ -23,14 +23,12 @@ The seed runs automatically on `supabase start` (first time) and `supabase db re
 
 ## Test Accounts
 
-All accounts use password: **`password123`**
-
-| Email | Role | What they can do |
-|-------|------|------------------|
-| `admin@test.fieldmapper.org` | **org_admin** | Everything: settings, members, billing, roles, all content, all modules |
-| `staff@test.fieldmapper.org` | **org_staff** | Create/edit all content, view reports, manage tasks. Cannot manage org settings or members |
-| `contributor@test.fieldmapper.org` | **contributor** | Edit assigned items, create updates, complete assigned tasks. Cannot create items or manage settings |
-| `viewer@test.fieldmapper.org` | **viewer** | Read-only: view items, updates, assigned tasks. Cannot create, edit, or manage anything |
+| Email | Password | Role | What they can do |
+|-------|----------|------|------------------|
+| `admin@test.fieldmapper.org` | `test-admin-password-123` | **org_admin** | Everything: settings, members, billing, roles, all content, all modules |
+| `staff@test.fieldmapper.org` | `test-staff-password-123` | **org_staff** | Create/edit all content, view reports, manage tasks. Cannot manage org settings or members |
+| `contributor@test.fieldmapper.org` | `test-contributor-password-123` | **contributor** | Edit assigned items, create updates, complete assigned tasks. Cannot create items or manage settings |
+| `viewer@test.fieldmapper.org` | `test-viewer-password-123` | **viewer** | Read-only: view items, updates, assigned tasks. Cannot create, edit, or manage anything |
 
 ### Test Org
 

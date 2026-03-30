@@ -4,18 +4,18 @@
 -- Creates 4 test users (one per role) with deterministic UUIDs,
 -- a test org, property, item types, sample items, and all associations.
 --
--- Test accounts (all passwords: "password123"):
---   admin@test.fieldmapper.org     → org_admin
---   staff@test.fieldmapper.org     → org_staff
---   contributor@test.fieldmapper.org → contributor
---   viewer@test.fieldmapper.org    → viewer
+-- Test accounts (all passwords: "test-admin-password-123" etc.):
+--   admin@test.fieldmapper.org       → org_admin   (pw: test-admin-password-123)
+--   staff@test.fieldmapper.org       → org_staff   (pw: test-staff-password-123)
+--   contributor@test.fieldmapper.org → contributor  (pw: test-contributor-password-123)
+--   viewer@test.fieldmapper.org      → viewer       (pw: test-viewer-password-123)
+--
+-- In CI, users are created via the Auth Admin API before seed runs.
+-- ON CONFLICT DO NOTHING ensures seed is idempotent either way.
 
 -- ============================================================================
 -- Auth Users (Supabase local dev allows direct auth.users inserts)
 -- ============================================================================
-
--- Password hash for "password123" using Supabase's bcrypt format
--- Generated via: SELECT crypt('password123', gen_salt('bf'));
 
 INSERT INTO auth.users (
   id, instance_id, email, encrypted_password, email_confirmed_at,
@@ -25,7 +25,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000000',
   'admin@test.fieldmapper.org',
-  crypt('password123', gen_salt('bf')),
+  crypt('test-admin-password-123', gen_salt('bf')),
   now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Test Admin"}'::jsonb,
@@ -35,7 +35,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000000',
   'staff@test.fieldmapper.org',
-  crypt('password123', gen_salt('bf')),
+  crypt('test-staff-password-123', gen_salt('bf')),
   now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Test Staff"}'::jsonb,
@@ -45,7 +45,7 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000003',
   '00000000-0000-0000-0000-000000000000',
   'contributor@test.fieldmapper.org',
-  crypt('password123', gen_salt('bf')),
+  crypt('test-contributor-password-123', gen_salt('bf')),
   now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Test Contributor"}'::jsonb,
@@ -55,19 +55,20 @@ INSERT INTO auth.users (
   '00000000-0000-0000-0000-000000000004',
   '00000000-0000-0000-0000-000000000000',
   'viewer@test.fieldmapper.org',
-  crypt('password123', gen_salt('bf')),
+  crypt('test-viewer-password-123', gen_salt('bf')),
   now(),
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Test Viewer"}'::jsonb,
   'authenticated', 'authenticated', now(), now()
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Auth identities (required for email login to work)
 INSERT INTO auth.identities (
   id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at
 ) VALUES
 (
-  gen_random_uuid(),
+  '00000000-0000-0000-0000-100000000001',
   '00000000-0000-0000-0000-000000000001',
   'admin@test.fieldmapper.org',
   'email',
@@ -75,7 +76,7 @@ INSERT INTO auth.identities (
   now(), now(), now()
 ),
 (
-  gen_random_uuid(),
+  '00000000-0000-0000-0000-100000000002',
   '00000000-0000-0000-0000-000000000002',
   'staff@test.fieldmapper.org',
   'email',
@@ -83,7 +84,7 @@ INSERT INTO auth.identities (
   now(), now(), now()
 ),
 (
-  gen_random_uuid(),
+  '00000000-0000-0000-0000-100000000003',
   '00000000-0000-0000-0000-000000000003',
   'contributor@test.fieldmapper.org',
   'email',
@@ -91,13 +92,14 @@ INSERT INTO auth.identities (
   now(), now(), now()
 ),
 (
-  gen_random_uuid(),
+  '00000000-0000-0000-0000-100000000004',
   '00000000-0000-0000-0000-000000000004',
   'viewer@test.fieldmapper.org',
   'email',
   '{"sub":"00000000-0000-0000-0000-000000000004","email":"viewer@test.fieldmapper.org"}'::jsonb,
   now(), now(), now()
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Disable auto-populate triggers during seeding
