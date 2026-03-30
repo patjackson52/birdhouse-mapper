@@ -23,6 +23,8 @@ ALTER TABLE update_entities DISABLE TRIGGER update_entities_auto_org;
 --   3. Run this script via Supabase SQL Editor or psql
 --
 -- This script uses deterministic UUIDs so test fixtures can reference them.
+-- All inserts use ON CONFLICT DO NOTHING to be idempotent when supabase start
+-- has already seeded data via seed.sql.
 
 -- ============================================================================
 -- Org
@@ -36,7 +38,8 @@ VALUES (
   true,
   '{"preset": "forest"}'::jsonb,
   'E2E test organization'
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Property
@@ -54,7 +57,8 @@ VALUES (
   -147.7164,
   13,
   '# About\n\nThis is the test property for automated testing.'
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Set default property on org
 UPDATE orgs SET default_property_id = '00000000-0000-0000-0000-000000000200'
@@ -136,7 +140,8 @@ INSERT INTO roles (id, org_id, name, description, base_role, permissions, is_sys
     "modules": {"tasks": false, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false}
   }'::jsonb,
   true, false, 3
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Org Memberships (links auth.users to roles)
@@ -152,7 +157,8 @@ SELECT
   'active',
   true,
   now()
-FROM auth.users WHERE email = 'admin@test.fieldmapper.org';
+FROM auth.users WHERE email = 'admin@test.fieldmapper.org'
+ON CONFLICT (org_id, user_id) DO NOTHING;
 
 -- Editor user membership
 INSERT INTO org_memberships (org_id, user_id, role_id, status, is_primary_org, joined_at)
@@ -163,7 +169,8 @@ SELECT
   'active',
   true,
   now()
-FROM auth.users WHERE email = 'editor@test.fieldmapper.org';
+FROM auth.users WHERE email = 'editor@test.fieldmapper.org'
+ON CONFLICT (org_id, user_id) DO NOTHING;
 
 -- ============================================================================
 -- Item Types
@@ -171,7 +178,8 @@ FROM auth.users WHERE email = 'editor@test.fieldmapper.org';
 
 INSERT INTO item_types (id, org_id, name, icon, color, sort_order) VALUES
   ('00000000-0000-0000-0000-000000000401', '00000000-0000-0000-0000-000000000100', 'Bird Box', '🏠', '#5D7F3A', 0),
-  ('00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000100', 'Trail Marker', '📍', '#8B6914', 1);
+  ('00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000100', 'Trail Marker', '📍', '#8B6914', 1)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Update Types (global + Bird Box specific)
@@ -183,7 +191,8 @@ INSERT INTO update_types (id, org_id, name, icon, is_global, item_type_id, sort_
   ('00000000-0000-0000-0000-000000000503', '00000000-0000-0000-0000-000000000100', 'Note', '📝', true, NULL, 2),
   ('00000000-0000-0000-0000-000000000504', '00000000-0000-0000-0000-000000000100', 'Installation', '🏗️', false, '00000000-0000-0000-0000-000000000401', 3),
   ('00000000-0000-0000-0000-000000000505', '00000000-0000-0000-0000-000000000100', 'Bird Sighting', '🐦', false, '00000000-0000-0000-0000-000000000401', 4),
-  ('00000000-0000-0000-0000-000000000506', '00000000-0000-0000-0000-000000000100', 'Damage Report', '⚠️', false, '00000000-0000-0000-0000-000000000401', 5);
+  ('00000000-0000-0000-0000-000000000506', '00000000-0000-0000-0000-000000000100', 'Damage Report', '⚠️', false, '00000000-0000-0000-0000-000000000401', 5)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Entity Type: Species
@@ -198,12 +207,14 @@ VALUES (
   '#5D7F3A',
   '{items,updates}',
   0
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Entity Type Fields
 INSERT INTO entity_type_fields (id, entity_type_id, org_id, name, field_type, options, required, sort_order) VALUES
   ('00000000-0000-0000-0000-000000000611', '00000000-0000-0000-0000-000000000600', '00000000-0000-0000-0000-000000000100', 'Scientific Name', 'text', NULL, false, 0),
-  ('00000000-0000-0000-0000-000000000612', '00000000-0000-0000-0000-000000000600', '00000000-0000-0000-0000-000000000100', 'Conservation Status', 'dropdown', '["LC","NT","VU","EN","CR"]'::jsonb, false, 1);
+  ('00000000-0000-0000-0000-000000000612', '00000000-0000-0000-0000-000000000600', '00000000-0000-0000-0000-000000000100', 'Conservation Status', 'dropdown', '["LC","NT","VU","EN","CR"]'::jsonb, false, 1)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Entities (3 species)
@@ -236,7 +247,8 @@ INSERT INTO entities (id, entity_type_id, org_id, name, description, custom_fiel
   'Iridescent blue-green swallow, common near water.',
   '{"00000000-0000-0000-0000-000000000611": "Tachycineta bicolor", "00000000-0000-0000-0000-000000000612": "LC"}'::jsonb,
   2
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Items (5 items with varying statuses)
@@ -297,16 +309,18 @@ INSERT INTO items (id, org_id, property_id, name, description, latitude, longitu
   'active',
   '00000000-0000-0000-0000-000000000402',
   '{}'::jsonb
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Item-Entity associations
 -- ============================================================================
 
 INSERT INTO item_entities (item_id, entity_id, org_id) VALUES
-  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100'),  -- Meadow Box → Chickadee
-  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000000100'),  -- Meadow Box → Violet-green Swallow
-  ('00000000-0000-0000-0000-000000000802', '00000000-0000-0000-0000-000000000703', '00000000-0000-0000-0000-000000000100');  -- Riverside Box → Tree Swallow
+  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100'),
+  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000000100'),
+  ('00000000-0000-0000-0000-000000000802', '00000000-0000-0000-0000-000000000703', '00000000-0000-0000-0000-000000000100')
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- Item Updates (3 updates)
@@ -318,7 +332,7 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   '00000000-0000-0000-0000-000000000801',
-  '00000000-0000-0000-0000-000000000505',  -- Bird Sighting
+  '00000000-0000-0000-0000-000000000505',
   'Pair of chickadees observed entering box. Nest material visible.',
   '2026-03-15'
 ),
@@ -327,7 +341,7 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   '00000000-0000-0000-0000-000000000802',
-  '00000000-0000-0000-0000-000000000501',  -- Maintenance
+  '00000000-0000-0000-0000-000000000501',
   'Cleaned out old nest. Box in good condition.',
   '2026-03-10'
 ),
@@ -336,17 +350,19 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   '00000000-0000-0000-0000-000000000803',
-  '00000000-0000-0000-0000-000000000506',  -- Damage Report
+  '00000000-0000-0000-0000-000000000506',
   'Wind damage to mounting bracket. Needs repair before nesting season.',
   '2026-03-20'
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================
 -- Update-Entity associations
 -- ============================================================================
 
 INSERT INTO update_entities (update_id, entity_id, org_id) VALUES
-  ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100');  -- Bird Sighting update → Chickadee
+  ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100')
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- Property Access Config (enable public access for testing)
@@ -357,7 +373,8 @@ VALUES (
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   true, true, true, true
-);
+)
+ON CONFLICT (property_id) DO NOTHING;
 
 -- Re-enable all triggers
 ALTER TABLE item_types ENABLE TRIGGER item_types_auto_org;
