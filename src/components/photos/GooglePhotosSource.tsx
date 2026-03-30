@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { PickerResult } from '@/lib/google/picker';
 import { resizeImage } from '@/lib/utils';
+import { useConfig } from '@/lib/config/client';
 
 interface GooglePhotosSourceProps {
   maxFiles: number;
@@ -13,12 +14,11 @@ interface GooglePhotosSourceProps {
 type Status = 'idle' | 'authenticating' | 'downloading' | 'error';
 
 /** Build the picker popup URL on the platform domain */
-function getPickerUrl(maxFiles: number): string {
-  const platformDomain = process.env.NEXT_PUBLIC_GOOGLE_PHOTOS_ORIGIN;
-  if (platformDomain) {
-    // Use configured origin so OAuth always matches Google's authorized JS origins
-    // e.g., "https://birdhouse-mapper.vercel.app"
-    return `${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
+function getPickerUrl(maxFiles: number, platformDomain: string | null): string {
+  if (platformDomain && platformDomain !== 'localhost') {
+    // Use platform domain so OAuth origin always matches Google's authorized JS origins
+    const protocol = platformDomain.includes('localhost') ? 'http' : 'https';
+    return `${protocol}://${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
   }
   // Local dev or same-origin — use relative path
   return `/google-photos-picker?maxFiles=${maxFiles}`;
@@ -31,6 +31,7 @@ export default function GooglePhotosSource({
   maxWidth,
   onFilesSelected,
 }: GooglePhotosSourceProps) {
+  const config = useConfig();
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [errorMessage, setErrorMessage] = useState('');
@@ -114,7 +115,7 @@ export default function GooglePhotosSource({
     setStatus('authenticating');
     setErrorMessage('');
 
-    const url = getPickerUrl(maxFiles);
+    const url = getPickerUrl(maxFiles, config.platformDomain);
     const popup = window.open(url, 'google-photos-picker', 'width=900,height=600,scrollbars=yes');
 
     if (!popup) {
