@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
+import { AdminSidebar, type SidebarItem } from '@/components/admin/AdminSidebar';
 
 interface AdminShellProps {
   orgId: string;
@@ -13,12 +13,15 @@ interface AdminShellProps {
   children: React.ReactNode;
 }
 
-const ORG_NAV_ITEMS = [
+const ORG_NAV_ITEMS: SidebarItem[] = [
   { label: 'Dashboard', href: '/admin' },
   { label: 'Properties', href: '/admin/properties' },
   { label: 'Members', href: '/admin/members' },
   { label: 'Roles', href: '/admin/roles' },
+  { type: 'section', label: 'Data' },
   { label: 'AI Context', href: '/admin/ai-context' },
+  { label: 'Geo Layers', href: '/admin/geo-layers' },
+  { type: 'section', label: 'Settings' },
   { label: 'Domains', href: '/admin/domains' },
   { label: 'Access & Tokens', href: '/admin/access' },
   { label: 'Org Settings', href: '/admin/settings' },
