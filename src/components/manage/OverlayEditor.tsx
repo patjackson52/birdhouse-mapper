@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useConfig, useTheme } from '@/lib/config/client';
+import PhotoSourcePicker from '@/components/photos/PhotoSourcePicker';
 
 interface OverlayConfig {
   url: string;
@@ -41,16 +42,6 @@ export default function OverlayEditor({ initialConfig, onSave, saving }: Overlay
   const [placementStep, setPlacementStep] = useState<PlacementStep>(
     initialConfig ? 'done' : 'idle'
   );
-
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
-      setImageUrl(''); // Clear URL input when file is uploaded
-    }
-  }
 
   function handleUrlChange(url: string) {
     setImageUrl(url);
@@ -116,11 +107,19 @@ export default function OverlayEditor({ initialConfig, onSave, saving }: Overlay
           {/* File upload */}
           <div>
             <label className="block text-xs text-sage mb-1">Upload an image</label>
-            <input
-              type="file"
+            <PhotoSourcePicker
               accept="image/png,image/jpeg,image/webp"
-              onChange={handleFileUpload}
-              className="block w-full text-sm text-sage file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-sage-light file:text-forest-dark hover:file:bg-sage-light file:cursor-pointer"
+              maxFiles={1}
+              maxWidth={4000}
+              multiple={false}
+              onFilesSelected={(files) => {
+                if (files.length === 0) return;
+                const file = files[0];
+                setImageFile(file);
+                const url = URL.createObjectURL(file);
+                setImagePreview(url);
+                setImageUrl('');
+              }}
             />
           </div>
 
