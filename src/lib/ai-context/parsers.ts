@@ -10,6 +10,7 @@ const SUPPORTED_EXTENSIONS: Record<string, string> = {
   kml: 'application/vnd.google-earth.kml+xml',
   kmz: 'application/vnd.google-earth.kmz',
   gpx: 'application/gpx+xml',
+  zip: 'application/zip',
   json: 'application/json',
   txt: 'text/plain',
   md: 'text/markdown',
@@ -28,9 +29,11 @@ const GEO_MIME_TYPES = new Set([
   'application/vnd.google-earth.kml+xml',
   'application/vnd.google-earth.kmz',
   'application/gpx+xml',
+  'application/zip',
+  'application/x-zip-compressed',
 ]);
 
-const GEO_EXTENSIONS = new Set(['geojson', 'kml', 'kmz', 'gpx']);
+const GEO_EXTENSIONS = new Set(['geojson', 'kml', 'kmz', 'gpx', 'zip']);
 
 const BINARY_MIME_TYPES = new Set([
   'application/pdf',

@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useConfig } from '@/lib/config/client';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { saveConfig, saveConfigValue } from './actions';
 import { THEME_PRESETS } from '@/lib/config/themes';
 import { MAP_STYLES, MAP_STYLE_CATEGORIES, THEME_DEFAULT_MAP_STYLE } from '@/lib/config/map-styles';
 import OverlayEditor from '@/components/manage/OverlayEditor';
+import { createClient } from '@/lib/supabase/client';
+import { getPropertyGeoLayers, setPropertyBoundary } from '@/app/admin/geo-layers/actions';
+import type { GeoLayerSummary, GeoLayerProperty } from '@/lib/geo/types';
 
 const CenterPicker = dynamic(() => import('@/components/manage/CenterPicker'), {
   ssr: false,
@@ -18,19 +21,49 @@ const CenterPicker = dynamic(() => import('@/components/manage/CenterPicker'), {
   ),
 });
 
-type SettingsTab = 'general' | 'appearance' | 'custommap' | 'about' | 'footer';
+type SettingsTab = 'general' | 'appearance' | 'custommap' | 'geo-layers' | 'about' | 'footer';
 
 export default function SettingsPage() {
   const config = useConfig();
   const router = useRouter();
+  const params = useParams();
+  const slug = params.slug as string;
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [propertyGeoLayers, setPropertyGeoLayers] = useState<GeoLayerSummary[]>([]);
+  const [layerAssignments, setLayerAssignments] = useState<GeoLayerProperty[]>([]);
+  const [currentBoundaryId, setCurrentBoundaryId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from('properties')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+      .then(({ data }) => {
+        if (data) setPropertyId(data.id);
+      });
+  }, [slug]);
+
+  useEffect(() => {
+    if (activeTab === 'geo-layers' && propertyId) {
+      getPropertyGeoLayers(propertyId).then((result) => {
+        if ('success' in result) {
+          setPropertyGeoLayers(result.layers);
+          setLayerAssignments(result.assignments);
+        }
+      });
+    }
+  }, [activeTab, propertyId]);
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'general', label: 'General' },
     { id: 'appearance', label: 'Appearance' },
     { id: 'custommap', label: 'Custom Map' },
+    { id: 'geo-layers', label: 'Geo Layers' },
     { id: 'about', label: 'About Page' },
     { id: 'footer', label: 'Footer' },
   ];
@@ -106,6 +139,53 @@ export default function SettingsPage() {
             }}
             saving={saving}
           />
+        </div>
+      )}
+      {activeTab === 'geo-layers' && (
+        <div className="space-y-6">
+          <div className="card p-4 space-y-2">
+            <h3 className="font-medium">Property Boundary</h3>
+            <p className="text-sm text-gray-500">Select a polygon layer to use as this property&apos;s boundary.</p>
+            <select
+              value={currentBoundaryId ?? ''}
+              onChange={async (e) => {
+                const value = e.target.value || null;
+                setCurrentBoundaryId(value);
+                if (propertyId) {
+                  await setPropertyBoundary(propertyId, value);
+                }
+              }}
+              className="input-field"
+            >
+              <option value="">None</option>
+              {propertyGeoLayers
+                .filter((l) => l.is_property_boundary)
+                .map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+            </select>
+          </div>
+
+          <div>
+            <h3 className="font-medium mb-2">Assigned Layers</h3>
+            {propertyGeoLayers.length === 0 ? (
+              <p className="text-sm text-gray-500">No layers assigned to this property.</p>
+            ) : (
+              <div className="space-y-2">
+                {propertyGeoLayers.map((layer) => (
+                  <div key={layer.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: layer.color }} />
+                      <div>
+                        <div className="text-sm font-medium">{layer.name}</div>
+                        <div className="text-xs text-gray-500">{layer.feature_count} features</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
       {activeTab === 'about' && (

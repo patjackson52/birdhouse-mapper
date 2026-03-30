@@ -21,6 +21,12 @@ describe('isGeoFile', () => {
   it('identifies GPX files', () => {
     expect(isGeoFile('track.gpx', 'application/gpx+xml')).toBe(true);
   });
+  it('identifies zip files as potential geo files (shapefiles)', () => {
+    expect(isGeoFile('parcels.zip', 'application/zip')).toBe(true);
+  });
+  it('identifies zip files with x-zip MIME type', () => {
+    expect(isGeoFile('parcels.zip', 'application/x-zip-compressed')).toBe(true);
+  });
   it('rejects non-geo files', () => {
     expect(isGeoFile('photo.jpg', 'image/jpeg')).toBe(false);
   });

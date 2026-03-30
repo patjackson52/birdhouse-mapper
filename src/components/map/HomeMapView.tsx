@@ -17,6 +17,11 @@ import { createClient } from "@/lib/supabase/client";
 import DetailPanel from "@/components/item/DetailPanel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { usePermissions } from "@/lib/permissions/hooks";
+import { useConfig } from "@/lib/config/client";
+import { getPropertyGeoLayersPublic, getGeoLayerPublic } from "@/app/admin/geo-layers/actions";
+import { clipLayerToBoundary, filterItemsByBoundary } from "@/lib/geo/spatial";
+import type { GeoLayerSummary, GeoLayerProperty } from "@/lib/geo/types";
+import type { FeatureCollection } from "geojson";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
@@ -53,6 +58,13 @@ function HomeMapViewContent() {
   const [loading, setLoading] = useState(true);
   const searchParams = useSearchParams();
   const deepLinkedRef = useRef(false);
+  const config = useConfig();
+  const propertyId = config.propertyId;
+
+  const [geoLayers, setGeoLayers] = useState<GeoLayerSummary[]>([]);
+  const [visibleGeoLayerIds, setVisibleGeoLayerIds] = useState<Set<string>>(new Set());
+  const [geoLayerData, setGeoLayerData] = useState<Map<string, FeatureCollection>>(new Map());
+  const [boundaryGeoJSON, setBoundaryGeoJSON] = useState<FeatureCollection | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -85,6 +97,40 @@ function HomeMapViewContent() {
     fetchData();
   }, []);
 
+  // Fetch geo layers for this property
+  useEffect(() => {
+    if (!propertyId) return;
+    getPropertyGeoLayersPublic(propertyId).then(async (result) => {
+      if (!('success' in result)) return;
+      setGeoLayers(result.layers);
+
+      // Set default visible layers
+      const defaultVisible = new Set(
+        result.assignments
+          .filter((a: GeoLayerProperty) => a.visible_default)
+          .map((a: GeoLayerProperty) => a.geo_layer_id)
+      );
+      setVisibleGeoLayerIds(defaultVisible);
+
+      // Load GeoJSON for default visible layers
+      for (const layerId of Array.from(defaultVisible)) {
+        const layerResult = await getGeoLayerPublic(layerId);
+        if ('success' in layerResult) {
+          setGeoLayerData((prev) => new Map(prev).set(layerId, layerResult.layer.geojson));
+        }
+      }
+
+      // Load boundary layer if one is marked as property boundary
+      const boundaryLayer = result.layers.find((l) => l.is_property_boundary);
+      if (boundaryLayer) {
+        const boundaryResult = await getGeoLayerPublic(boundaryLayer.id);
+        if ('success' in boundaryResult) {
+          setBoundaryGeoJSON(boundaryResult.layer.geojson);
+        }
+      }
+    });
+  }, [propertyId]);
+
   // Auto-open detail panel when navigating with ?item=id
   useEffect(() => {
     if (loading || deepLinkedRef.current) return;
@@ -96,6 +142,29 @@ function HomeMapViewContent() {
       handleMarkerClick(item);
     }
   }, [loading, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleToggleGeoLayer(layerId: string) {
+    setVisibleGeoLayerIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(layerId)) {
+        next.delete(layerId);
+      } else {
+        next.add(layerId);
+        // Fetch GeoJSON if not already loaded
+        if (!geoLayerData.has(layerId)) {
+          getGeoLayerPublic(layerId).then((result) => {
+            if ('success' in result) {
+              const geojson = boundaryGeoJSON
+                ? clipLayerToBoundary(result.layer.geojson, boundaryGeoJSON)
+                : result.layer.geojson;
+              setGeoLayerData((prev) => new Map(prev).set(layerId, geojson));
+            }
+          });
+        }
+      }
+      return next;
+    });
+  }
 
   async function handleMarkerClick(item: Item) {
     const supabase = createClient();
@@ -175,12 +244,21 @@ function HomeMapViewContent() {
     );
   }
 
+  const filteredItems = boundaryGeoJSON
+    ? filterItemsByBoundary(items, boundaryGeoJSON)
+    : items;
+
   return (
     <div className="relative h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)]">
       <MapView
-        items={items}
+        items={filteredItems}
         itemTypes={itemTypes}
         onMarkerClick={handleMarkerClick}
+        geoLayers={geoLayers}
+        geoLayerData={geoLayerData}
+        boundaryGeoJSON={boundaryGeoJSON}
+        visibleGeoLayerIds={visibleGeoLayerIds}
+        onToggleGeoLayer={handleToggleGeoLayer}
       />
 
       {/* List view link */}
