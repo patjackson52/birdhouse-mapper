@@ -14,6 +14,8 @@ import {
   updateGeoLayer,
   deleteGeoLayer,
   assignLayerToProperties,
+  publishGeoLayer,
+  unpublishGeoLayer,
 } from './actions';
 import type { GeoLayerSummary } from '@/lib/geo/types';
 
@@ -22,6 +24,7 @@ export default function GeoLayersAdminPage() {
   const [layers, setLayers] = useState<GeoLayerSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImport, setShowImport] = useState(false);
+  const [showAiImport, setShowAiImport] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -138,6 +141,26 @@ export default function GeoLayersAdminPage() {
     }
   };
 
+  const handlePublish = async (layerId: string) => {
+    const result = await publishGeoLayer(layerId);
+    if ('error' in result) {
+      setMessage({ type: 'error', text: result.error });
+    } else {
+      setMessage({ type: 'success', text: 'Layer published — now visible on maps' });
+      loadLayers();
+    }
+  };
+
+  const handleUnpublish = async (layerId: string) => {
+    const result = await unpublishGeoLayer(layerId);
+    if ('error' in result) {
+      setMessage({ type: 'error', text: result.error });
+    } else {
+      setMessage({ type: 'success', text: 'Layer unpublished — hidden from maps' });
+      loadLayers();
+    }
+  };
+
   if (showImport) {
     return (
       <div className="max-w-2xl mx-auto p-4">
@@ -151,6 +174,19 @@ export default function GeoLayersAdminPage() {
     );
   }
 
+  if (showAiImport) {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <div className="card p-6 text-center text-gray-500">
+          <p className="text-lg mb-2">✨ AI-Assisted Import</p>
+          <p className="text-sm">Upload a geo file and AI will analyze it, suggest layer names, and auto-configure properties.</p>
+          <p className="text-sm mt-4 text-amber-600">Coming soon — use Quick Import for now.</p>
+          <button onClick={() => setShowAiImport(false)} className="btn-secondary mt-4">Close</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -160,9 +196,17 @@ export default function GeoLayersAdminPage() {
             {layers.length} layer{layers.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button onClick={() => setShowImport(true)} className="btn-primary">
-          + Import Layer
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowImport(true)} className="btn-primary">
+            Quick Import
+          </button>
+          <button
+            onClick={() => setShowAiImport(true)}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+          >
+            ✨ AI-Assisted Import
+          </button>
+        </div>
       </div>
 
       {message && (
@@ -184,8 +228,10 @@ export default function GeoLayersAdminPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-gray-50">
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Layer</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Features</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Format</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Source</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -193,6 +239,15 @@ export default function GeoLayersAdminPage() {
             <tbody>
               {layers.map((layer) => (
                 <tr key={layer.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <td className="px-4 py-3">
+                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                      layer.status === 'published'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}>
+                      {layer.status === 'published' ? 'Published' : 'Draft'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-sm flex-shrink-0" style={{ backgroundColor: layer.color }} />
@@ -224,7 +279,23 @@ export default function GeoLayersAdminPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{layer.feature_count}</td>
                   <td className="px-4 py-3 text-gray-500 capitalize">{layer.source_format}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {layer.source === 'ai' ? (
+                      <span className="text-purple-600">✨ AI</span>
+                    ) : (
+                      <span>Manual</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
+                    {layer.status === 'draft' ? (
+                      <button onClick={() => handlePublish(layer.id)} className="text-green-600 hover:text-green-800 text-sm mr-3">
+                        Publish
+                      </button>
+                    ) : (
+                      <button onClick={() => handleUnpublish(layer.id)} className="text-amber-600 hover:text-amber-800 text-sm mr-3">
+                        Unpublish
+                      </button>
+                    )}
                     <button
                       onClick={() => { setEditingId(layer.id); setEditName(layer.name); }}
                       className="text-gray-500 hover:text-gray-700 text-sm mr-3"
