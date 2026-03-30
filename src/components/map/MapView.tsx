@@ -13,11 +13,22 @@ import LocateButton from "./LocateButton";
 import GoToFieldButton from "./GoToFieldButton";
 import { useUserLocation } from "@/lib/location/provider";
 import QuickAddSheet from "./QuickAddSheet";
+import GeoLayerRenderer from "@/components/geo/GeoLayerRenderer";
+import PropertyBoundary from "@/components/geo/PropertyBoundary";
+import FeaturePopup from "@/components/geo/FeaturePopup";
+import LayerControlPanel from "@/components/geo/LayerControlPanel";
+import type { GeoLayerSummary } from "@/lib/geo/types";
+import type { FeatureCollection, Feature } from "geojson";
 
 interface MapViewProps {
   items: Item[];
   itemTypes: ItemType[];
   onMarkerClick: (item: Item) => void;
+  geoLayers?: GeoLayerSummary[];
+  geoLayerData?: Map<string, FeatureCollection>;
+  boundaryGeoJSON?: FeatureCollection | null;
+  onToggleGeoLayer?: (layerId: string) => void;
+  visibleGeoLayerIds?: Set<string>;
 }
 
 /** Flies map to user position when trigger increments */
@@ -45,6 +56,11 @@ export default function MapView({
   items,
   itemTypes,
   onMarkerClick,
+  geoLayers,
+  geoLayerData,
+  boundaryGeoJSON,
+  onToggleGeoLayer,
+  visibleGeoLayerIds,
 }: MapViewProps) {
   const config = useConfig();
   const theme = useTheme();
@@ -54,6 +70,7 @@ export default function MapView({
   const [fullscreen, setFullscreen] = useState(false);
   const [flyToUserTrigger, setFlyToUserTrigger] = useState(0);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [selectedFeature, setSelectedFeature] = useState<{ feature: Feature; layerName: string } | null>(null);
 
   // Build a lookup map for item types
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
@@ -112,7 +129,38 @@ export default function MapView({
         <UserLocationLayer />
         <FlyToUser trigger={flyToUserTrigger} />
         <GoToFieldButton />
+
+        {boundaryGeoJSON && <PropertyBoundary geojson={boundaryGeoJSON} />}
+
+        {geoLayers?.filter((l) => visibleGeoLayerIds?.has(l.id)).map((l) => {
+          const data = geoLayerData?.get(l.id);
+          if (!data) return null;
+          return (
+            <GeoLayerRenderer
+              key={l.id}
+              geojson={data}
+              layer={l}
+              onFeatureClick={(feature, layerName) => setSelectedFeature({ feature, layerName })}
+            />
+          );
+        })}
       </MapContainer>
+
+      {geoLayers && geoLayers.length > 0 && (
+        <LayerControlPanel
+          layers={geoLayers}
+          visibleLayerIds={visibleGeoLayerIds ?? new Set()}
+          onToggleLayer={onToggleGeoLayer ?? (() => {})}
+        />
+      )}
+
+      {selectedFeature && (
+        <FeaturePopup
+          feature={selectedFeature.feature}
+          layerName={selectedFeature.layerName}
+          onClose={() => setSelectedFeature(null)}
+        />
+      )}
 
       {/* Fullscreen toggle */}
       <button
