@@ -226,6 +226,55 @@ export async function createGeoLayerService(
   return { success: true, layerId: data.id };
 }
 
+/**
+ * Public (no-auth) version of getPropertyGeoLayers — used on the public map page.
+ * RLS allows anon reads on geo_layers and geo_layer_properties.
+ */
+export async function getPropertyGeoLayersPublic(
+  propertyId: string
+): Promise<{ success: true; layers: GeoLayerSummary[]; assignments: GeoLayerProperty[] } | { error: string }> {
+  const supabase = createClient();
+
+  const { data: assignments, error: assignError } = await supabase
+    .from('geo_layer_properties')
+    .select('*')
+    .eq('property_id', propertyId);
+
+  if (assignError) return { error: assignError.message };
+  if (!assignments || assignments.length === 0) {
+    return { success: true, layers: [], assignments: [] };
+  }
+
+  const layerIds = assignments.map((a: GeoLayerProperty) => a.geo_layer_id);
+
+  const { data: layers, error: layerError } = await supabase
+    .from('geo_layers')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by')
+    .in('id', layerIds);
+
+  if (layerError) return { error: layerError.message };
+  return { success: true, layers: layers as GeoLayerSummary[], assignments: assignments as GeoLayerProperty[] };
+}
+
+/**
+ * Public (no-auth) version of getGeoLayer — used on the public map page.
+ * RLS allows anon reads on geo_layers.
+ */
+export async function getGeoLayerPublic(
+  layerId: string
+): Promise<{ success: true; layer: GeoLayer } | { error: string }> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('geo_layers')
+    .select('*')
+    .eq('id', layerId)
+    .single();
+
+  if (error) return { error: error.message };
+  return { success: true, layer: data as GeoLayer };
+}
+
 /** Assign layer to property using service client (bypasses RLS — used during onboarding) */
 export async function assignLayerToPropertyService(
   layerId: string,

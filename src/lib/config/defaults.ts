@@ -4,6 +4,7 @@ export const DEFAULT_CONFIG: SiteConfig = {
   siteName: 'Field Mapper',
   tagline: 'Map and track points of interest',
   locationName: '',
+  propertyId: null,
   mapCenter: { lat: 0, lng: 0, zoom: 2 },
   theme: { preset: 'forest' },
   aboutContent: '# About\n\nDescribe your project here.',
