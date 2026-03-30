@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { openGooglePhotosPicker, type PickerResult } from '@/lib/google/picker';
+import { useState, useEffect, useCallback } from 'react';
+import type { PickerResult } from '@/lib/google/picker';
 import { resizeImage } from '@/lib/utils';
 
 interface GooglePhotosSourceProps {
@@ -12,6 +12,20 @@ interface GooglePhotosSourceProps {
 
 type Status = 'idle' | 'authenticating' | 'downloading' | 'error';
 
+/** Build the picker popup URL on the platform domain */
+function getPickerUrl(maxFiles: number): string {
+  const platformDomain = process.env.NEXT_PUBLIC_GOOGLE_PHOTOS_ORIGIN;
+  if (platformDomain) {
+    // Use configured origin so OAuth always matches Google's authorized JS origins
+    // e.g., "https://birdhouse-mapper.vercel.app"
+    return `${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
+  }
+  // Local dev or same-origin — use relative path
+  return `/google-photos-picker?maxFiles=${maxFiles}`;
+}
+
+const POLL_INTERVAL = 500; // ms — check if popup was closed
+
 export default function GooglePhotosSource({
   maxFiles,
   maxWidth,
@@ -21,80 +35,102 @@ export default function GooglePhotosSource({
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [errorMessage, setErrorMessage] = useState('');
 
-  async function handleBrowse() {
+  const handleMessage = useCallback(
+    async (event: MessageEvent) => {
+      // Only accept google-photos-picked messages
+      if (event.data?.type !== 'google-photos-picked') return;
+
+      const results: PickerResult[] = event.data.results || [];
+
+      if (results.length === 0) {
+        setStatus('idle');
+        return;
+      }
+
+      setStatus('downloading');
+      setProgress({ done: 0, total: results.length });
+
+      const files: File[] = [];
+      let failCount = 0;
+
+      await Promise.all(
+        results.map(async (result) => {
+          try {
+            const response = await fetch('/api/photos/proxy', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ url: result.url, token: result.token }),
+            });
+
+            if (!response.ok) {
+              failCount++;
+              return;
+            }
+
+            const blob = await response.blob();
+            let finalBlob: Blob = blob;
+
+            if (maxWidth) {
+              try {
+                const tempFile = new File([blob], result.name, { type: result.mimeType });
+                finalBlob = await resizeImage(tempFile, maxWidth);
+              } catch {
+                // If resize fails, use original blob
+              }
+            }
+
+            files.push(new File([finalBlob], result.name, { type: result.mimeType }));
+          } catch {
+            failCount++;
+          } finally {
+            setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+          }
+        })
+      );
+
+      if (files.length > 0) {
+        onFilesSelected(files);
+      }
+
+      if (failCount > 0 && files.length > 0) {
+        setStatus('error');
+        setErrorMessage(`${failCount} of ${results.length} photos couldn't be downloaded`);
+      } else if (files.length === 0) {
+        setStatus('error');
+        setErrorMessage("Couldn't download any photos. Please try again.");
+      } else {
+        setStatus('idle');
+      }
+    },
+    [maxWidth, onFilesSelected]
+  );
+
+  useEffect(() => {
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [handleMessage]);
+
+  function handleBrowse() {
     setStatus('authenticating');
     setErrorMessage('');
 
-    let pickerResults: PickerResult[];
-    try {
-      pickerResults = await openGooglePhotosPicker(maxFiles);
-    } catch (err) {
+    const url = getPickerUrl(maxFiles);
+    const popup = window.open(url, 'google-photos-picker', 'width=900,height=600,scrollbars=yes');
+
+    if (!popup) {
       setStatus('error');
-      setErrorMessage("Couldn't connect to Google Photos. Try again or use Device.");
+      setErrorMessage('Popup was blocked. Please allow popups for this site.');
       return;
     }
 
-    if (pickerResults.length === 0) {
-      setStatus('idle');
-      return;
-    }
-
-    setStatus('downloading');
-    setProgress({ done: 0, total: pickerResults.length });
-
-    const files: File[] = [];
-    let failCount = 0;
-
-    const accessToken = (window as any).google?.accounts?.oauth2?.getToken?.()?.access_token;
-
-    await Promise.all(
-      pickerResults.map(async (result) => {
-        try {
-          const response = await fetch('/api/photos/proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: result.url, token: accessToken }),
-          });
-
-          if (!response.ok) {
-            failCount++;
-            return;
-          }
-
-          const blob = await response.blob();
-          let finalBlob: Blob = blob;
-
-          if (maxWidth) {
-            try {
-              const tempFile = new File([blob], result.name, { type: result.mimeType });
-              finalBlob = await resizeImage(tempFile, maxWidth);
-            } catch {
-              // If resize fails, use original blob
-            }
-          }
-
-          files.push(new File([finalBlob], result.name, { type: result.mimeType }));
-        } catch {
-          failCount++;
-        } finally {
-          setProgress((prev) => ({ ...prev, done: prev.done + 1 }));
-        }
-      })
-    );
-
-    if (files.length > 0) {
-      onFilesSelected(files);
-    }
-
-    if (failCount > 0 && files.length > 0) {
-      setStatus('error');
-      setErrorMessage(`${failCount} of ${pickerResults.length} photos couldn't be downloaded`);
-    } else if (files.length === 0) {
-      setStatus('error');
-      setErrorMessage("Couldn't download any photos. Please try again.");
-    } else {
-      setStatus('idle');
-    }
+    // Poll for popup close (user cancelled without selecting)
+    const timer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(timer);
+        // Only reset if we're still in authenticating state (no message received)
+        setStatus((current) => (current === 'authenticating' ? 'idle' : current));
+      }
+    }, POLL_INTERVAL);
   }
 
   return (
