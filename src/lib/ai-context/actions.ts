@@ -15,6 +15,7 @@ import {
   buildOnboardingPreFillPrompt,
 } from './prompts';
 import { buildOrgContextBlock } from './context-provider';
+import { isGeoFile } from './parsers';
 
 // ---------------------------------------------------------------------------
 // uploadAiContextItem
@@ -237,6 +238,50 @@ export async function analyzeAiContextItem(
         if (clientGeoError) {
           console.error('Failed to insert client geo features:', clientGeoError);
         }
+      }
+    }
+
+    // Auto-create draft geo layer if this is a geo file
+    if (item.storage_path && isGeoFile(item.file_name ?? '', item.mime_type ?? '')) {
+      try {
+        const { detectGeoFormat, parseGeoFile, validateGeoJSON } = await import('@/lib/geo/parsers');
+        const format = detectGeoFormat(item.file_name ?? '', item.mime_type ?? '');
+
+        if (format) {
+          const { data: fileData } = await service.storage
+            .from('ai-context')
+            .download(item.storage_path);
+
+          if (fileData) {
+            const file = new File([fileData], item.file_name ?? 'upload', {
+              type: item.mime_type ?? 'application/octet-stream',
+            });
+            const parsed = await parseGeoFile(file);
+            const validation = validateGeoJSON(parsed.geojson);
+
+            if (validation.valid) {
+              const { createGeoLayerService } = await import('@/app/admin/geo-layers/actions');
+              await createGeoLayerService({
+                orgId: item.org_id,
+                name: parsed.name,
+                geojson: parsed.geojson,
+                sourceFormat: parsed.sourceFormat,
+                sourceFilename: parsed.sourceFilename,
+                color: '#3b82f6',
+                opacity: 0.6,
+                featureCount: parsed.featureCount,
+                bbox: parsed.bbox,
+                isPropertyBoundary: false,
+                status: 'draft',
+                source: 'ai',
+                createdBy: item.uploaded_by,
+              });
+            }
+          }
+        }
+      } catch (geoLayerErr) {
+        // Non-fatal — log but don't fail the analysis
+        console.error('Failed to auto-create geo layer:', geoLayerErr);
       }
     }
 
