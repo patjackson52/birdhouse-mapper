@@ -31,6 +31,7 @@ export interface SiteConfig {
   customNavItems: { label: string; href: string }[];
   setupComplete: boolean;
   landingPage: LandingPageConfig | null;
+  platformDomain: string | null;
 }
 
 /**
@@ -85,5 +86,6 @@ export function buildSiteConfig(
     customNavItems: (property.custom_nav_items as { label: string; href: string }[]) ?? [],
     setupComplete: org.setup_complete,
     landingPage: property.landing_page as LandingPageConfig | null,
+    platformDomain: process.env.PLATFORM_DOMAIN ?? null,
   };
 }

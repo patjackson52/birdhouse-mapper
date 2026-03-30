@@ -18,4 +18,5 @@ export const DEFAULT_CONFIG: SiteConfig = {
   customNavItems: [],
   setupComplete: false,
   landingPage: null,
+  platformDomain: null,
 };

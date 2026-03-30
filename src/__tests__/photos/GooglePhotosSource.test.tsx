@@ -1,15 +1,15 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import GooglePhotosSource from '@/components/photos/GooglePhotosSource';
-
-// Mock the picker
-vi.mock('@/lib/google/picker', () => ({
-  openGooglePhotosPicker: vi.fn(),
-}));
 
 // Mock resizeImage
 vi.mock('@/lib/utils', () => ({
   resizeImage: vi.fn((file: File) => Promise.resolve(new Blob(['resized'], { type: 'image/jpeg' }))),
+}));
+
+// Mock picker module (only used by the popup page, not this component directly)
+vi.mock('@/lib/google/picker', () => ({
+  isGooglePhotosConfigured: () => true,
 }));
 
 describe('GooglePhotosSource', () => {
@@ -17,6 +17,14 @@ describe('GooglePhotosSource', () => {
     maxFiles: 5,
     onFilesSelected: vi.fn(),
   };
+
+  let mockPopup: { closed: boolean; close: () => void };
+
+  beforeEach(() => {
+    mockPopup = { closed: false, close: vi.fn() };
+    vi.spyOn(window, 'open').mockReturnValue(mockPopup as any);
+    defaultProps.onFilesSelected.mockClear();
+  });
 
   it('renders the Browse button in idle state', () => {
     render(<GooglePhotosSource {...defaultProps} />);
@@ -28,38 +36,37 @@ describe('GooglePhotosSource', () => {
     expect(screen.getByText(/up to 3 photos/i)).toBeInTheDocument();
   });
 
-  it('shows authenticating state when Browse is clicked', async () => {
-    const { openGooglePhotosPicker } = await import('@/lib/google/picker');
-    (openGooglePhotosPicker as any).mockImplementation(() => new Promise(() => {})); // never resolves
-
+  it('opens a popup and shows authenticating state when Browse is clicked', () => {
     render(<GooglePhotosSource {...defaultProps} />);
     fireEvent.click(screen.getByText('Browse Google Photos'));
+
+    expect(window.open).toHaveBeenCalledWith(
+      expect.stringContaining('/google-photos-picker?maxFiles=5'),
+      'google-photos-picker',
+      expect.any(String)
+    );
     expect(screen.getByText('Connecting to Google Photos...')).toBeInTheDocument();
   });
 
-  it('returns to idle if picker is cancelled (empty result)', async () => {
-    const { openGooglePhotosPicker } = await import('@/lib/google/picker');
-    (openGooglePhotosPicker as any).mockResolvedValue([]);
+  it('shows error when popup is blocked', () => {
+    vi.spyOn(window, 'open').mockReturnValue(null);
 
     render(<GooglePhotosSource {...defaultProps} />);
     fireEvent.click(screen.getByText('Browse Google Photos'));
+
+    expect(screen.getByText(/Popup was blocked/)).toBeInTheDocument();
+    expect(screen.getByText('Try Again')).toBeInTheDocument();
+  });
+
+  it('returns to idle when popup is closed without selection', async () => {
+    render(<GooglePhotosSource {...defaultProps} />);
+    fireEvent.click(screen.getByText('Browse Google Photos'));
+
+    // Simulate popup closing
+    mockPopup.closed = true;
 
     await waitFor(() => {
       expect(screen.getByText('Browse Google Photos')).toBeInTheDocument();
     });
-  });
-
-  it('shows error message when picker fails', async () => {
-    const { openGooglePhotosPicker } = await import('@/lib/google/picker');
-    (openGooglePhotosPicker as any).mockRejectedValue(new Error('Auth failed'));
-
-    render(<GooglePhotosSource {...defaultProps} />);
-    fireEvent.click(screen.getByText('Browse Google Photos'));
-
-    await waitFor(() => {
-      expect(screen.getByText(/Couldn't connect to Google Photos/)).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Try Again')).toBeInTheDocument();
   });
 });

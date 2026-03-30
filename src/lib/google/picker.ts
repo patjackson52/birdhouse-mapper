@@ -46,6 +46,13 @@ async function loadGis(): Promise<void> {
   gisLoaded = true;
 }
 
+let lastAccessToken: string | null = null;
+
+/** Get the last OAuth access token obtained during this session */
+export function getAccessToken(): string | null {
+  return lastAccessToken;
+}
+
 /** Request an OAuth access token via Google Identity Services */
 function requestAccessToken(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -58,6 +65,7 @@ function requestAccessToken(): Promise<string> {
           reject(new Error(response.error));
           return;
         }
+        lastAccessToken = response.access_token;
         resolve(response.access_token);
       },
     });
@@ -69,6 +77,7 @@ export interface PickerResult {
   url: string;
   name: string;
   mimeType: string;
+  token?: string; // OAuth access token — included when using popup flow
 }
 
 /** Open Google Picker for Photos and return selected items */
