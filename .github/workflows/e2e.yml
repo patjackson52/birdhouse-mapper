@@ -50,61 +50,65 @@ jobs:
           echo "anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
           echo "service_role_key=${SERVICE_ROLE_KEY}" >> "$GITHUB_OUTPUT"
 
-      - name: Patch auth schema and create test users
+      - name: Create E2E test users
         run: |
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U supabase_auth_admin -d postgres --quiet -c "
-            ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS display_name text;
-            ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS full_name text;
-            ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS email_verified boolean DEFAULT false;
-          "
-
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U supabase_auth_admin -d postgres --quiet -c "
-            ALTER TABLE auth.users DISABLE TRIGGER on_auth_user_created;
-          "
-
-          docker restart $(docker ps -qf "name=supabase_auth") && sleep 5
-
           API_URL="${{ steps.supabase.outputs.api_url }}"
           SERVICE_KEY="${{ steps.supabase.outputs.service_role_key }}"
 
-          # Create users via Auth API (|| true: seed.sql may have already created them)
-          curl -s -X POST "${API_URL}/auth/v1/admin/users" \
-            -H "apikey: ${SERVICE_KEY}" \
-            -H "Authorization: Bearer ${SERVICE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"email":"admin@test.fieldmapper.org","password":"test-admin-password-123","email_confirm":true}' || true
+          # Create each E2E user via Auth Admin API.
+          # Uses a psql check-then-create pattern to be idempotent:
+          # if the user already exists (e.g. in a future scenario where seed.sql
+          # creates auth users), the curl is skipped cleanly.
+          for EMAIL_PASS in \
+            "admin@test.fieldmapper.org:test-admin-password-123" \
+            "editor@test.fieldmapper.org:test-editor-password-123" \
+            "onboard@test.fieldmapper.org:test-onboard-password-123"; do
+            EMAIL="${EMAIL_PASS%%:*}"
+            PASSWORD="${EMAIL_PASS#*:}"
+            EXISTS=$(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -tAc \
+              "SELECT COUNT(*) FROM auth.users WHERE email = '$EMAIL'")
+            if [ "$EXISTS" = "0" ]; then
+              curl -sf -X POST "${API_URL}/auth/v1/admin/users" \
+                -H "apikey: ${SERVICE_KEY}" \
+                -H "Authorization: Bearer ${SERVICE_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"email\":\"${EMAIL}\",\"password\":\"${PASSWORD}\",\"email_confirm\":true}"
+              echo "Created: $EMAIL"
+            else
+              echo "Already exists (skipped): $EMAIL"
+            fi
+          done
 
-          curl -s -X POST "${API_URL}/auth/v1/admin/users" \
-            -H "apikey: ${SERVICE_KEY}" \
-            -H "Authorization: Bearer ${SERVICE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"email":"editor@test.fieldmapper.org","password":"test-editor-password-123","email_confirm":true}' || true
-
-          curl -s -X POST "${API_URL}/auth/v1/admin/users" \
-            -H "apikey: ${SERVICE_KEY}" \
-            -H "Authorization: Bearer ${SERVICE_KEY}" \
-            -H "Content-Type: application/json" \
-            -d '{"email":"onboard@test.fieldmapper.org","password":"test-onboard-password-123","email_confirm":true}' || true
-
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
+          # Safety-net: ensure public.users rows exist for all three E2E accounts.
+          # handle_new_user trigger should have done this, but be explicit.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c "
             INSERT INTO public.users (id, email, email_verified, full_name, display_name)
             SELECT id, email, true, email, split_part(email, '@', 1)
             FROM auth.users
-            WHERE email IN ('admin@test.fieldmapper.org', 'editor@test.fieldmapper.org', 'onboard@test.fieldmapper.org')
-            ON CONFLICT (id) DO NOTHING;
-          "
-
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U supabase_auth_admin -d postgres --quiet -c "
-            ALTER TABLE auth.users ENABLE TRIGGER on_auth_user_created;
+            WHERE email IN (
+              'admin@test.fieldmapper.org',
+              'editor@test.fieldmapper.org',
+              'onboard@test.fieldmapper.org'
+            )
+            ON CONFLICT (id) DO UPDATE SET
+              email_verified = true,
+              full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
+              display_name = COALESCE(EXCLUDED.display_name, public.users.display_name);
           "
 
       - name: Seed test data
         run: |
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
+          # Remove the stub 'default' org inserted by migration 008 (setup_complete=false).
+          # It pre-dates the test org in created_at, so Signal D would pick it first
+          # and redirect authenticated users to /setup instead of /manage.
+          # Must delete org_memberships first due to FK constraints.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c "
+            DELETE FROM org_memberships
+            WHERE org_id = (SELECT id FROM orgs WHERE slug = 'default' AND setup_complete = false LIMIT 1);
             DELETE FROM orgs WHERE slug = 'default' AND setup_complete = false;
           "
           PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
-            -f supabase/scripts/seed-test-db.sql --quiet
+            -f supabase/scripts/seed-test-db.sql
 
       - name: Build and start app
         run: npm run build && npm start &

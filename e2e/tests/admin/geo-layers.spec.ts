@@ -12,7 +12,7 @@ test.describe('Admin Geo Layers', () => {
     await page.waitForLoadState('networkidle');
 
     // Should show the page title
-    await expect(page.getByText('Geo Layers')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Geo Layers' })).toBeVisible({ timeout: 10000 });
 
     // Should show the import button
     await expect(page.getByText('+ Import Layer')).toBeVisible();
