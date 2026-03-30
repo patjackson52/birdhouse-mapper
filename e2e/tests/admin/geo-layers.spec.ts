@@ -68,4 +68,13 @@ test.describe('Admin Geo Layers', () => {
 
     await expect(page.getByRole('button', { name: 'Quick Import' })).toBeVisible({ timeout: 5000 });
   });
+
+  test('table shows Properties column header', async ({ page }) => {
+    await page.goto('/admin/geo-layers');
+    await page.waitForLoadState('networkidle');
+
+    // Properties column should be visible in the table header
+    const table = page.locator('table');
+    await expect(table.getByText('Properties', { exact: true })).toBeVisible({ timeout: 10000 });
+  });
 });
