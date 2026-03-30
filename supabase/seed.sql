@@ -4,14 +4,15 @@
 -- Creates 4 test users (one per role) with deterministic UUIDs,
 -- a test org, property, item types, sample items, and all associations.
 --
--- Test accounts (all passwords: "test-admin-password-123" etc.):
---   admin@test.fieldmapper.org       → org_admin   (pw: test-admin-password-123)
---   staff@test.fieldmapper.org       → org_staff   (pw: test-staff-password-123)
+-- Test accounts (all passwords: "test-<role>-password-123"):
+--   admin@test.fieldmapper.org       → org_admin    (pw: test-admin-password-123)
+--   staff@test.fieldmapper.org       → org_staff    (pw: test-staff-password-123)
 --   contributor@test.fieldmapper.org → contributor  (pw: test-contributor-password-123)
 --   viewer@test.fieldmapper.org      → viewer       (pw: test-viewer-password-123)
+--   editor@test.fieldmapper.org      → contributor  (pw: test-editor-password-123)  [E2E only]
+--   onboard@test.fieldmapper.org     → (no org)     (pw: test-onboard-password-123) [E2E only]
 --
--- In CI, users are created via the Auth Admin API before seed runs.
--- ON CONFLICT DO NOTHING ensures seed is idempotent either way.
+-- ON CONFLICT DO NOTHING makes all inserts idempotent.
 
 -- ============================================================================
 -- Auth Users (Supabase local dev allows direct auth.users inserts)
@@ -60,6 +61,26 @@ INSERT INTO auth.users (
   '{"provider":"email","providers":["email"]}'::jsonb,
   '{"full_name":"Test Viewer"}'::jsonb,
   'authenticated', 'authenticated', now(), now()
+),
+(
+  '00000000-0000-0000-0000-000000000005',
+  '00000000-0000-0000-0000-000000000000',
+  'editor@test.fieldmapper.org',
+  crypt('test-editor-password-123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Test Editor"}'::jsonb,
+  'authenticated', 'authenticated', now(), now()
+),
+(
+  '00000000-0000-0000-0000-000000000006',
+  '00000000-0000-0000-0000-000000000000',
+  'onboard@test.fieldmapper.org',
+  crypt('test-onboard-password-123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Test Onboard"}'::jsonb,
+  'authenticated', 'authenticated', now(), now()
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -97,6 +118,22 @@ INSERT INTO auth.identities (
   'viewer@test.fieldmapper.org',
   'email',
   '{"sub":"00000000-0000-0000-0000-000000000004","email":"viewer@test.fieldmapper.org"}'::jsonb,
+  now(), now(), now()
+),
+(
+  '00000000-0000-0000-0000-100000000005',
+  '00000000-0000-0000-0000-000000000005',
+  'editor@test.fieldmapper.org',
+  'email',
+  '{"sub":"00000000-0000-0000-0000-000000000005","email":"editor@test.fieldmapper.org"}'::jsonb,
+  now(), now(), now()
+),
+(
+  '00000000-0000-0000-0000-100000000006',
+  '00000000-0000-0000-0000-000000000006',
+  'onboard@test.fieldmapper.org',
+  'email',
+  '{"sub":"00000000-0000-0000-0000-000000000006","email":"onboard@test.fieldmapper.org"}'::jsonb,
   now(), now(), now()
 )
 ON CONFLICT (id) DO NOTHING;
@@ -252,7 +289,8 @@ WHERE id IN (
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
   '00000000-0000-0000-0000-000000000003',
-  '00000000-0000-0000-0000-000000000004'
+  '00000000-0000-0000-0000-000000000004',
+  '00000000-0000-0000-0000-000000000005'
 );
 
 -- ============================================================================
