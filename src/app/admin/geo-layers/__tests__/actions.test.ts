@@ -56,4 +56,36 @@ describe('geo layer actions', () => {
     });
     expect(result).toEqual({ error: 'Not authenticated' });
   });
+
+  it('rejects unauthenticated users on publishGeoLayer', async () => {
+    mockUser = null;
+    const { publishGeoLayer } = await import('../actions');
+    const result = await publishGeoLayer('layer-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('rejects unauthenticated users on unpublishGeoLayer', async () => {
+    mockUser = null;
+    const { unpublishGeoLayer } = await import('../actions');
+    const result = await unpublishGeoLayer('layer-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('publishGeoLayer calls update with published status', async () => {
+    mockUser = { id: 'user-1' };
+    mockUpdateResult = { data: null, error: null };
+    const { publishGeoLayer } = await import('../actions');
+    const result = await publishGeoLayer('layer-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
+
+  it('unpublishGeoLayer calls update with draft status', async () => {
+    mockUser = { id: 'user-1' };
+    mockUpdateResult = { data: null, error: null };
+    const { unpublishGeoLayer } = await import('../actions');
+    const result = await unpublishGeoLayer('layer-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
 });
