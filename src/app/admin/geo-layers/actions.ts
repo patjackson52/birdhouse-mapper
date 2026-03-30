@@ -159,6 +159,22 @@ export async function assignLayerToProperties(
   return { success: true };
 }
 
+export async function getOrgLayerAssignments(
+  orgId: string
+): Promise<{ success: true; assignments: GeoLayerProperty[] } | { error: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { data, error } = await supabase
+    .from('geo_layer_properties')
+    .select('*')
+    .eq('org_id', orgId);
+
+  if (error) return { error: error.message };
+  return { success: true, assignments: (data ?? []) as GeoLayerProperty[] };
+}
+
 export async function getPropertyGeoLayers(
   propertyId: string
 ): Promise<{ success: true; layers: GeoLayerSummary[]; assignments: GeoLayerProperty[] } | { error: string }> {
