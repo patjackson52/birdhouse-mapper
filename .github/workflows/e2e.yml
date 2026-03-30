@@ -50,13 +50,38 @@ jobs:
           echo "anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
           echo "service_role_key=${SERVICE_ROLE_KEY}" >> "$GITHUB_OUTPUT"
 
-      - name: Ensure test users exist in public.users
+      - name: Create E2E test users
         run: |
-          # seed.sql (run by supabase start) creates auth users + fires handle_new_user trigger
-          # which populates public.users. This step is a safety-net upsert in case any user
-          # was created via the Auth API after the trigger was disabled, or if handle_new_user
-          # silently failed. We never ALTER auth.users schema — that breaks GoTrue.
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
+          API_URL="${{ steps.supabase.outputs.api_url }}"
+          SERVICE_KEY="${{ steps.supabase.outputs.service_role_key }}"
+
+          # Create each E2E user via Auth Admin API.
+          # Uses a psql check-then-create pattern to be idempotent:
+          # if the user already exists (e.g. in a future scenario where seed.sql
+          # creates auth users), the curl is skipped cleanly.
+          for EMAIL_PASS in \
+            "admin@test.fieldmapper.org:test-admin-password-123" \
+            "editor@test.fieldmapper.org:test-editor-password-123" \
+            "onboard@test.fieldmapper.org:test-onboard-password-123"; do
+            EMAIL="${EMAIL_PASS%%:*}"
+            PASSWORD="${EMAIL_PASS#*:}"
+            EXISTS=$(PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -tAc \
+              "SELECT COUNT(*) FROM auth.users WHERE email = '$EMAIL'")
+            if [ "$EXISTS" = "0" ]; then
+              curl -sf -X POST "${API_URL}/auth/v1/admin/users" \
+                -H "apikey: ${SERVICE_KEY}" \
+                -H "Authorization: Bearer ${SERVICE_KEY}" \
+                -H "Content-Type: application/json" \
+                -d "{\"email\":\"${EMAIL}\",\"password\":\"${PASSWORD}\",\"email_confirm\":true}"
+              echo "Created: $EMAIL"
+            else
+              echo "Already exists (skipped): $EMAIL"
+            fi
+          done
+
+          # Safety-net: ensure public.users rows exist for all three E2E accounts.
+          # handle_new_user trigger should have done this, but be explicit.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c "
             INSERT INTO public.users (id, email, email_verified, full_name, display_name)
             SELECT id, email, true, email, split_part(email, '@', 1)
             FROM auth.users
