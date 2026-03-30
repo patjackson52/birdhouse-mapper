@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { resizeImage } from '@/lib/utils';
+import PhotoSourcePicker from '@/components/photos/PhotoSourcePicker';
 
 interface PhotoUploaderProps {
   onPhotosSelected: (files: File[]) => void;
@@ -13,10 +14,8 @@ export default function PhotoUploader({
   maxFiles = 5,
 }: PhotoUploaderProps) {
   const [previews, setPreviews] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []);
+  async function handleFilesSelected(files: File[]) {
     if (files.length === 0) return;
 
     const limited = files.slice(0, maxFiles - previews.length);
@@ -63,27 +62,13 @@ export default function PhotoUploader({
       </div>
 
       {previews.length < maxFiles && (
-        <div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="btn-secondary text-sm"
-          >
-            {previews.length === 0 ? 'Add Photos' : 'Add More Photos'}
-          </button>
-          <p className="text-xs text-sage mt-1">
-            Up to {maxFiles} photos. Images will be resized automatically.
-          </p>
-        </div>
+        <PhotoSourcePicker
+          accept="image/*"
+          maxFiles={maxFiles - previews.length}
+          maxWidth={1200}
+          capture="environment"
+          onFilesSelected={handleFilesSelected}
+        />
       )}
     </div>
   );

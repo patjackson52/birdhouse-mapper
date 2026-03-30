@@ -168,7 +168,7 @@ export default function MapView({
       {/* Fullscreen toggle */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-3 left-3 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-3 left-3 z-20 bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
         aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
       >
