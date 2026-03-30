@@ -4,6 +4,7 @@ export interface SiteConfig {
   siteName: string;
   tagline: string;
   locationName: string;
+  propertyId: string | null;
   mapCenter: { lat: number; lng: number; zoom: number };
   theme: { preset: string; overrides?: Record<string, string> };
   aboutContent: string;
@@ -46,6 +47,7 @@ export function buildSiteConfig(
     setup_complete: boolean;
   },
   property: {
+    id?: string;
     description: string | null;
     map_default_lat: number | null;
     map_default_lng: number | null;
@@ -65,6 +67,7 @@ export function buildSiteConfig(
     siteName: org.name,
     tagline: org.tagline ?? '',
     locationName: property.description ?? '',
+    propertyId: property.id ?? null,
     mapCenter: {
       lat: property.map_default_lat ?? 0,
       lng: property.map_default_lng ?? 0,

@@ -4,6 +4,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
 import { buildOrgContextBlock } from '@/lib/ai-context/context-provider';
 import type { AiContextSummary } from '@/lib/ai-context/types';
+import type { FeatureCollection } from 'geojson';
 
 export interface EntityTypeSuggestion {
   name: string;
@@ -26,6 +27,17 @@ export interface OnboardConfig {
   itemTypes: Array<{ name: string; icon: string; color: string }>;
   aboutContent: string;
   entityTypes?: EntityTypeSuggestion[];
+  geoLayers?: Array<{
+    name: string;
+    color: string;
+    opacity: number;
+    geojson: FeatureCollection;
+    sourceFormat: string;
+    sourceFilename: string;
+    featureCount: number;
+    bbox: [number, number, number, number];
+    isPropertyBoundary: boolean;
+  }>;
 }
 
 /**
@@ -331,6 +343,38 @@ export async function onboardCreateOrg(
 
   if (landingError) {
     return { error: `Failed to create landing page: ${landingError.message}` };
+  }
+
+  // Step 10: Create geo layers
+  if (config.geoLayers && config.geoLayers.length > 0) {
+    const { createGeoLayerService, assignLayerToPropertyService } = await import('@/app/admin/geo-layers/actions');
+
+    for (const layer of config.geoLayers) {
+      const layerResult = await createGeoLayerService({
+        orgId: org.id,
+        name: layer.name,
+        color: layer.color,
+        opacity: layer.opacity,
+        geojson: layer.geojson,
+        sourceFormat: layer.sourceFormat as any,
+        sourceFilename: layer.sourceFilename,
+        featureCount: layer.featureCount,
+        bbox: layer.bbox,
+        isPropertyBoundary: layer.isPropertyBoundary,
+        createdBy: userId,
+      });
+
+      if ('success' in layerResult) {
+        await assignLayerToPropertyService(layerResult.layerId, propertyId, org.id);
+
+        if (layer.isPropertyBoundary) {
+          await service
+            .from('properties')
+            .update({ boundary_layer_id: layerResult.layerId })
+            .eq('id', propertyId);
+        }
+      }
+    }
   }
 
   return { success: true, orgSlug: org.slug };
