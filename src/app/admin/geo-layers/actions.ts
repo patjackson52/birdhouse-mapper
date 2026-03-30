@@ -222,6 +222,8 @@ export async function createGeoLayerService(
       bbox: input.bbox,
       is_property_boundary: input.isPropertyBoundary,
       created_by: input.createdBy,
+      status: input.status ?? 'draft',
+      source: input.source ?? 'manual',
     })
     .select('id')
     .single();
