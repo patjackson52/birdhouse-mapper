@@ -55,7 +55,7 @@ export function validateGeoJSON(fc: FeatureCollection): GeoValidationResult {
     const geomType = feature.geometry?.type;
 
     if (!geomType || !VALID_GEOMETRY_TYPES.has(geomType)) {
-      errors.push(`Feature ${i}: unsupported geometry type "${geomType}". Supported: ${[...VALID_GEOMETRY_TYPES].join(', ')}`);
+      errors.push(`Feature ${i}: unsupported geometry type "${geomType}". Supported: ${Array.from(VALID_GEOMETRY_TYPES).join(', ')}`);
       continue;
     }
 
@@ -146,7 +146,7 @@ export async function parseGeoFile(file: File): Promise<ParsedGeoLayer> {
       break;
   }
 
-  const geometryTypes = [...new Set(fc.features.map((f) => f.geometry?.type).filter(Boolean))];
+  const geometryTypes = Array.from(new Set(fc.features.map((f) => f.geometry?.type).filter(Boolean)));
   const computedBbox = bbox(featureCollection(fc.features)) as [number, number, number, number];
 
   return {
