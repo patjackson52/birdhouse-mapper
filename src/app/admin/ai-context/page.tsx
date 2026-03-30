@@ -396,6 +396,27 @@ export default function AiContextPage() {
         </section>
       )}
 
+      {/* Geo layers detection banner */}
+      {totalGeoCount > 0 && (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 flex items-center gap-3">
+          <span className="text-xl">🗺️</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-purple-900">
+              {totalGeoCount} geo feature{totalGeoCount !== 1 ? 's' : ''} detected in uploaded files
+            </p>
+            <p className="text-xs text-purple-700 truncate">
+              {items.filter(i => i.geo_count > 0).map(i => `${i.file_name} (${i.geo_count})`).join(' · ')}
+            </p>
+          </div>
+          <a
+            href="/admin/geo-layers"
+            className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+          >
+            View in Geo Layers →
+          </a>
+        </div>
+      )}
+
       {/* Delete confirmation dialog */}
       {confirmDeleteId && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 flex items-center justify-between gap-4">

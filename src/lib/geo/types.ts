@@ -2,6 +2,9 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson';
 
 export type GeoSourceFormat = 'geojson' | 'shapefile' | 'kml' | 'kmz';
 
+export type GeoLayerStatus = 'draft' | 'published';
+export type GeoLayerSource = 'manual' | 'ai';
+
 export interface GeoLayer {
   id: string;
   org_id: string;
@@ -17,6 +20,8 @@ export interface GeoLayer {
   is_property_boundary: boolean;
   created_at: string;
   created_by: string | null;
+  status: GeoLayerStatus;
+  source: GeoLayerSource;
 }
 
 export interface GeoLayerProperty {
@@ -41,6 +46,8 @@ export interface GeoLayerSummary {
   is_property_boundary: boolean;
   created_at: string;
   created_by: string | null;
+  status: GeoLayerStatus;
+  source: GeoLayerSource;
 }
 
 /** Result of parsing an uploaded geo file, before storage */
