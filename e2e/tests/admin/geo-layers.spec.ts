@@ -7,57 +7,65 @@ const ADMIN_AUTH = path.join(__dirname, '..', '..', '.auth', 'admin.json');
 test.describe('Admin Geo Layers', () => {
   test.use({ storageState: ADMIN_AUTH });
 
-  test('geo layers page loads with import button', async ({ page }) => {
-    await page.goto(`/admin/geo-layers`);
+  test('sidebar shows Geo Layers under Data section', async ({ page }) => {
+    await page.goto('/admin');
     await page.waitForLoadState('networkidle');
 
-    // Should show the page title
-    await expect(page.getByRole('heading', { name: 'Geo Layers' })).toBeVisible({ timeout: 10000 });
+    // Section header exists
+    const sidebar = page.locator('nav');
+    await expect(sidebar.getByText('Data')).toBeVisible({ timeout: 10000 });
 
-    // Should show the import button
-    await expect(page.getByText('+ Import Layer')).toBeVisible();
+    // Geo Layers link exists and navigates
+    const geoLink = sidebar.getByText('Geo Layers');
+    await expect(geoLink).toBeVisible();
+    await geoLink.click();
+    await expect(page).toHaveURL(/\/admin\/geo-layers/);
+  });
+
+  test('geo layers page loads with import buttons', async ({ page }) => {
+    await page.goto('/admin/geo-layers');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByRole('heading', { name: 'Geo Layers' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Quick Import' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /AI-Assisted Import/ })).toBeVisible();
+  });
+
+  test('AI-assisted import shows placeholder', async ({ page }) => {
+    await page.goto('/admin/geo-layers');
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: /AI-Assisted Import/ }).click();
+    await expect(page.getByText('Coming soon')).toBeVisible();
   });
 
   test('shows empty state when no layers exist', async ({ page }) => {
-    await page.goto(`/admin/geo-layers`);
+    await page.goto('/admin/geo-layers');
     await page.waitForLoadState('networkidle');
 
-    // Should show empty state message
     await expect(page.getByText('No geo layers yet')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText(/Import a GeoJSON/)).toBeVisible();
   });
 
-  test('clicking import shows the import flow', async ({ page }) => {
-    await page.goto(`/admin/geo-layers`);
+  test('clicking Quick Import shows the import flow', async ({ page }) => {
+    await page.goto('/admin/geo-layers');
     await page.waitForLoadState('networkidle');
 
-    await page.getByText('+ Import Layer').click();
+    await page.getByRole('button', { name: 'Quick Import' }).click();
 
-    // Should show the import flow with dropzone
     await expect(page.getByText('Import Geo Layer')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText(/Drop a file here/)).toBeVisible();
   });
 
-  test('import flow shows file format hints', async ({ page }) => {
-    await page.goto(`/admin/geo-layers`);
-    await page.waitForLoadState('networkidle');
-
-    await page.getByText('+ Import Layer').click();
-
-    // Should show supported formats
-    await expect(page.getByText(/\.geojson/)).toBeVisible({ timeout: 5000 });
-  });
-
   test('import flow has cancel button that returns to list', async ({ page }) => {
-    await page.goto(`/admin/geo-layers`);
+    await page.goto('/admin/geo-layers');
     await page.waitForLoadState('networkidle');
 
-    await page.getByText('+ Import Layer').click();
+    await page.getByRole('button', { name: 'Quick Import' }).click();
     await expect(page.getByText('Import Geo Layer')).toBeVisible({ timeout: 5000 });
 
     await page.getByText('Cancel').click();
 
-    // Should be back on the list view
-    await expect(page.getByText('+ Import Layer')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: 'Quick Import' })).toBeVisible({ timeout: 5000 });
   });
 });

@@ -75,6 +75,9 @@ export default function MapView({
   // Build a lookup map for item types
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
 
+  // Only render published layers on the map
+  const publishedLayers = (geoLayers ?? []).filter(l => l.status === 'published');
+
   // Escape key exits fullscreen
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -132,7 +135,7 @@ export default function MapView({
 
         {boundaryGeoJSON && <PropertyBoundary geojson={boundaryGeoJSON} />}
 
-        {geoLayers?.filter((l) => visibleGeoLayerIds?.has(l.id)).map((l) => {
+        {publishedLayers.filter((l) => visibleGeoLayerIds?.has(l.id)).map((l) => {
           const data = geoLayerData?.get(l.id);
           if (!data) return null;
           return (

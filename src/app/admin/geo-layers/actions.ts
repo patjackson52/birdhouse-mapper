@@ -16,6 +16,8 @@ interface CreateGeoLayerInput {
   featureCount: number;
   bbox: [number, number, number, number] | null;
   isPropertyBoundary: boolean;
+  status?: 'draft' | 'published';
+  source?: 'manual' | 'ai';
 }
 
 export async function createGeoLayer(
@@ -40,6 +42,8 @@ export async function createGeoLayer(
       bbox: input.bbox,
       is_property_boundary: input.isPropertyBoundary,
       created_by: user.id,
+      status: input.status ?? 'draft',
+      source: input.source ?? 'manual',
     })
     .select('id')
     .single();
@@ -57,7 +61,7 @@ export async function listGeoLayers(
 
   const { data, error } = await supabase
     .from('geo_layers')
-    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by, status, source')
     .eq('org_id', orgId)
     .order('created_at', { ascending: false });
 
@@ -174,7 +178,7 @@ export async function getPropertyGeoLayers(
 
   const { data: layers, error: layerError } = await supabase
     .from('geo_layers')
-    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by, status, source')
     .in('id', layerIds);
 
   if (layerError) return { error: layerError.message };
@@ -249,7 +253,7 @@ export async function getPropertyGeoLayersPublic(
 
   const { data: layers, error: layerError } = await supabase
     .from('geo_layers')
-    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by, status, source')
     .in('id', layerIds);
 
   if (layerError) return { error: layerError.message };
@@ -273,6 +277,38 @@ export async function getGeoLayerPublic(
 
   if (error) return { error: error.message };
   return { success: true, layer: data as GeoLayer };
+}
+
+export async function publishGeoLayer(
+  layerId: string
+): Promise<{ success: true } | { error: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('geo_layers')
+    .update({ status: 'published' })
+    .eq('id', layerId);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+export async function unpublishGeoLayer(
+  layerId: string
+): Promise<{ success: true } | { error: string }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated' };
+
+  const { error } = await supabase
+    .from('geo_layers')
+    .update({ status: 'draft' })
+    .eq('id', layerId);
+
+  if (error) return { error: error.message };
+  return { success: true };
 }
 
 /** Assign layer to property using service client (bypasses RLS — used during onboarding) */

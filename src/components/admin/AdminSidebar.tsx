@@ -3,10 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-interface SidebarItem {
-  label: string;
-  href: string;
-}
+export type SidebarItem =
+  | { label: string; href: string }
+  | { type: 'section'; label: string };
 
 interface AdminSidebarProps {
   title: string;
@@ -32,14 +31,26 @@ export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSideba
       <div className="px-4 py-3 font-bold text-forest-dark text-sm">
         {title}
       </div>
-      {items.map((item) => {
+      {items.map((item, i) => {
+        if ('type' in item && item.type === 'section') {
+          return (
+            <div
+              key={`section-${i}`}
+              className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-sage"
+            >
+              {item.label}
+            </div>
+          );
+        }
+
+        const navItem = item as { label: string; href: string };
         const isActive =
-          pathname === item.href ||
-          (item.href !== '/admin' && pathname.startsWith(item.href));
+          pathname === navItem.href ||
+          (navItem.href !== '/admin' && pathname.startsWith(navItem.href));
         return (
           <Link
-            key={item.href}
-            href={item.href}
+            key={navItem.href}
+            href={navItem.href}
             className={`block px-4 py-2 text-sm ${
               isActive
                 ? 'bg-sage-light/50 text-forest-dark font-semibold border-l-3 border-golden'
@@ -47,7 +58,7 @@ export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSideba
             }`}
             onClick={onNavClick}
           >
-            {item.label}
+            {navItem.label}
           </Link>
         );
       })}
