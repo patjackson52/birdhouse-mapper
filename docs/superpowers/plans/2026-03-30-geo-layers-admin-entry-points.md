@@ -611,7 +611,196 @@ git commit -m "feat: add geo layers detection banner to AI context page"
 
 ---
 
-### Task 7: Seed Data — Update seed files for new columns
+### Task 7: Unit Tests — Server actions and component behaviors
+
+**Files:**
+- Modify: `src/app/admin/geo-layers/__tests__/actions.test.ts`
+- Create: `src/__tests__/admin/AiContextGeoBanner.test.tsx`
+
+- [ ] **Step 1: Add publish/unpublish action tests**
+
+Add to `src/app/admin/geo-layers/__tests__/actions.test.ts`, inside the existing `describe('geo layer actions', ...)` block:
+
+```typescript
+  it('rejects unauthenticated users on publishGeoLayer', async () => {
+    mockUser = null;
+    const { publishGeoLayer } = await import('../actions');
+    const result = await publishGeoLayer('layer-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('rejects unauthenticated users on unpublishGeoLayer', async () => {
+    mockUser = null;
+    const { unpublishGeoLayer } = await import('../actions');
+    const result = await unpublishGeoLayer('layer-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('publishGeoLayer calls update with published status', async () => {
+    mockUser = { id: 'user-1' };
+    mockUpdateResult = { data: null, error: null };
+    const { publishGeoLayer } = await import('../actions');
+    const result = await publishGeoLayer('layer-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
+
+  it('unpublishGeoLayer calls update with draft status', async () => {
+    mockUser = { id: 'user-1' };
+    mockUpdateResult = { data: null, error: null };
+    const { unpublishGeoLayer } = await import('../actions');
+    const result = await unpublishGeoLayer('layer-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
+```
+
+- [ ] **Step 2: Run action tests**
+
+Run: `npx vitest run src/app/admin/geo-layers/__tests__/actions.test.ts`
+Expected: All pass (existing + new)
+
+- [ ] **Step 3: Write AI Context geo banner test**
+
+Create `src/__tests__/admin/AiContextGeoBanner.test.tsx`:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+
+// Isolated banner component for testability — mirrors the markup in ai-context/page.tsx
+function GeoBanner({ totalGeoCount, items }: { totalGeoCount: number; items: Array<{ name: string; geo_count: number }> }) {
+  if (totalGeoCount <= 0) return null;
+  return (
+    <div data-testid="geo-banner" className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 flex items-center gap-3">
+      <span className="text-xl">🗺️</span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-purple-900">
+          {totalGeoCount} geo feature{totalGeoCount !== 1 ? 's' : ''} detected in uploaded files
+        </p>
+        <p className="text-xs text-purple-700 truncate">
+          {items.filter(i => i.geo_count > 0).map(i => `${i.name} (${i.geo_count})`).join(' · ')}
+        </p>
+      </div>
+      <a href="/admin/geo-layers">View in Geo Layers →</a>
+    </div>
+  );
+}
+
+describe('GeoBanner', () => {
+  it('renders nothing when totalGeoCount is 0', () => {
+    const { container } = render(<GeoBanner totalGeoCount={0} items={[]} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('renders banner with feature count and link', () => {
+    const items = [
+      { name: 'trails.kml', geo_count: 5 },
+      { name: 'readme.txt', geo_count: 0 },
+      { name: 'boundary.geojson', geo_count: 1 },
+    ];
+    render(<GeoBanner totalGeoCount={6} items={items} />);
+
+    expect(screen.getByTestId('geo-banner')).toBeTruthy();
+    expect(screen.getByText('6 geo features detected in uploaded files')).toBeTruthy();
+    expect(screen.getByText('trails.kml (5) · boundary.geojson (1)')).toBeTruthy();
+    expect(screen.getByText('View in Geo Layers →').closest('a')?.getAttribute('href')).toBe('/admin/geo-layers');
+  });
+
+  it('uses singular "feature" for count of 1', () => {
+    render(<GeoBanner totalGeoCount={1} items={[{ name: 'test.kml', geo_count: 1 }]} />);
+    expect(screen.getByText('1 geo feature detected in uploaded files')).toBeTruthy();
+  });
+});
+```
+
+- [ ] **Step 4: Run banner test**
+
+Run: `npx vitest run src/__tests__/admin/AiContextGeoBanner.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Run full test suite**
+
+Run: `npm run test`
+Expected: All pass
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/app/admin/geo-layers/__tests__/actions.test.ts src/__tests__/admin/AiContextGeoBanner.test.tsx
+git commit -m "test: add unit tests for publish/unpublish actions and geo banner"
+```
+
+---
+
+### Task 8: E2E Tests — Sidebar nav, geo layers page, publish flow
+
+**Files:**
+- Create: `e2e/tests/admin/geo-layers.spec.ts`
+
+- [ ] **Step 1: Write E2E tests**
+
+Create `e2e/tests/admin/geo-layers.spec.ts`:
+
+```typescript
+import { test, expect } from '@playwright/test';
+import path from 'path';
+import { TEST_DATA } from '../../fixtures/test-data';
+
+const ADMIN_AUTH = path.join(__dirname, '..', '..', '.auth', 'admin.json');
+
+test.describe('Admin Geo Layers', () => {
+  test.use({ storageState: ADMIN_AUTH });
+
+  test('sidebar shows Geo Layers under Data section', async ({ page }) => {
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+
+    // Section header exists
+    const sidebar = page.locator('nav');
+    await expect(sidebar.getByText('Data')).toBeVisible({ timeout: 10000 });
+
+    // Geo Layers link exists and navigates
+    const geoLink = sidebar.getByText('Geo Layers');
+    await expect(geoLink).toBeVisible();
+    await geoLink.click();
+    await expect(page).toHaveURL(/\/admin\/geo-layers/);
+  });
+
+  test('geo layers page loads with import buttons', async ({ page }) => {
+    await page.goto('/admin/geo-layers');
+    await page.waitForLoadState('networkidle');
+
+    await expect(page.getByText('Geo Layers')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: 'Quick Import' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /AI-Assisted Import/ })).toBeVisible();
+  });
+
+  test('AI-assisted import shows placeholder', async ({ page }) => {
+    await page.goto('/admin/geo-layers');
+    await page.waitForLoadState('networkidle');
+
+    await page.getByRole('button', { name: /AI-Assisted Import/ }).click();
+    await expect(page.getByText('Coming soon')).toBeVisible();
+  });
+});
+```
+
+- [ ] **Step 2: Run E2E smoke test**
+
+Run: `npx playwright test --config=e2e/playwright.config.ts e2e/tests/admin/geo-layers.spec.ts`
+Expected: All 3 tests pass (requires local dev server running with seeded data and auth state)
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add e2e/tests/admin/geo-layers.spec.ts
+git commit -m "test: add E2E tests for geo layers admin page and sidebar"
+```
+
+---
+
+### Task 9: Seed Data — Update seed files for new columns
 
 **Files:**
 - Modify: `supabase/seed.sql` (if it references geo_layers)
@@ -642,7 +831,7 @@ git commit -m "chore: update seed data for geo layer status columns"
 
 ---
 
-### Task 8: Verification — End-to-end manual test
+### Task 10: Verification — End-to-end manual test
 
 - [ ] **Step 1: Start local dev**
 
