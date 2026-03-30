@@ -12,12 +12,15 @@ import ProcessingProgress from '@/components/ai-context/ProcessingProgress';
 import { parseFileForAnalysis } from '@/lib/ai-context/parsers';
 import { analyzeFilesForOnboarding } from '@/lib/ai-context/actions';
 import type { ParsedFileData } from '@/lib/ai-context/types';
+import { parseGeoFile, detectGeoFormat } from '@/lib/geo/parsers';
+import type { FeatureCollection } from 'geojson';
 
 type OnboardPath = 'ai' | 'manual';
 type Step =
   | 'welcome'
   | 'ai-upload'
   | 'ai-progress'
+  | 'ai-geo-review'
   | 'ai-review'
   | 'name'
   | 'theme'
@@ -27,7 +30,7 @@ type Step =
   | 'about'
   | 'review';
 
-const AI_STEPS: Step[] = ['welcome', 'ai-upload', 'ai-progress', 'ai-review'];
+const AI_STEPS: Step[] = ['welcome', 'ai-upload', 'ai-progress', 'ai-geo-review', 'ai-review'];
 const MANUAL_STEPS: Step[] = [
   'welcome',
   'name',
@@ -102,6 +105,18 @@ export default function OnboardPage() {
   const [aiOrgProfile, setAiOrgProfile] = useState<string | null>(null);
   const [aiSummaryReady, setAiSummaryReady] = useState(false);
   const [preFillApplied, setPreFillApplied] = useState(false);
+  const [detectedGeoLayers, setDetectedGeoLayers] = useState<Array<{
+    name: string;
+    color: string;
+    opacity: number;
+    geojson: FeatureCollection;
+    sourceFormat: string;
+    sourceFilename: string;
+    featureCount: number;
+    bbox: [number, number, number, number];
+    isPropertyBoundary: boolean;
+    enabled: boolean;
+  }>>([]);
 
   // Collapsible sections for ai-review
   const [expandedSections, setExpandedSections] = useState<
@@ -377,9 +392,50 @@ export default function OnboardPage() {
     if (pf.aboutContent) setAboutContent(pf.aboutContent);
     setPreFillApplied(true);
 
-    // Auto-advance to review after a brief delay
+    // Detect geo layers from uploaded files
+    const geoLayers: Array<{
+      name: string;
+      color: string;
+      opacity: number;
+      geojson: FeatureCollection;
+      sourceFormat: string;
+      sourceFilename: string;
+      featureCount: number;
+      bbox: [number, number, number, number];
+      isPropertyBoundary: boolean;
+      enabled: boolean;
+    }> = [];
+    for (const file of aiFiles) {
+      const format = detectGeoFormat(file.name, file.type);
+      if (format) {
+        try {
+          const parsed = await parseGeoFile(file);
+          geoLayers.push({
+            name: parsed.name,
+            color: '#3b82f6',
+            opacity: 0.6,
+            geojson: parsed.geojson,
+            sourceFormat: parsed.sourceFormat,
+            sourceFilename: parsed.sourceFilename,
+            featureCount: parsed.featureCount,
+            bbox: parsed.bbox,
+            isPropertyBoundary: false,
+            enabled: true,
+          });
+        } catch {
+          // Non-fatal — skip files that fail to parse as geo
+        }
+      }
+    }
+    setDetectedGeoLayers(geoLayers);
+
+    // Auto-advance after a brief delay; skip geo review if no layers detected
     setTimeout(() => {
-      setStep('ai-review');
+      if (geoLayers.length === 0) {
+        setStep('ai-review');
+      } else {
+        setStep('ai-geo-review');
+      }
     }, 1500);
   }, [aiFiles, aiUrls]);
 
@@ -390,6 +446,10 @@ export default function OnboardPage() {
     setError('');
 
     try {
+      const enabledGeoLayers = detectedGeoLayers
+        .filter((l) => l.enabled)
+        .map(({ enabled: _enabled, ...rest }) => rest);
+
       const result = await onboardCreateOrg({
         orgName,
         orgSlug,
@@ -403,6 +463,7 @@ export default function OnboardPage() {
         aboutContent,
         entityTypes:
           entityTypeSuggestions.length > 0 ? entityTypeSuggestions : undefined,
+        geoLayers: enabledGeoLayers.length > 0 ? enabledGeoLayers : undefined,
       });
 
       if ('error' in result) {
@@ -608,6 +669,62 @@ export default function OnboardPage() {
                   Setup suggestions ready — moving to review...
                 </p>
               )}
+            </div>
+          )}
+
+          {step === 'ai-geo-review' && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Geographic Layers Detected</h2>
+              <p className="text-gray-600">We found geographic data in your uploaded files. Review and configure these layers.</p>
+
+              {detectedGeoLayers.map((layer, index) => (
+                <div key={index} className="card p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={layer.enabled}
+                      onChange={() => {
+                        setDetectedGeoLayers((prev) =>
+                          prev.map((l, i) => i === index ? { ...l, enabled: !l.enabled } : l)
+                        );
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: layer.color }} />
+                    <input
+                      type="text"
+                      value={layer.name}
+                      onChange={(e) => {
+                        setDetectedGeoLayers((prev) =>
+                          prev.map((l, i) => i === index ? { ...l, name: e.target.value } : l)
+                        );
+                      }}
+                      className="input-field flex-1"
+                    />
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {layer.featureCount} features from {layer.sourceFilename}
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={layer.isPropertyBoundary}
+                      onChange={() => {
+                        setDetectedGeoLayers((prev) =>
+                          prev.map((l, i) => i === index ? { ...l, isPropertyBoundary: !l.isPropertyBoundary } : l)
+                        );
+                      }}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-sm text-gray-700">Use as property boundary</span>
+                  </label>
+                </div>
+              ))}
+
+              <div className="flex justify-between">
+                <button onClick={() => setStep('ai-progress')} className="btn-secondary">Back</button>
+                <button onClick={() => setStep('ai-review')} className="btn-primary">Next</button>
+              </div>
             </div>
           )}
 
