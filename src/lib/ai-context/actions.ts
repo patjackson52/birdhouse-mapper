@@ -15,7 +15,6 @@ import {
   buildOnboardingPreFillPrompt,
 } from './prompts';
 import { buildOrgContextBlock } from './context-provider';
-import { isGeoFile } from './parsers';
 
 // ---------------------------------------------------------------------------
 // uploadAiContextItem
@@ -241,49 +240,8 @@ export async function analyzeAiContextItem(
       }
     }
 
-    // Auto-create draft geo layer if this is a geo file
-    if (item.storage_path && isGeoFile(item.file_name ?? '', item.mime_type ?? '')) {
-      try {
-        const { detectGeoFormat, parseGeoFile, validateGeoJSON } = await import('@/lib/geo/parsers');
-        const format = detectGeoFormat(item.file_name ?? '', item.mime_type ?? '');
-
-        if (format) {
-          const { data: fileData } = await service.storage
-            .from('ai-context')
-            .download(item.storage_path);
-
-          if (fileData) {
-            const file = new File([fileData], item.file_name ?? 'upload', {
-              type: item.mime_type ?? 'application/octet-stream',
-            });
-            const parsed = await parseGeoFile(file);
-            const validation = validateGeoJSON(parsed.geojson);
-
-            if (validation.valid) {
-              const { createGeoLayerService } = await import('@/app/admin/geo-layers/actions');
-              await createGeoLayerService({
-                orgId: item.org_id,
-                name: parsed.name,
-                geojson: parsed.geojson,
-                sourceFormat: parsed.sourceFormat,
-                sourceFilename: parsed.sourceFilename,
-                color: '#3b82f6',
-                opacity: 0.6,
-                featureCount: parsed.featureCount,
-                bbox: parsed.bbox,
-                isPropertyBoundary: false,
-                status: 'draft',
-                source: 'ai',
-                createdBy: item.uploaded_by,
-              });
-            }
-          }
-        }
-      } catch (geoLayerErr) {
-        // Non-fatal — log but don't fail the analysis
-        console.error('Failed to auto-create geo layer:', geoLayerErr);
-      }
-    }
+    // Auto-create draft geo layer for recognized geo files
+    await tryCreateDraftGeoLayer(item, service);
 
     return { success: true, result };
   } catch (err) {
@@ -817,5 +775,53 @@ export async function analyzeFilesForOnboarding(
     return {
       error: err instanceof Error ? err.message : 'Onboarding analysis failed',
     };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// tryCreateDraftGeoLayer (non-fatal helper for analyzeAiContextItem)
+// ---------------------------------------------------------------------------
+
+async function tryCreateDraftGeoLayer(
+  item: { storage_path: string | null; file_name: string | null; mime_type: string | null; org_id: string; uploaded_by: string },
+  service: ReturnType<typeof createServiceClient>
+): Promise<void> {
+  const fileName = item.file_name ?? '';
+  const mimeType = item.mime_type ?? '';
+
+  const { detectGeoFormat, parseGeoFile, validateGeoJSON } = await import('@/lib/geo/parsers');
+  const format = detectGeoFormat(fileName, mimeType);
+  if (!format || !item.storage_path) return;
+
+  try {
+    const { data: fileData } = await service.storage
+      .from('ai-context')
+      .download(item.storage_path);
+    if (!fileData) return;
+
+    const file = new File([fileData], fileName, { type: mimeType || 'application/octet-stream' });
+    const parsed = await parseGeoFile(file);
+    const validation = validateGeoJSON(parsed.geojson);
+    if (!validation.valid) return;
+
+    const { DEFAULT_LAYER_COLOR, DEFAULT_LAYER_OPACITY } = await import('@/lib/geo/constants');
+    const { createGeoLayerService } = await import('@/app/admin/geo-layers/actions');
+    await createGeoLayerService({
+      orgId: item.org_id,
+      name: parsed.name,
+      geojson: parsed.geojson,
+      sourceFormat: parsed.sourceFormat,
+      sourceFilename: parsed.sourceFilename,
+      color: DEFAULT_LAYER_COLOR,
+      opacity: DEFAULT_LAYER_OPACITY,
+      featureCount: parsed.featureCount,
+      bbox: parsed.bbox,
+      isPropertyBoundary: false,
+      status: 'draft',
+      source: 'ai',
+      createdBy: item.uploaded_by,
+    });
+  } catch (err) {
+    console.error('Failed to auto-create geo layer:', err);
   }
 }
