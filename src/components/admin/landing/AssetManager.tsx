@@ -1,9 +1,9 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { resizeImage } from '@/lib/utils';
 import { uploadLandingAsset, deleteLandingAsset } from '@/app/admin/landing/actions';
 import type { LandingAsset } from '@/lib/config/landing-types';
+import PhotoSourcePicker from '@/components/photos/PhotoSourcePicker';
 
 const MAX_ASSETS = 20;
 
@@ -20,7 +20,6 @@ export default function AssetManager({
   referenceLinks,
   onReferenceLinksChange,
 }: AssetManagerProps) {
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
 
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -34,31 +33,6 @@ export default function AssetManager({
   const imageAssets = assets.filter(a => a.category === 'image');
   const docAssets = assets.filter(a => a.category === 'document');
   const atLimit = assets.length >= MAX_ASSETS;
-
-  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadError(null);
-    setUploadingImage(true);
-    try {
-      const blob = await resizeImage(file, 2000);
-      const resized = new File([blob], file.name, { type: 'image/jpeg' });
-      const formData = new FormData();
-      formData.append('file', resized);
-      formData.append('category', 'image');
-      const { asset, error } = await uploadLandingAsset(formData);
-      if (error || !asset) {
-        setUploadError(error ?? 'Upload failed');
-      } else {
-        onAssetsChange([...assets, asset]);
-      }
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setUploadingImage(false);
-      if (imageInputRef.current) imageInputRef.current.value = '';
-    }
-  }
 
   async function handleDocSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -142,23 +116,36 @@ export default function AssetManager({
         {imageAssets.length === 0 && (
           <p className="text-xs text-gray-400 mb-2">No images uploaded yet.</p>
         )}
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageSelect}
-        />
-        {!atLimit && (
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={uploadingImage}
-            className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded px-2 py-1 bg-white disabled:opacity-50"
-          >
-            {uploadingImage ? 'Uploading…' : '+ Add image'}
-          </button>
+        {!atLimit && !uploadingImage && (
+          <PhotoSourcePicker
+            accept="image/*"
+            maxFiles={1}
+            maxWidth={2000}
+            multiple={false}
+            onFilesSelected={async (files) => {
+              if (files.length === 0) return;
+              setUploadError(null);
+              setUploadingImage(true);
+              try {
+                const file = files[0];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('category', 'image');
+                const { asset, error } = await uploadLandingAsset(formData);
+                if (error || !asset) {
+                  setUploadError(error ?? 'Upload failed');
+                } else {
+                  onAssetsChange([...assets, asset]);
+                }
+              } catch (err) {
+                setUploadError(err instanceof Error ? err.message : 'Upload failed');
+              } finally {
+                setUploadingImage(false);
+              }
+            }}
+          />
         )}
+        {uploadingImage && <p className="text-xs text-gray-500">Uploading...</p>}
         {atLimit && <p className="text-xs text-gray-400">Asset limit reached (max {MAX_ASSETS}).</p>}
       </div>
 
