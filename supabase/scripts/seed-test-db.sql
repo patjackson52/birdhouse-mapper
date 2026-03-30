@@ -158,7 +158,7 @@ SELECT
   true,
   now()
 FROM auth.users WHERE email = 'admin@test.fieldmapper.org'
-ON CONFLICT (org_id, user_id) DO NOTHING;
+ON CONFLICT (org_id, user_id) WHERE user_id IS NOT NULL DO NOTHING;
 
 -- Editor user membership
 INSERT INTO org_memberships (org_id, user_id, role_id, status, is_primary_org, joined_at)
@@ -170,7 +170,7 @@ SELECT
   true,
   now()
 FROM auth.users WHERE email = 'editor@test.fieldmapper.org'
-ON CONFLICT (org_id, user_id) DO NOTHING;
+ON CONFLICT (org_id, user_id) WHERE user_id IS NOT NULL DO NOTHING;
 
 -- ============================================================================
 -- Item Types
