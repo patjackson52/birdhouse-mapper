@@ -15,27 +15,32 @@ async function globalSetup(config: FullConfig) {
 
   const browser = await chromium.launch();
 
+  // Helper: log in via form and save storage state
+  async function loginAndSave(email: string, password: string, storageStatePath: string): Promise<void> {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto(`${baseURL}/login`);
+    await page.locator('#email').fill(email);
+    await page.locator('#password').fill(password);
+    await page.locator('button[type="submit"]').click();
+    try {
+      await page.waitForURL(/\/(map|manage|admin)/, { timeout: 30000 });
+    } catch (err) {
+      // Log current URL to help diagnose failures
+      console.error(`[global-setup] Login failed for ${email}. Current URL: ${page.url()}`);
+      const bodyText = await page.locator('body').innerText().catch(() => '');
+      if (bodyText) console.error('[global-setup] Page body:', bodyText.slice(0, 500));
+      throw err;
+    }
+    await ctx.storageState({ path: storageStatePath });
+    await ctx.close();
+  }
+
   // Log in as admin via the actual login form (sets cookies properly)
-  const adminContext = await browser.newContext();
-  const adminPage = await adminContext.newPage();
-  await adminPage.goto(`${baseURL}/login`);
-  await adminPage.locator('#email').fill(TEST_DATA.admin.email);
-  await adminPage.locator('#password').fill(TEST_DATA.admin.password);
-  await adminPage.locator('button[type="submit"]').click();
-  await adminPage.waitForURL(/\/(map|manage|admin)/, { timeout: 15000 });
-  await adminContext.storageState({ path: path.join(AUTH_DIR, 'admin.json') });
-  await adminContext.close();
+  await loginAndSave(TEST_DATA.admin.email, TEST_DATA.admin.password, path.join(AUTH_DIR, 'admin.json'));
 
   // Log in as editor via the actual login form
-  const editorContext = await browser.newContext();
-  const editorPage = await editorContext.newPage();
-  await editorPage.goto(`${baseURL}/login`);
-  await editorPage.locator('#email').fill(TEST_DATA.editor.email);
-  await editorPage.locator('#password').fill(TEST_DATA.editor.password);
-  await editorPage.locator('button[type="submit"]').click();
-  await editorPage.waitForURL(/\/(map|manage|admin)/, { timeout: 15000 });
-  await editorContext.storageState({ path: path.join(AUTH_DIR, 'editor.json') });
-  await editorContext.close();
+  await loginAndSave(TEST_DATA.editor.email, TEST_DATA.editor.password, path.join(AUTH_DIR, 'editor.json'));
 
   // Onboard user: ensure clean state by removing any org memberships from prior runs.
   // We do NOT delete/recreate the user — the CI workflow pre-creates them via psql

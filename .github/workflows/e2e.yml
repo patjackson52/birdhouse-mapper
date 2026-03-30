@@ -100,11 +100,29 @@ jobs:
 
       - name: Seed test data
         run: |
-          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres --quiet -c "
-            DELETE FROM orgs WHERE slug = 'default' AND setup_complete = false;
+          # Remove the stub 'default' org created by migrations (setup_complete=false).
+          # It has no setup_complete=true so it would cause middleware to redirect to /setup.
+          # We must also clear its roles/memberships first to avoid FK RESTRICT violations,
+          # then delete the org itself. Cascade handles role deletion from org side,
+          # but org_memberships.role_id -> roles is RESTRICT so delete memberships first.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c "
+            DO \$\$
+            DECLARE
+              stub_org_id uuid;
+            BEGIN
+              SELECT id INTO stub_org_id FROM orgs WHERE slug = 'default' AND setup_complete = false LIMIT 1;
+              IF stub_org_id IS NOT NULL THEN
+                DELETE FROM org_memberships WHERE org_id = stub_org_id;
+                DELETE FROM orgs WHERE id = stub_org_id;
+                RAISE NOTICE 'Deleted stub default org %', stub_org_id;
+              ELSE
+                RAISE NOTICE 'No stub default org found (already cleaned or not present)';
+              END IF;
+            END;
+            \$\$;
           "
           PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres \
-            -f supabase/scripts/seed-test-db.sql --quiet
+            -f supabase/scripts/seed-test-db.sql
 
       - name: Build and start app
         run: npm run build && npm start &
