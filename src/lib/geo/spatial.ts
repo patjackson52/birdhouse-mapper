@@ -7,7 +7,6 @@ interface ItemWithLocation {
   id: string;
   latitude: number;
   longitude: number;
-  [key: string]: unknown;
 }
 
 /** Get the first Polygon or MultiPolygon from a FeatureCollection (used as boundary) */

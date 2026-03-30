@@ -19,7 +19,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { usePermissions } from "@/lib/permissions/hooks";
 import { useConfig } from "@/lib/config/client";
 import { getPropertyGeoLayersPublic, getGeoLayerPublic } from "@/app/admin/geo-layers/actions";
-import { clipLayerToBoundary } from "@/lib/geo/spatial";
+import { clipLayerToBoundary, filterItemsByBoundary } from "@/lib/geo/spatial";
 import type { GeoLayerSummary, GeoLayerProperty } from "@/lib/geo/types";
 import type { FeatureCollection } from "geojson";
 
@@ -244,10 +244,14 @@ function HomeMapViewContent() {
     );
   }
 
+  const filteredItems = boundaryGeoJSON
+    ? filterItemsByBoundary(items, boundaryGeoJSON)
+    : items;
+
   return (
     <div className="relative h-[calc(100vh-3.5rem-4rem)] md:h-[calc(100vh-4rem)]">
       <MapView
-        items={items}
+        items={filteredItems}
         itemTypes={itemTypes}
         onMarkerClick={handleMarkerClick}
         geoLayers={geoLayers}
