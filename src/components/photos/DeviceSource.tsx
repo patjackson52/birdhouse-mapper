@@ -57,7 +57,7 @@ export default function DeviceSource({
             : 'border-gray-300 hover:border-gray-400'
       }`}
     >
-      <input {...getInputProps()} capture={capture} />
+      <input {...getInputProps()} capture={capture as 'user' | 'environment' | boolean | undefined} />
       <p className="text-gray-600 mb-1">
         {isDragActive ? 'Drop files here' : 'Drop files here or tap to browse'}
       </p>

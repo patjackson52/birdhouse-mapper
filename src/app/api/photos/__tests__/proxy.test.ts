@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
+import { NextRequest } from 'next/server';
 
 describe('photos proxy route', () => {
   it('rejects requests without url parameter', async () => {
     const { POST } = await import('../proxy/route');
-    const request = new Request('http://localhost/api/photos/proxy', {
+    const request = new NextRequest('http://localhost/api/photos/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: 'test' }),
@@ -16,7 +17,7 @@ describe('photos proxy route', () => {
 
   it('rejects requests without token parameter', async () => {
     const { POST } = await import('../proxy/route');
-    const request = new Request('http://localhost/api/photos/proxy', {
+    const request = new NextRequest('http://localhost/api/photos/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://lh3.googleusercontent.com/test' }),
@@ -29,7 +30,7 @@ describe('photos proxy route', () => {
 
   it('rejects non-Google URLs', async () => {
     const { POST } = await import('../proxy/route');
-    const request = new Request('http://localhost/api/photos/proxy', {
+    const request = new NextRequest('http://localhost/api/photos/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: 'https://evil.com/hack.jpg', token: 'test' }),
