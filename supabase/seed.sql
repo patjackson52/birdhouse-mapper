@@ -1,5 +1,108 @@
--- seed-test-db.sql — Seed data for the field-mapper-test Supabase project
--- Disable ALL auto-populate triggers during seeding (we provide org_id/property_id explicitly)
+-- seed.sql — Seed data for local development and testing
+-- Auto-runs on `supabase db reset` (configured in config.toml)
+--
+-- Creates 4 test users (one per role) with deterministic UUIDs,
+-- a test org, property, item types, sample items, and all associations.
+--
+-- Test accounts (all passwords: "password123"):
+--   admin@test.fieldmapper.org     → org_admin
+--   staff@test.fieldmapper.org     → org_staff
+--   contributor@test.fieldmapper.org → contributor
+--   viewer@test.fieldmapper.org    → viewer
+
+-- ============================================================================
+-- Auth Users (Supabase local dev allows direct auth.users inserts)
+-- ============================================================================
+
+-- Password hash for "password123" using Supabase's bcrypt format
+-- Generated via: SELECT crypt('password123', gen_salt('bf'));
+
+INSERT INTO auth.users (
+  id, instance_id, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, aud, role, created_at, updated_at
+) VALUES
+(
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000000',
+  'admin@test.fieldmapper.org',
+  crypt('password123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Test Admin"}'::jsonb,
+  'authenticated', 'authenticated', now(), now()
+),
+(
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000000',
+  'staff@test.fieldmapper.org',
+  crypt('password123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Test Staff"}'::jsonb,
+  'authenticated', 'authenticated', now(), now()
+),
+(
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000000',
+  'contributor@test.fieldmapper.org',
+  crypt('password123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Test Contributor"}'::jsonb,
+  'authenticated', 'authenticated', now(), now()
+),
+(
+  '00000000-0000-0000-0000-000000000004',
+  '00000000-0000-0000-0000-000000000000',
+  'viewer@test.fieldmapper.org',
+  crypt('password123', gen_salt('bf')),
+  now(),
+  '{"provider":"email","providers":["email"]}'::jsonb,
+  '{"full_name":"Test Viewer"}'::jsonb,
+  'authenticated', 'authenticated', now(), now()
+);
+
+-- Auth identities (required for email login to work)
+INSERT INTO auth.identities (
+  id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at
+) VALUES
+(
+  gen_random_uuid(),
+  '00000000-0000-0000-0000-000000000001',
+  'admin@test.fieldmapper.org',
+  'email',
+  '{"sub":"00000000-0000-0000-0000-000000000001","email":"admin@test.fieldmapper.org"}'::jsonb,
+  now(), now(), now()
+),
+(
+  gen_random_uuid(),
+  '00000000-0000-0000-0000-000000000002',
+  'staff@test.fieldmapper.org',
+  'email',
+  '{"sub":"00000000-0000-0000-0000-000000000002","email":"staff@test.fieldmapper.org"}'::jsonb,
+  now(), now(), now()
+),
+(
+  gen_random_uuid(),
+  '00000000-0000-0000-0000-000000000003',
+  'contributor@test.fieldmapper.org',
+  'email',
+  '{"sub":"00000000-0000-0000-0000-000000000003","email":"contributor@test.fieldmapper.org"}'::jsonb,
+  now(), now(), now()
+),
+(
+  gen_random_uuid(),
+  '00000000-0000-0000-0000-000000000004',
+  'viewer@test.fieldmapper.org',
+  'email',
+  '{"sub":"00000000-0000-0000-0000-000000000004","email":"viewer@test.fieldmapper.org"}'::jsonb,
+  now(), now(), now()
+);
+
+-- ============================================================================
+-- Disable auto-populate triggers during seeding
+-- ============================================================================
+
 ALTER TABLE item_types DISABLE TRIGGER item_types_auto_org;
 ALTER TABLE custom_fields DISABLE TRIGGER custom_fields_auto_org;
 ALTER TABLE update_types DISABLE TRIGGER update_types_auto_org;
@@ -12,17 +115,6 @@ ALTER TABLE entity_type_fields DISABLE TRIGGER entity_type_fields_auto_org;
 ALTER TABLE entities DISABLE TRIGGER entities_auto_org;
 ALTER TABLE item_entities DISABLE TRIGGER item_entities_auto_org;
 ALTER TABLE update_entities DISABLE TRIGGER update_entities_auto_org;
--- Run this AFTER all migrations have been applied and AFTER the two test users
--- have been created via Supabase Auth dashboard:
---   admin@test.fieldmapper.org
---   editor@test.fieldmapper.org
---
--- Usage:
---   1. Apply all migrations to the test project
---   2. Create the two users in Supabase Auth dashboard
---   3. Run this script via Supabase SQL Editor or psql
---
--- This script uses deterministic UUIDs so test fixtures can reference them.
 
 -- ============================================================================
 -- Org
@@ -79,7 +171,8 @@ INSERT INTO roles (id, org_id, name, description, base_role, permissions, is_sys
     "tasks": {"view_assigned": true, "view_all": true, "create": true, "assign": true, "complete": true},
     "attachments": {"upload": true, "delete_own": true, "delete_any": true},
     "reports": {"view": true, "export": true},
-    "modules": {"tasks": true, "volunteers": true, "public_forms": true, "qr_codes": true, "reports": true}
+    "modules": {"tasks": true, "volunteers": true, "public_forms": true, "qr_codes": true, "reports": true},
+    "ai_context": {"view": true, "download": true, "upload": true, "manage": true}
   }'::jsonb,
   true, false, 0
 ),
@@ -97,7 +190,8 @@ INSERT INTO roles (id, org_id, name, description, base_role, permissions, is_sys
     "tasks": {"view_assigned": true, "view_all": true, "create": true, "assign": true, "complete": true},
     "attachments": {"upload": true, "delete_own": true, "delete_any": false},
     "reports": {"view": true, "export": false},
-    "modules": {"tasks": true, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false}
+    "modules": {"tasks": true, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false},
+    "ai_context": {"view": true, "download": true, "upload": true, "manage": false}
   }'::jsonb,
   true, false, 1
 ),
@@ -115,7 +209,8 @@ INSERT INTO roles (id, org_id, name, description, base_role, permissions, is_sys
     "tasks": {"view_assigned": true, "view_all": false, "create": false, "assign": false, "complete": true},
     "attachments": {"upload": true, "delete_own": true, "delete_any": false},
     "reports": {"view": false, "export": false},
-    "modules": {"tasks": true, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false}
+    "modules": {"tasks": true, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false},
+    "ai_context": {"view": true, "download": true, "upload": false, "manage": false}
   }'::jsonb,
   true, true, 2
 ),
@@ -133,37 +228,30 @@ INSERT INTO roles (id, org_id, name, description, base_role, permissions, is_sys
     "tasks": {"view_assigned": true, "view_all": false, "create": false, "assign": false, "complete": false},
     "attachments": {"upload": false, "delete_own": false, "delete_any": false},
     "reports": {"view": false, "export": false},
-    "modules": {"tasks": false, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false}
+    "modules": {"tasks": false, "volunteers": false, "public_forms": false, "qr_codes": false, "reports": false},
+    "ai_context": {"view": false, "download": false, "upload": false, "manage": false}
   }'::jsonb,
   true, false, 3
 );
 
 -- ============================================================================
--- Org Memberships (links auth.users to roles)
--- Run this AFTER users exist in Supabase Auth
+-- Org Memberships (one user per role)
 -- ============================================================================
 
--- Admin user membership
-INSERT INTO org_memberships (org_id, user_id, role_id, status, is_primary_org, joined_at)
-SELECT
-  '00000000-0000-0000-0000-000000000100',
-  id,
-  '00000000-0000-0000-0000-000000000301',  -- Admin role
-  'active',
-  true,
-  now()
-FROM auth.users WHERE email = 'admin@test.fieldmapper.org';
+INSERT INTO org_memberships (org_id, user_id, role_id, status, is_primary_org, joined_at) VALUES
+  ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000301', 'active', true, now()),  -- admin → Admin
+  ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000302', 'active', true, now()),  -- staff → Staff
+  ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000303', 'active', true, now()),  -- contributor → Contributor
+  ('00000000-0000-0000-0000-000000000100', '00000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000304', 'active', true, now());  -- viewer → Viewer
 
--- Editor user membership
-INSERT INTO org_memberships (org_id, user_id, role_id, status, is_primary_org, joined_at)
-SELECT
-  '00000000-0000-0000-0000-000000000100',
-  id,
-  '00000000-0000-0000-0000-000000000303',  -- Contributor role
-  'active',
-  true,
-  now()
-FROM auth.users WHERE email = 'editor@test.fieldmapper.org';
+-- Set last_active_org_id for all users
+UPDATE auth.users SET raw_user_meta_data = raw_user_meta_data || '{"last_active_org_id":"00000000-0000-0000-0000-000000000100"}'::jsonb
+WHERE id IN (
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000004'
+);
 
 -- ============================================================================
 -- Item Types
@@ -174,7 +262,7 @@ INSERT INTO item_types (id, org_id, name, icon, color, sort_order) VALUES
   ('00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000100', 'Trail Marker', '📍', '#8B6914', 1);
 
 -- ============================================================================
--- Update Types (global + Bird Box specific)
+-- Update Types
 -- ============================================================================
 
 INSERT INTO update_types (id, org_id, name, icon, is_global, item_type_id, sort_order) VALUES
@@ -200,7 +288,6 @@ VALUES (
   0
 );
 
--- Entity Type Fields
 INSERT INTO entity_type_fields (id, entity_type_id, org_id, name, field_type, options, required, sort_order) VALUES
   ('00000000-0000-0000-0000-000000000611', '00000000-0000-0000-0000-000000000600', '00000000-0000-0000-0000-000000000100', 'Scientific Name', 'text', NULL, false, 0),
   ('00000000-0000-0000-0000-000000000612', '00000000-0000-0000-0000-000000000600', '00000000-0000-0000-0000-000000000100', 'Conservation Status', 'dropdown', '["LC","NT","VU","EN","CR"]'::jsonb, false, 1);
@@ -304,12 +391,12 @@ INSERT INTO items (id, org_id, property_id, name, description, latitude, longitu
 -- ============================================================================
 
 INSERT INTO item_entities (item_id, entity_id, org_id) VALUES
-  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100'),  -- Meadow Box → Chickadee
-  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000000100'),  -- Meadow Box → Violet-green Swallow
-  ('00000000-0000-0000-0000-000000000802', '00000000-0000-0000-0000-000000000703', '00000000-0000-0000-0000-000000000100');  -- Riverside Box → Tree Swallow
+  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100'),
+  ('00000000-0000-0000-0000-000000000801', '00000000-0000-0000-0000-000000000702', '00000000-0000-0000-0000-000000000100'),
+  ('00000000-0000-0000-0000-000000000802', '00000000-0000-0000-0000-000000000703', '00000000-0000-0000-0000-000000000100');
 
 -- ============================================================================
--- Item Updates (3 updates)
+-- Item Updates
 -- ============================================================================
 
 INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, content, update_date) VALUES
@@ -318,7 +405,7 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   '00000000-0000-0000-0000-000000000801',
-  '00000000-0000-0000-0000-000000000505',  -- Bird Sighting
+  '00000000-0000-0000-0000-000000000505',
   'Pair of chickadees observed entering box. Nest material visible.',
   '2026-03-15'
 ),
@@ -327,7 +414,7 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   '00000000-0000-0000-0000-000000000802',
-  '00000000-0000-0000-0000-000000000501',  -- Maintenance
+  '00000000-0000-0000-0000-000000000501',
   'Cleaned out old nest. Box in good condition.',
   '2026-03-10'
 ),
@@ -336,7 +423,7 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
   '00000000-0000-0000-0000-000000000100',
   '00000000-0000-0000-0000-000000000200',
   '00000000-0000-0000-0000-000000000803',
-  '00000000-0000-0000-0000-000000000506',  -- Damage Report
+  '00000000-0000-0000-0000-000000000506',
   'Wind damage to mounting bracket. Needs repair before nesting season.',
   '2026-03-20'
 );
@@ -346,7 +433,7 @@ INSERT INTO item_updates (id, org_id, property_id, item_id, update_type_id, cont
 -- ============================================================================
 
 INSERT INTO update_entities (update_id, entity_id, org_id) VALUES
-  ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100');  -- Bird Sighting update → Chickadee
+  ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000100');
 
 -- ============================================================================
 -- Property Access Config (enable public access for testing)
@@ -359,7 +446,10 @@ VALUES (
   true, true, true, true
 );
 
+-- ============================================================================
 -- Re-enable all triggers
+-- ============================================================================
+
 ALTER TABLE item_types ENABLE TRIGGER item_types_auto_org;
 ALTER TABLE custom_fields ENABLE TRIGGER custom_fields_auto_org;
 ALTER TABLE update_types ENABLE TRIGGER update_types_auto_org;
