@@ -1,13 +1,8 @@
-import type { Data } from '@measured/puck';
-
 export interface LandingPageConfig {
   enabled: boolean;
   blocks: LandingBlock[];
   generatedFrom?: string;
   assets: LandingAsset[];
-  editorType?: 'blocks' | 'puck';
-  puckData?: Data;
-  puckGeneratedFrom?: string;
 }
 
 export interface LandingAsset {

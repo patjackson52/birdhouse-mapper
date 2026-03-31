@@ -107,15 +107,12 @@ import { generateText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { generationBlocksSchema } from '@/lib/landing/schemas';
 import type { LandingBlock } from '@/lib/config/landing-types';
-import type { Data } from '@measured/puck';
-import { z } from 'zod';
 
 export async function generateLandingPage(
   userPrompt: string,
   assets: LandingAsset[],
-  referenceLinks: { label: string; url: string }[],
-  editorType?: 'blocks' | 'puck'
-): Promise<{ blocks: LandingBlock[] | null; puckData: Data | null; error: string | null }> {
+  referenceLinks: { label: string; url: string }[]
+): Promise<{ blocks: LandingBlock[] | null; error: string | null }> {
   try {
     const config = await getConfig();
     const supabase = createClient();
@@ -163,82 +160,6 @@ export async function generateLandingPage(
     const linkContext = referenceLinks.length > 0
       ? '\nReference links:\n' + referenceLinks.map(l => `- ${l.label}: ${l.url}`).join('\n')
       : '';
-
-
-    // --- Puck generation path ---
-    if (editorType === 'puck') {
-      const puckSystemPrompt = `You are a landing page designer for a field mapping application.
-Generate a Puck editor JSON object for a landing page.
-
-SITE CONTEXT:
-- Name: "${config.siteName}"
-- Location: "${config.locationName}"
-- Tagline: "${config.tagline}"
-- Tracks ${itemRes.count ?? 0} items across types: ${typeRes.data?.map((t: { name: string }) => t.name).join(', ') || 'none yet'}
-${linkContext}
-${documentContext ? '\nDOCUMENT CONTEXT:\n' + documentContext : ''}
-
-AVAILABLE IMAGES (use URLs directly in backgroundImageUrl/src/imageUrls fields):
-${imageAssets.map((img: LandingAsset) => `- ${img.publicUrl} — ${img.description || img.fileName}`).join('\n') || '(none uploaded)'}
-
-Available component types: Hero, RichText, Image, Button, LinkList, Stats, Gallery, Spacer
-
-Guidelines:
-- Start with a Hero block
-- Include a RichText block describing the project
-- Add a Button linking to /home
-- Include a Stats block with mode:"auto"
-- Keep it concise: 4-8 content items
-
-Respond with ONLY valid JSON in this exact format:
-{
-  "root": { "props": {} },
-  "content": [
-    { "type": "Hero", "props": { "title": "...", "subtitle": "...", "backgroundImageUrl": "" } },
-    ...
-  ]
-}`;
-
-      const { text: puckText } = await generateText({
-        model: anthropic('claude-sonnet-4-6'),
-        system: puckSystemPrompt + '\n\nRespond with ONLY the JSON object. No markdown fences, no explanation.',
-        messages: [{ role: 'user', content: userPrompt }],
-        maxOutputTokens: 2000,
-      });
-
-      let puckJson = puckText.trim();
-      if (puckJson.startsWith('```')) {
-        puckJson = puckJson.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-      }
-
-      // Lenient Zod schema for AI-generated Puck data
-      const puckContentItemSchema = z.looseObject({
-        type: z.string(),
-        props: z.record(z.string(), z.unknown()).default({}),
-      });
-      const puckGenerationSchema = z.looseObject({
-        root: z.looseObject({ props: z.record(z.string(), z.unknown()).default({}) }).default({ props: {} }),
-        content: z.array(puckContentItemSchema).default([]),
-      });
-
-      const parsedPuck = JSON.parse(puckJson);
-      const puckResult = puckGenerationSchema.safeParse(parsedPuck);
-      if (!puckResult.success) {
-        return { blocks: null, puckData: null, error: 'AI returned invalid Puck structure: ' + puckResult.error.message };
-      }
-
-      // Add Puck component IDs
-      const puckData: Data = {
-        root: { props: puckResult.data.root.props as Record<string, unknown> },
-        content: puckResult.data.content.map((item) => ({
-          type: item.type,
-          props: { ...item.props, id: crypto.randomUUID() } as Record<string, unknown>,
-        })),
-        zones: {},
-      };
-
-      return { blocks: null, puckData, error: null };
-    }
 
     const systemPrompt = `You are a landing page designer for a field mapping application.
 Generate a JSON array of content blocks for a landing page.
@@ -292,7 +213,7 @@ Guidelines:
     const parsed = JSON.parse(jsonText);
     const parseResult = generationBlocksSchema.safeParse(parsed);
     if (!parseResult.success) {
-      return { blocks: null, puckData: null, error: 'AI returned invalid block structure: ' + parseResult.error.message };
+      return { blocks: null, error: 'AI returned invalid block structure: ' + parseResult.error.message };
     }
     const blocks = parseResult.data;
 
@@ -316,9 +237,9 @@ Guidelines:
       return withId;
     });
 
-    return { blocks: processedBlocks, puckData: null, error: null };
+    return { blocks: processedBlocks, error: null };
   } catch (err) {
     console.error('Landing page generation failed:', err);
-    return { blocks: null, puckData: null, error: err instanceof Error ? err.message : 'Generation failed' };
+    return { blocks: null, error: err instanceof Error ? err.message : 'Generation failed' };
   }
 }

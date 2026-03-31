@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import type { LandingPageConfig, LandingBlock, LandingAsset } from '@/lib/config/landing-types';
-import type { Data } from '@measured/puck';
 import { getLandingPageConfig, saveLandingPageConfig, generateLandingPage } from '@/app/admin/landing/actions';
 import HomepageToggle from '@/components/admin/landing/HomepageToggle';
 import AssetManager from '@/components/admin/landing/AssetManager';
@@ -11,15 +9,6 @@ import GenerateSection from '@/components/admin/landing/GenerateSection';
 import BlockList from '@/components/admin/landing/BlockList';
 import { LandingRendererPreview } from '@/components/landing/LandingRendererPreview';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { puckConfig } from '@/lib/config/puck-config';
-
-// Puck editor is dynamically imported — no Puck JS on public pages
-const PuckEditorWrapper = dynamic(
-  () => import('@/components/admin/landing/PuckEditorWrapper'),
-  { ssr: false }
-);
-
-type EditorType = 'blocks' | 'puck';
 
 export default function AdminLandingPage() {
   const [config, setConfig] = useState<LandingPageConfig | null>(null);
@@ -36,11 +25,6 @@ export default function AdminLandingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [assetsOpen, setAssetsOpen] = useState(false);
 
-  // Puck state
-  const [editorType, setEditorType] = useState<EditorType>('blocks');
-  const [puckData, setPuckData] = useState<Data | undefined>(undefined);
-  const [previousPuckData, setPreviousPuckData] = useState<Data | undefined>(undefined);
-
   useEffect(() => {
     async function load() {
       try {
@@ -51,9 +35,6 @@ export default function AdminLandingPage() {
           setBlocks(data.blocks ?? []);
           setAssets(data.assets ?? []);
           if (data.generatedFrom) setPrompt(data.generatedFrom);
-          if (data.editorType) setEditorType(data.editorType);
-          if (data.puckData) setPuckData(data.puckData);
-          if (data.puckGeneratedFrom) setPrompt(data.puckGeneratedFrom);
         }
       } catch {
         setMessage({ type: 'error', text: 'Failed to load landing page config.' });
@@ -64,59 +45,30 @@ export default function AdminLandingPage() {
     load();
   }, []);
 
-  const handleSwitchEditorType = useCallback((type: EditorType) => {
-    if (type === editorType) return;
-    setEditorType(type);
-    setMessage({
-      type: 'success',
-      text: 'Switching will change which content is shown publicly. Save to apply.',
-    });
-  }, [editorType]);
-
   const handleGenerate = useCallback(async () => {
-    if (editorType === 'blocks') {
-      if (blocks.length > 0) {
-        if (!window.confirm('This will replace all current blocks. Continue?')) return;
-      }
-      setPreviousBlocks(blocks);
-    } else {
-      if (puckData) {
-        if (!window.confirm('This will replace the current visual layout. Continue?')) return;
-      }
-      setPreviousPuckData(puckData);
+    if (blocks.length > 0) {
+      if (!window.confirm('This will replace all current blocks. Continue?')) return;
     }
-
+    setPreviousBlocks(blocks);
     setIsGenerating(true);
     setMessage(null);
 
-    const { blocks: newBlocks, puckData: newPuckData, error } = await generateLandingPage(
-      prompt,
-      assets,
-      referenceLinks,
-      editorType
-    );
+    const { blocks: newBlocks, error } = await generateLandingPage(prompt, assets, referenceLinks);
 
-    if (error) {
+    if (error || !newBlocks) {
       setMessage({ type: 'error', text: error ?? 'Generation failed.' });
-      setPreviousBlocks(null);
-      setPreviousPuckData(undefined);
+      // Restore if this was a regeneration
+      if (blocks.length > 0) setPreviousBlocks(null);
       setIsGenerating(false);
       return;
     }
 
-    if (editorType === 'puck' && newPuckData) {
-      setPuckData(newPuckData);
-    } else if (newBlocks) {
-      setBlocks(newBlocks);
-    }
+    setBlocks(newBlocks);
     setIsGenerating(false);
-  }, [editorType, blocks, puckData, prompt, assets, referenceLinks]);
+  }, [blocks, prompt, assets, referenceLinks]);
 
   function handleUndo() {
-    if (editorType === 'puck' && previousPuckData !== undefined) {
-      setPuckData(previousPuckData);
-      setPreviousPuckData(undefined);
-    } else if (previousBlocks) {
+    if (previousBlocks) {
       setBlocks(previousBlocks);
       setPreviousBlocks(null);
     }
@@ -130,10 +82,7 @@ export default function AdminLandingPage() {
       enabled,
       blocks,
       assets,
-      generatedFrom: editorType === 'blocks' ? (prompt || undefined) : config?.generatedFrom,
-      editorType,
-      puckData: puckData,
-      puckGeneratedFrom: editorType === 'puck' ? (prompt || undefined) : config?.puckGeneratedFrom,
+      generatedFrom: prompt || undefined,
     };
 
     const { error } = await saveLandingPageConfig(updated);
@@ -144,7 +93,6 @@ export default function AdminLandingPage() {
       setConfig(updated);
       setMessage({ type: 'success', text: 'Saved successfully!' });
       setPreviousBlocks(null);
-      setPreviousPuckData(undefined);
     }
     setIsSaving(false);
   }
@@ -156,10 +104,6 @@ export default function AdminLandingPage() {
       </div>
     );
   }
-
-  const canUndo =
-    (editorType === 'puck' && previousPuckData !== undefined) ||
-    (editorType === 'blocks' && previousBlocks !== null);
 
   const editorPanel = (
     <div className="space-y-6 p-4">
@@ -178,42 +122,6 @@ export default function AdminLandingPage() {
       )}
 
       <HomepageToggle enabled={enabled} onChange={setEnabled} />
-
-      {/* Editor type toggle */}
-      <div>
-        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block mb-2">
-          Editor
-        </label>
-        <div className="flex rounded-lg border border-gray-300 overflow-hidden text-sm">
-          <button
-            type="button"
-            onClick={() => handleSwitchEditorType('blocks')}
-            className={`flex-1 py-2 font-medium transition-colors ${
-              editorType === 'blocks'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Custom Blocks
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSwitchEditorType('puck')}
-            className={`flex-1 py-2 font-medium transition-colors ${
-              editorType === 'puck'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Visual Editor
-          </button>
-        </div>
-        {editorType === 'puck' && (
-          <p className="text-xs text-gray-400 mt-1">
-            Drag-and-drop Puck editor. AI generation creates Puck-format content.
-          </p>
-        )}
-      </div>
 
       <div>
         <button
@@ -239,12 +147,12 @@ export default function AdminLandingPage() {
       <GenerateSection
         prompt={prompt}
         onPromptChange={setPrompt}
-        hasBlocks={editorType === 'blocks' ? blocks.length > 0 : !!puckData}
+        hasBlocks={blocks.length > 0}
         onGenerate={handleGenerate}
         isGenerating={isGenerating}
       />
 
-      {canUndo && (
+      {previousBlocks !== null && (
         <button
           type="button"
           onClick={handleUndo}
@@ -254,24 +162,12 @@ export default function AdminLandingPage() {
         </button>
       )}
 
-      {editorType === 'blocks' && (
-        <BlockList
-          blocks={blocks}
-          onBlocksChange={setBlocks}
-          assets={assets}
-          onAssetsChange={setAssets}
-        />
-      )}
-
-      {editorType === 'puck' && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden" style={{ minHeight: '600px' }}>
-          <PuckEditorWrapper
-            value={puckData}
-            onChange={setPuckData}
-            config={puckConfig}
-          />
-        </div>
-      )}
+      <BlockList
+        blocks={blocks}
+        onBlocksChange={setBlocks}
+        assets={assets}
+        onAssetsChange={setAssets}
+      />
 
       <button
         type="button"
@@ -292,18 +188,12 @@ export default function AdminLandingPage() {
         </span>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {editorType === 'blocks' ? (
-          blocks.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-12">
-              Add blocks to see a preview.
-            </p>
-          ) : (
-            <LandingRendererPreview blocks={blocks} />
-          )
-        ) : (
+        {blocks.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-12">
-            Preview is shown inline in the Visual Editor.
+            Add blocks to see a preview.
           </p>
+        ) : (
+          <LandingRendererPreview blocks={blocks} />
         )}
       </div>
     </div>

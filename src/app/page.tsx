@@ -4,8 +4,6 @@ import { getConfig } from '@/lib/config/server';
 import { LandingRenderer } from '@/components/landing/LandingRenderer';
 import { HomeMapView } from '@/components/map/HomeMapView';
 import { PlatformLanding } from '@/components/platform/PlatformLanding';
-import PuckRendererWrapper from '@/components/landing/PuckRendererWrapper';
-import { puckConfig } from '@/lib/config/puck-config';
 
 interface HomePageProps {
   searchParams: Record<string, string | string[] | undefined>;
@@ -36,26 +34,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     redirect(`/map?${query.toString()}`);
   }
 
-  const landingPage = config.landingPage;
-
-  if (landingPage?.enabled) {
-    // Puck editor path
-    if (landingPage.editorType === 'puck' && landingPage.puckData) {
-      return (
-        <main className="pb-20 md:pb-0">
-          <PuckRendererWrapper data={landingPage.puckData} config={puckConfig} />
-        </main>
-      );
-    }
-
-    // Block editor path (existing)
-    if (landingPage.blocks && landingPage.blocks.length > 0) {
-      return (
-        <main className="pb-20 md:pb-0">
-          <LandingRenderer blocks={landingPage.blocks} />
-        </main>
-      );
-    }
+  // Landing page enabled — render blocks
+  if (config.landingPage?.enabled && config.landingPage.blocks.length > 0) {
+    return (
+      <main className="pb-20 md:pb-0">
+        <LandingRenderer blocks={config.landingPage.blocks} />
+      </main>
+    );
   }
 
   // Fallback — render map (current behavior)
