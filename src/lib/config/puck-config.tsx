@@ -328,8 +328,7 @@ export const puckConfig: Config<{
             url: { type: 'text', label: 'URL' },
           },
           defaultItemProps: { url: '' },
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any,
+        } as unknown as import('@measured/puck').Field,
         columns: {
           type: 'select',
           label: 'Columns',
