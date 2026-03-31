@@ -117,6 +117,9 @@ export async function updateSession(request: NextRequest) {
   supabaseResponse.headers.set('x-tenant-source', tenant.source);
   if (tenant.propertyId) supabaseResponse.headers.set('x-property-id', tenant.propertyId);
   if (tenant.propertySlug) supabaseResponse.headers.set('x-property-slug', tenant.propertySlug);
+  if (request.nextUrl.searchParams.get('preview') === 'true') {
+    supabaseResponse.headers.set('x-preview', 'true');
+  }
 
   // --- QR code redirect handler ---
   if (pathname.startsWith('/go/')) {
