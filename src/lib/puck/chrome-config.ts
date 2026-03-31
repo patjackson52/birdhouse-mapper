@@ -14,6 +14,8 @@ import { AnnouncementBar } from './components/chrome/AnnouncementBar';
 import { FooterColumns } from './components/chrome/FooterColumns';
 import { SocialLinks } from './components/chrome/SocialLinks';
 import { SimpleFooter } from './components/chrome/SimpleFooter';
+import { imagePickerField, iconPickerField, linkField, colorPickerField } from './fields';
+import { fetchLandingAssets } from './fields/fetch-assets';
 
 type ChromeComponents = {
   HeaderBar: HeaderBarProps;
@@ -42,6 +44,17 @@ export const chromeConfig: Config<ChromeComponents> = {
             { label: 'Centered', value: 'centered' },
           ],
         },
+        logoUrl: imagePickerField('Logo', fetchLandingAssets),
+        icon: iconPickerField('Icon'),
+        iconPosition: {
+          type: 'radio',
+          label: 'Icon Position',
+          options: [
+            { label: 'Before Name', value: 'before-name' },
+            { label: 'After Name', value: 'after-name' },
+            { label: 'Above Name', value: 'above-name' },
+          ],
+        },
         showTagline: {
           type: 'radio',
           label: 'Show Tagline',
@@ -60,6 +73,68 @@ export const chromeConfig: Config<ChromeComponents> = {
             { label: 'Surface', value: 'surface' },
           ],
         },
+        nameSize: {
+          type: 'select',
+          label: 'Name Size',
+          options: [
+            { label: 'Small', value: 'small' },
+            { label: 'Medium', value: 'medium' },
+            { label: 'Large', value: 'large' },
+            { label: 'XL', value: 'xl' },
+          ],
+        },
+        nameWeight: {
+          type: 'select',
+          label: 'Name Weight',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Medium', value: 'medium' },
+            { label: 'Semibold', value: 'semibold' },
+            { label: 'Bold', value: 'bold' },
+          ],
+        },
+        nameColor: colorPickerField('Name Color'),
+        taglineSize: {
+          type: 'select',
+          label: 'Tagline Size',
+          options: [
+            { label: 'Small', value: 'small' },
+            { label: 'Medium', value: 'medium' },
+            { label: 'Large', value: 'large' },
+            { label: 'XL', value: 'xl' },
+          ],
+        },
+        taglineWeight: {
+          type: 'select',
+          label: 'Tagline Weight',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Medium', value: 'medium' },
+            { label: 'Semibold', value: 'semibold' },
+            { label: 'Bold', value: 'bold' },
+          ],
+        },
+        taglineColor: colorPickerField('Tagline Color'),
+        links: {
+          type: 'array',
+          label: 'Header Links',
+          arrayFields: {
+            label: { type: 'text', label: 'Label' },
+            href: { type: 'text', label: 'URL' },
+          },
+          defaultItemProps: {
+            label: 'Link',
+            href: '#',
+          },
+        },
+        linkColor: colorPickerField('Link Color'),
+      },
+      resolveFields: (data: any, { fields }: any) => {
+        if (!data.props.showTagline) {
+          const { taglineSize, taglineWeight, taglineColor, ...rest } = fields;
+          return rest;
+        }
+        return fields;
       },
       render: HeaderBar,
     },
@@ -110,7 +185,7 @@ export const chromeConfig: Config<ChromeComponents> = {
       },
       fields: {
         text: { type: 'text', label: 'Text' },
-        linkUrl: { type: 'text', label: 'Link URL' },
+        linkUrl: linkField('Link URL'),
         backgroundColor: {
           type: 'select',
           label: 'Background Color',
@@ -142,7 +217,7 @@ export const chromeConfig: Config<ChromeComponents> = {
               label: 'Links',
               arrayFields: {
                 label: { type: 'text', label: 'Label' },
-                url: { type: 'text', label: 'URL' },
+                url: linkField('URL'),
               },
               defaultItemProps: {
                 label: 'Link',
@@ -235,7 +310,7 @@ export const chromeConfig: Config<ChromeComponents> = {
           label: 'Links',
           arrayFields: {
             label: { type: 'text', label: 'Label' },
-            url: { type: 'text', label: 'URL' },
+            url: linkField('URL'),
           },
           defaultItemProps: {
             label: 'Link',

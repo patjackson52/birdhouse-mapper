@@ -50,6 +50,25 @@ describe('HeaderBar', () => {
     const inner = container.querySelector('.text-center');
     expect(inner).toBeDefined();
   });
+
+  it('renders custom logo when logoUrl is set', () => {
+    render(<HeaderBar layout="left-aligned" showTagline={false} backgroundColor="default" logoUrl="https://example.com/logo.png" />);
+    const imgs = screen.getAllByRole('img');
+    const logo = imgs.find(img => img.getAttribute('src') === 'https://example.com/logo.png');
+    expect(logo).toBeDefined();
+  });
+
+  it('renders header links', () => {
+    render(<HeaderBar layout="left-aligned" showTagline={false} backgroundColor="default" links={[{ label: 'Contact', href: '/contact' }]} />);
+    const link = screen.getByRole('link', { name: 'Contact' });
+    expect(link.getAttribute('href')).toBe('/contact');
+  });
+
+  it('applies custom name typography', () => {
+    const { container } = render(<HeaderBar layout="left-aligned" showTagline={false} backgroundColor="default" nameSize="xl" nameWeight="semibold" />);
+    const nameSpan = container.querySelector('.text-2xl');
+    expect(nameSpan).not.toBeNull();
+  });
 });
 
 // SimpleFooter
