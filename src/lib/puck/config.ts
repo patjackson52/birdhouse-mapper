@@ -1,4 +1,6 @@
 import type { Config } from '@puckeditor/core';
+import { imagePickerField, iconPickerField, linkField } from './fields';
+import { fetchLandingAssets } from './fields/fetch-assets';
 import type {
   HeroProps,
   RichTextProps,
@@ -71,7 +73,7 @@ export const pageConfig: Config<PageComponents> = {
       fields: {
         title: { type: 'text', label: 'Title' },
         subtitle: { type: 'text', label: 'Subtitle' },
-        backgroundImageUrl: { type: 'text', label: 'Background Image URL' },
+        backgroundImageUrl: imagePickerField('Background Image', fetchLandingAssets),
         overlay: {
           type: 'select',
           label: 'Overlay',
@@ -82,7 +84,8 @@ export const pageConfig: Config<PageComponents> = {
           ],
         },
         ctaLabel: { type: 'text', label: 'CTA Label' },
-        ctaHref: { type: 'text', label: 'CTA Link' },
+        ctaHref: linkField('CTA Link'),
+        icon: iconPickerField('Icon'),
       },
       render: Hero,
     },
@@ -126,7 +129,7 @@ export const pageConfig: Config<PageComponents> = {
         linkHref: '',
       },
       fields: {
-        url: { type: 'text', label: 'Image URL' },
+        url: imagePickerField('Image', fetchLandingAssets),
         alt: { type: 'text', label: 'Alt Text' },
         caption: { type: 'text', label: 'Caption' },
         width: {
@@ -138,7 +141,7 @@ export const pageConfig: Config<PageComponents> = {
             { label: 'Full', value: 'full' },
           ],
         },
-        linkHref: { type: 'text', label: 'Link URL' },
+        linkHref: linkField('Link URL'),
       },
       render: ImageBlock,
     },
@@ -154,7 +157,7 @@ export const pageConfig: Config<PageComponents> = {
           label: 'Buttons',
           arrayFields: {
             label: { type: 'text', label: 'Label' },
-            href: { type: 'text', label: 'Link' },
+            href: linkField('Link'),
             style: {
               type: 'select',
               label: 'Style',
@@ -195,7 +198,7 @@ export const pageConfig: Config<PageComponents> = {
           label: 'Links',
           arrayFields: {
             label: { type: 'text', label: 'Label' },
-            url: { type: 'text', label: 'URL' },
+            url: linkField('URL'),
             description: { type: 'text', label: 'Description' },
           },
           defaultItemProps: {
@@ -258,7 +261,7 @@ export const pageConfig: Config<PageComponents> = {
           type: 'array',
           label: 'Images',
           arrayFields: {
-            url: { type: 'text', label: 'Image URL' },
+            url: imagePickerField('Image', fetchLandingAssets),
             alt: { type: 'text', label: 'Alt Text' },
             caption: { type: 'text', label: 'Caption' },
           },
@@ -332,7 +335,7 @@ export const pageConfig: Config<PageComponents> = {
           label: 'Background Color',
           options: themeColorOptions,
         },
-        backgroundImageUrl: { type: 'text', label: 'Background Image URL' },
+        backgroundImageUrl: imagePickerField('Background Image', fetchLandingAssets),
         paddingY: {
           type: 'radio',
           label: 'Vertical Padding',
@@ -356,11 +359,12 @@ export const pageConfig: Config<PageComponents> = {
         linkLabel: '',
       },
       fields: {
-        imageUrl: { type: 'text', label: 'Image URL' },
+        imageUrl: imagePickerField('Image', fetchLandingAssets),
         title: { type: 'text', label: 'Title' },
         text: { type: 'textarea', label: 'Text' },
-        linkHref: { type: 'text', label: 'Link URL' },
+        linkHref: linkField('Link URL'),
         linkLabel: { type: 'text', label: 'Link Label' },
+        icon: iconPickerField('Icon'),
       },
       render: Card,
     },
@@ -411,7 +415,7 @@ export const pageConfig: Config<PageComponents> = {
       fields: {
         quote: { type: 'textarea', label: 'Quote' },
         attribution: { type: 'text', label: 'Attribution' },
-        photoUrl: { type: 'text', label: 'Photo URL' },
+        photoUrl: imagePickerField('Photo', fetchLandingAssets),
         style: {
           type: 'radio',
           label: 'Style',
