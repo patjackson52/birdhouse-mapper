@@ -1,6 +1,7 @@
 'use client';
 import { useConfig } from '@/lib/config/client';
 import type { FooterColumnsProps } from '../../types';
+import { resolveLink } from '../../fields/link-utils';
 
 export function FooterColumns({ columns, showBranding, copyrightText }: FooterColumnsProps) {
   const config = useConfig();
@@ -19,9 +20,21 @@ export function FooterColumns({ columns, showBranding, copyrightText }: FooterCo
             <div key={i}>
               <h4 className="mb-3 text-sm font-semibold uppercase tracking-wider opacity-70">{col.title}</h4>
               <ul className="space-y-2">
-                {col.links.map((link, j) => (
-                  <li key={j}><a href={link.url} className="text-sm opacity-80 transition hover:opacity-100 hover:underline">{link.label}</a></li>
-                ))}
+                {col.links.map((link, j) => {
+                  const resolved = resolveLink(link.url);
+                  return (
+                    <li key={j}>
+                      <a
+                        href={resolved.href}
+                        target={resolved.target}
+                        className="text-sm opacity-80 transition hover:opacity-100 hover:underline"
+                        style={resolved.color ? { color: resolved.color } : undefined}
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}

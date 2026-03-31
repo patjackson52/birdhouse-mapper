@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import type { AnnouncementBarProps } from '../../types';
+import { resolveLink } from '../../fields/link-utils';
 
 const bgClasses = {
   primary: 'bg-[var(--color-primary)] text-white',
@@ -11,7 +12,19 @@ const bgClasses = {
 export function AnnouncementBar({ text, linkUrl, backgroundColor }: AnnouncementBarProps) {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed || !text) return <></>;
-  const content = linkUrl ? <a href={linkUrl} className="underline hover:no-underline">{text}</a> : <span>{text}</span>;
+  const link = resolveLink(linkUrl);
+  const content = link.href ? (
+    <a
+      href={link.href}
+      target={link.target}
+      className="underline hover:no-underline"
+      style={link.color ? { color: link.color } : undefined}
+    >
+      {text}
+    </a>
+  ) : (
+    <span>{text}</span>
+  );
   return (
     <div className={`relative px-4 py-2 text-center text-sm ${bgClasses[backgroundColor]}`}>
       {content}

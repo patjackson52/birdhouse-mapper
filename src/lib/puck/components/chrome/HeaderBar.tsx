@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useConfig } from '@/lib/config/client';
 import type { HeaderBarProps } from '../../types';
+import { IconRenderer } from '../../icons/IconRenderer';
 
 const bgClasses = {
   primary: 'bg-[var(--color-primary)] text-white',
@@ -10,17 +11,96 @@ const bgClasses = {
   default: 'bg-white text-gray-900 border-b border-gray-200',
 };
 
-export function HeaderBar({ layout, showTagline, backgroundColor }: HeaderBarProps) {
+const sizeClasses = {
+  small: 'text-sm',
+  medium: 'text-lg',
+  large: 'text-xl',
+  xl: 'text-2xl',
+};
+
+const weightClasses = {
+  normal: 'font-normal',
+  medium: 'font-medium',
+  semibold: 'font-semibold',
+  bold: 'font-bold',
+};
+
+export function HeaderBar({
+  layout,
+  showTagline,
+  backgroundColor,
+  logoUrl,
+  icon,
+  iconPosition = 'before-name',
+  nameSize = 'medium',
+  nameWeight = 'bold',
+  nameColor,
+  taglineSize = 'small',
+  taglineWeight = 'normal',
+  taglineColor,
+  links,
+  linkColor,
+}: HeaderBarProps) {
   const config = useConfig();
   const alignClass = layout === 'centered' ? 'text-center' : 'text-left';
+  const displayLogo = logoUrl || config.logoUrl;
+
+  const nameNode = (
+    <span
+      className={`${sizeClasses[nameSize]} ${weightClasses[nameWeight]}`}
+      style={nameColor ? { color: nameColor } : undefined}
+    >
+      {config.siteName}
+    </span>
+  );
+
+  const iconNode = icon ? <IconRenderer icon={icon} size={nameSize === 'xl' ? 28 : nameSize === 'large' ? 24 : 20} /> : null;
+
   return (
     <header className={`px-4 py-3 ${bgClasses[backgroundColor]}`}>
       <div className={`mx-auto max-w-6xl ${alignClass}`}>
-        <Link href="/" className="inline-flex items-center gap-3">
-          {config.logoUrl && <img src={config.logoUrl} alt={config.siteName} className="h-8 w-auto" />}
-          <span className="text-lg font-bold">{config.siteName}</span>
-        </Link>
-        {showTagline && config.tagline && <p className="mt-0.5 text-sm opacity-80">{config.tagline}</p>}
+        <div className={layout === 'centered' ? 'flex flex-col items-center gap-1' : 'flex items-center justify-between'}>
+          <Link href="/" className="inline-flex items-center gap-3">
+            {displayLogo && <img src={displayLogo} alt={config.siteName} className="h-8 w-auto" />}
+            {iconPosition === 'above-name' && iconNode && (
+              <div className="flex flex-col items-center gap-1">
+                {iconNode}
+                {nameNode}
+              </div>
+            )}
+            {iconPosition !== 'above-name' && (
+              <>
+                {iconPosition === 'before-name' && iconNode}
+                {nameNode}
+                {iconPosition === 'after-name' && iconNode}
+              </>
+            )}
+          </Link>
+
+          {links && links.length > 0 && (
+            <nav className="flex items-center gap-4">
+              {links.map((link, i) => (
+                <Link
+                  key={i}
+                  href={link.href}
+                  className="text-sm hover:underline"
+                  style={linkColor ? { color: linkColor } : undefined}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
+          )}
+        </div>
+
+        {showTagline && config.tagline && (
+          <p
+            className={`mt-0.5 opacity-80 ${sizeClasses[taglineSize]} ${weightClasses[taglineWeight]}`}
+            style={taglineColor ? { color: taglineColor } : undefined}
+          >
+            {config.tagline}
+          </p>
+        )}
       </div>
     </header>
   );

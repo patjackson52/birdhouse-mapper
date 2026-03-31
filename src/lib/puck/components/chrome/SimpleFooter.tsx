@@ -1,4 +1,5 @@
 import type { SimpleFooterProps } from '../../types';
+import { resolveLink } from '../../fields/link-utils';
 
 export function SimpleFooter({ text, links, showPoweredBy }: SimpleFooterProps) {
   return (
@@ -7,7 +8,20 @@ export function SimpleFooter({ text, links, showPoweredBy }: SimpleFooterProps) 
         <span>{text}</span>
         {links?.length > 0 && (
           <div className="flex gap-4">
-            {links.map((link, i) => <a key={i} href={link.url} className="hover:text-gray-900 hover:underline">{link.label}</a>)}
+            {links.map((link, i) => {
+              const resolved = resolveLink(link.url);
+              return (
+                <a
+                  key={i}
+                  href={resolved.href}
+                  target={resolved.target}
+                  className="hover:text-gray-900 hover:underline"
+                  style={resolved.color ? { color: resolved.color } : undefined}
+                >
+                  {link.label}
+                </a>
+              );
+            })}
           </div>
         )}
       </div>
