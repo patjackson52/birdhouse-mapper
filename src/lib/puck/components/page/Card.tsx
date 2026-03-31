@@ -14,7 +14,11 @@ export function Card({ imageUrl, title, text, linkHref, linkLabel, icon }: CardP
           </div>
         )}
         {title && <h3 className="text-lg font-semibold text-[var(--color-primary-dark)]">{title}</h3>}
-        {text && <p className="mt-2 text-sm text-gray-600">{text}</p>}
+        {text && (
+          typeof text === 'string'
+            ? <div className="mt-2 text-sm text-gray-600 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: text }} />
+            : <div className="mt-2 text-sm text-gray-600 prose prose-sm max-w-none">{text}</div>
+        )}
         {link.href && linkLabel && (
           <a
             href={link.href}
