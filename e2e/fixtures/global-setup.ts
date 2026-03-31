@@ -15,27 +15,30 @@ async function globalSetup(config: FullConfig) {
 
   const browser = await chromium.launch();
 
-  // Log in as admin via the actual login form (sets cookies properly)
-  const adminContext = await browser.newContext();
-  const adminPage = await adminContext.newPage();
-  await adminPage.goto(`${baseURL}/login`);
-  await adminPage.locator('#email').fill(TEST_DATA.admin.email);
-  await adminPage.locator('#password').fill(TEST_DATA.admin.password);
-  await adminPage.locator('button[type="submit"]').click();
-  await adminPage.waitForURL(/\/(map|manage|admin)/, { timeout: 15000 });
-  await adminContext.storageState({ path: path.join(AUTH_DIR, 'admin.json') });
-  await adminContext.close();
+  async function loginAndSave(email: string, password: string, savePath: string) {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    await page.goto(`${baseURL}/login`);
+    // Wait for the login form to be fully hydrated (checkingSession=false)
+    await page.locator('#email').waitFor({ state: 'visible', timeout: 15000 });
+    await page.locator('#email').fill(email);
+    await page.locator('#password').fill(password);
+    await page.locator('button[type="submit"]').click();
+    try {
+      await page.waitForURL(/\/(map|manage|admin)/, { timeout: 30000 });
+    } catch {
+      const url = page.url();
+      const body = await page.locator('body').innerText().catch(() => '(could not get body)');
+      const screenshot = await page.screenshot().catch(() => null);
+      if (screenshot) fs.writeFileSync(path.join(AUTH_DIR, `login-fail-${email.split('@')[0]}.png`), screenshot);
+      throw new Error(`Login failed for ${email}. URL: ${url}\nPage: ${body.slice(0, 500)}`);
+    }
+    await ctx.storageState({ path: savePath });
+    await ctx.close();
+  }
 
-  // Log in as editor via the actual login form
-  const editorContext = await browser.newContext();
-  const editorPage = await editorContext.newPage();
-  await editorPage.goto(`${baseURL}/login`);
-  await editorPage.locator('#email').fill(TEST_DATA.editor.email);
-  await editorPage.locator('#password').fill(TEST_DATA.editor.password);
-  await editorPage.locator('button[type="submit"]').click();
-  await editorPage.waitForURL(/\/(map|manage|admin)/, { timeout: 15000 });
-  await editorContext.storageState({ path: path.join(AUTH_DIR, 'editor.json') });
-  await editorContext.close();
+  await loginAndSave(TEST_DATA.admin.email, TEST_DATA.admin.password, path.join(AUTH_DIR, 'admin.json'));
+  await loginAndSave(TEST_DATA.editor.email, TEST_DATA.editor.password, path.join(AUTH_DIR, 'editor.json'));
 
   // Onboard user: ensure clean state by removing any org memberships from prior runs.
   // We do NOT delete/recreate the user — the CI workflow pre-creates them via psql

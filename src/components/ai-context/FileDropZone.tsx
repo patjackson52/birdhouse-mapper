@@ -4,6 +4,8 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { FileText, FileImage, FileSpreadsheet, Globe, MapPin, File as FileIcon, X } from 'lucide-react';
 import { getSupportedExtensions } from '@/lib/ai-context/parsers';
+import { isGooglePhotosConfigured } from '@/lib/google/picker';
+import GooglePhotosSource from '@/components/photos/GooglePhotosSource';
 
 interface FileDropZoneProps {
   onFilesSelected: (files: File[]) => void;
@@ -12,7 +14,7 @@ interface FileDropZoneProps {
   disabled?: boolean;
 }
 
-type Tab = 'files' | 'url' | 'text';
+type Tab = 'files' | 'url' | 'text' | 'google-photos';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -135,6 +137,7 @@ export default function FileDropZone({
     { id: 'files', label: 'Files' },
     { id: 'url', label: 'URL' },
     { id: 'text', label: 'Text' },
+    ...(isGooglePhotosConfigured() ? [{ id: 'google-photos' as Tab, label: 'Google Photos' }] : []),
   ];
 
   return (
@@ -316,6 +319,18 @@ export default function FileDropZone({
             Add Text
           </button>
         </div>
+      )}
+
+      {/* Google Photos tab */}
+      {activeTab === 'google-photos' && (
+        <GooglePhotosSource
+          maxFiles={10}
+          onFilesSelected={(files) => {
+            const updated = [...selectedFiles, ...files];
+            setSelectedFiles(updated);
+            onFilesSelected(updated);
+          }}
+        />
       )}
     </div>
   );

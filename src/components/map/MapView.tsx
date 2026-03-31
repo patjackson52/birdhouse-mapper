@@ -75,6 +75,9 @@ export default function MapView({
   // Build a lookup map for item types
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
 
+  // Only render published layers on the map
+  const publishedLayers = (geoLayers ?? []).filter(l => l.status === 'published');
+
   // Escape key exits fullscreen
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -132,7 +135,7 @@ export default function MapView({
 
         {boundaryGeoJSON && <PropertyBoundary geojson={boundaryGeoJSON} />}
 
-        {geoLayers?.filter((l) => visibleGeoLayerIds?.has(l.id)).map((l) => {
+        {publishedLayers.filter((l) => visibleGeoLayerIds?.has(l.id)).map((l) => {
           const data = geoLayerData?.get(l.id);
           if (!data) return null;
           return (
@@ -165,7 +168,7 @@ export default function MapView({
       {/* Fullscreen toggle */}
       <button
         onClick={toggleFullscreen}
-        className="absolute top-3 left-3 z-[1000] bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
+        className="absolute top-3 left-3 z-20 bg-white rounded-lg shadow-lg border border-sage-light p-3 min-w-[44px] min-h-[44px] text-forest-dark hover:bg-sage-light transition-colors"
         aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
       >

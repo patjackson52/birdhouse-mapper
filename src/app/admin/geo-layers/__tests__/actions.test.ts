@@ -7,15 +7,22 @@ let mockSelectResult: any = { data: [], error: null };
 let mockUpdateResult: any = { data: null, error: null };
 let mockDeleteResult: any = { data: null, error: null };
 
+// Thenable object that also exposes chaining methods — covers both
+// `.select().eq()` (awaited directly) and `.select().eq().order()` paths.
+function mockQueryResult(resultFn: () => any) {
+  const obj: any = {
+    eq: vi.fn(() => obj),
+    order: vi.fn(() => Promise.resolve(resultFn())),
+    single: vi.fn(() => Promise.resolve(resultFn())),
+    in: vi.fn(() => Promise.resolve(resultFn())),
+    then: (resolve: any, reject?: any) => Promise.resolve(resultFn()).then(resolve, reject),
+  };
+  return obj;
+}
+
 const mockFrom = vi.fn(() => ({
   insert: vi.fn(() => ({ select: vi.fn(() => ({ single: vi.fn(() => Promise.resolve(mockInsertResult)) })) })),
-  select: vi.fn(() => ({
-    eq: vi.fn(() => ({
-      order: vi.fn(() => Promise.resolve(mockSelectResult)),
-      single: vi.fn(() => Promise.resolve(mockSelectResult)),
-    })),
-    in: vi.fn(() => Promise.resolve(mockSelectResult)),
-  })),
+  select: vi.fn(() => mockQueryResult(() => mockSelectResult)),
   update: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve(mockUpdateResult)) })),
   delete: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve(mockDeleteResult)) })),
 }));
@@ -54,6 +61,65 @@ describe('geo layer actions', () => {
       bbox: null,
       isPropertyBoundary: false,
     });
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('rejects unauthenticated users on publishGeoLayer', async () => {
+    mockUser = null;
+    const { publishGeoLayer } = await import('../actions');
+    const result = await publishGeoLayer('layer-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('rejects unauthenticated users on unpublishGeoLayer', async () => {
+    mockUser = null;
+    const { unpublishGeoLayer } = await import('../actions');
+    const result = await unpublishGeoLayer('layer-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('publishGeoLayer calls update with published status', async () => {
+    mockUser = { id: 'user-1' };
+    mockUpdateResult = { data: null, error: null };
+    const { publishGeoLayer } = await import('../actions');
+    const result = await publishGeoLayer('layer-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
+
+  it('unpublishGeoLayer calls update with draft status', async () => {
+    mockUser = { id: 'user-1' };
+    mockUpdateResult = { data: null, error: null };
+    const { unpublishGeoLayer } = await import('../actions');
+    const result = await unpublishGeoLayer('layer-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
+
+  it('rejects unauthenticated users on getOrgLayerAssignments', async () => {
+    mockUser = null;
+    const { getOrgLayerAssignments } = await import('../actions');
+    const result = await getOrgLayerAssignments('org-1');
+    expect(result).toEqual({ error: 'Not authenticated' });
+  });
+
+  it('getOrgLayerAssignments returns assignments for the org', async () => {
+    mockUser = { id: 'user-1' };
+    const mockAssignments = [
+      { geo_layer_id: 'layer-1', property_id: 'prop-1', org_id: 'org-1', visible_default: true },
+      { geo_layer_id: 'layer-1', property_id: 'prop-2', org_id: 'org-1', visible_default: true },
+    ];
+    mockSelectResult = { data: mockAssignments, error: null };
+    const { getOrgLayerAssignments } = await import('../actions');
+    const result = await getOrgLayerAssignments('org-1');
+    expect(result).toEqual({ success: true, assignments: mockAssignments });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layer_properties');
+  });
+
+  it('rejects unauthenticated users on assignLayerToProperties', async () => {
+    mockUser = null;
+    const { assignLayerToProperties } = await import('../actions');
+    const result = await assignLayerToProperties('layer-1', 'org-1', ['prop-1']);
     expect(result).toEqual({ error: 'Not authenticated' });
   });
 });
