@@ -40,7 +40,7 @@ type StatsProps = {
 };
 
 type GalleryProps = {
-  imageUrls: string[];
+  imageUrls: { url: string }[];
   columns: 2 | 3 | 4;
 };
 
@@ -328,7 +328,7 @@ export const puckConfig: Config<{
             url: { type: 'text', label: 'URL' },
           },
           defaultItemProps: { url: '' },
-        } as unknown as import('@measured/puck').Field,
+        },
         columns: {
           type: 'select',
           label: 'Columns',
@@ -343,8 +343,7 @@ export const puckConfig: Config<{
       render: ({ imageUrls, columns }) => {
         const colClass =
           columns === 2 ? 'grid-cols-2' : columns === 3 ? 'grid-cols-3' : 'grid-cols-4';
-        // imageUrls may come in as array of strings or array of {url:string} from Puck array field
-        const urls = (imageUrls as unknown as (string | { url: string })[]).map(u =>
+        const urls = imageUrls.map(u =>
           typeof u === 'string' ? u : u.url
         );
         return (
