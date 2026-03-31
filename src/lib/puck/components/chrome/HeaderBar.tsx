@@ -83,6 +83,8 @@ export function HeaderBar({
                 <Link
                   key={i}
                   href={link.href}
+                  target={link.href.startsWith('http') ? '_blank' : undefined}
+                  rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
                   className="text-sm hover:underline"
                   style={linkColor ? { color: linkColor } : undefined}
                 >

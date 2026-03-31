@@ -129,6 +129,13 @@ export const chromeConfig: Config<ChromeComponents> = {
         },
         linkColor: colorPickerField('Link Color'),
       },
+      resolveFields: (data: any, { fields }: any) => {
+        if (!data.props.showTagline) {
+          const { taglineSize, taglineWeight, taglineColor, ...rest } = fields;
+          return rest;
+        }
+        return fields;
+      },
       render: HeaderBar,
     },
 
