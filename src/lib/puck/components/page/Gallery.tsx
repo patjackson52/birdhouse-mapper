@@ -7,7 +7,7 @@ const colClasses: Record<2 | 3 | 4, string> = {
 };
 
 export function Gallery({ images, columns }: GalleryProps) {
-  if (!images?.length) return null;
+  if (!images?.length) return <></>;
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
       <div className={`grid gap-4 ${colClasses[columns]}`}>

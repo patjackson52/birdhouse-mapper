@@ -1,7 +1,7 @@
 import type { LinkListProps } from '../../types';
 
 export function LinkList({ items, layout }: LinkListProps) {
-  if (!items?.length) return null;
+  if (!items?.length) return <></>;
   const containerClass =
     layout === 'inline'
       ? 'flex flex-wrap items-center justify-center gap-4'

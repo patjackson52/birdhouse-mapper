@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ButtonGroupProps } from '../../types';
 
 export function ButtonGroup({ buttons }: ButtonGroupProps) {
-  if (!buttons?.length) return null;
+  if (!buttons?.length) return <></>;
   return (
     <div className="flex flex-wrap items-center justify-center gap-4 px-4 py-4">
       {buttons.map((btn, i) => {

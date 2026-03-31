@@ -1,7 +1,7 @@
 import type { StatsProps } from '../../types';
 
 export function Stats({ items }: StatsProps) {
-  if (!items?.length) return null;
+  if (!items?.length) return <></>;
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
