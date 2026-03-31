@@ -48,7 +48,10 @@ export default async function RootLayout({
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const puckRoot = config.puckRoot as Data | null;
+  const isPreview = headersList.get('x-preview') === 'true';
+  const puckRoot = (isPreview
+    ? (config.puckRootDraft ?? config.puckRoot)
+    : config.puckRoot) as Data | null;
 
   return (
     <html lang="en">

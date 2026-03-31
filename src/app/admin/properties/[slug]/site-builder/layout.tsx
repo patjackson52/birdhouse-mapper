@@ -14,9 +14,13 @@ export default function SiteBuilderLayout({ children }: { children: React.ReactN
     { label: 'Templates', href: `${base}/templates` },
   ];
 
+  const handlePreview = () => {
+    window.open('/?preview=true', '_blank');
+  };
+
   return (
     <div>
-      <div className="mb-6 border-b border-gray-200">
+      <div className="mb-6 flex items-center justify-between border-b border-gray-200">
         <nav className="flex gap-4">
           {tabs.map((tab) => {
             const isActive = pathname.startsWith(tab.href);
@@ -35,6 +39,12 @@ export default function SiteBuilderLayout({ children }: { children: React.ReactN
             );
           })}
         </nav>
+        <button
+          onClick={handlePreview}
+          className="mb-2 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+        >
+          Preview Site ↗
+        </button>
       </div>
       {children}
     </div>
