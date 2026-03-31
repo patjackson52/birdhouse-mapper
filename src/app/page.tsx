@@ -23,8 +23,11 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   // Org context — existing behavior
   const config = await getConfig();
 
-  // Forward any query params to /map (preserves deep links like ?item=123)
-  if (Object.keys(searchParams).length > 0) {
+  // Check for preview mode
+  const isPreview = searchParams?.preview === 'true';
+
+  // Forward non-preview query params to /map (preserves deep links like ?item=123)
+  if (!isPreview && Object.keys(searchParams).length > 0) {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(searchParams)) {
       if (typeof value === 'string') {
@@ -37,10 +40,18 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   // Puck landing page (new system) — takes priority over legacy
-  const puckLandingData = config.puckPages?.['/'];
+  // In preview mode, use draft data if available
+  const puckLandingData = isPreview
+    ? (config.puckPagesDraft?.['/'] ?? config.puckPages?.['/'])
+    : config.puckPages?.['/'];
   if (puckLandingData) {
     return (
       <main className="pb-20 md:pb-0">
+        {isPreview && (
+          <div className="bg-yellow-100 px-4 py-2 text-center text-sm text-yellow-800">
+            Preview Mode — This is a draft and not yet published.
+          </div>
+        )}
         <PuckPageRenderer data={puckLandingData as Data} />
       </main>
     );
