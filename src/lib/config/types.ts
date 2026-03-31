@@ -32,6 +32,12 @@ export interface SiteConfig {
   setupComplete: boolean;
   landingPage: LandingPageConfig | null;
   platformDomain: string | null;
+  // Puck site builder (null = legacy mode)
+  puckPages: Record<string, unknown> | null;
+  puckRoot: Record<string, unknown> | null;
+  puckTemplate: string | null;
+  puckPagesDraft: Record<string, unknown> | null;
+  puckRootDraft: Record<string, unknown> | null;
 }
 
 /**
@@ -62,6 +68,11 @@ export function buildSiteConfig(
     custom_nav_items: unknown | null;
     landing_page: unknown | null;
     logo_url: string | null;
+    puck_pages: unknown | null;
+    puck_root: unknown | null;
+    puck_template: string | null;
+    puck_pages_draft: unknown | null;
+    puck_root_draft: unknown | null;
   }
 ): SiteConfig {
   return {
@@ -87,5 +98,10 @@ export function buildSiteConfig(
     setupComplete: org.setup_complete,
     landingPage: property.landing_page as LandingPageConfig | null,
     platformDomain: process.env.PLATFORM_DOMAIN ?? null,
+    puckPages: property.puck_pages as Record<string, unknown> | null ?? null,
+    puckRoot: property.puck_root as Record<string, unknown> | null ?? null,
+    puckTemplate: property.puck_template ?? null,
+    puckPagesDraft: property.puck_pages_draft as Record<string, unknown> | null ?? null,
+    puckRootDraft: property.puck_root_draft as Record<string, unknown> | null ?? null,
   };
 }

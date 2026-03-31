@@ -1,10 +1,12 @@
 import '@/styles/globals.css';
 import Navigation from '@/components/layout/Navigation';
+import { PuckRootRenderer } from '@/components/puck/PuckRootRenderer';
 import { ConfigProvider } from '@/lib/config/client';
 import { getConfig } from '@/lib/config/server';
 import { resolveTheme, themeToCssVars } from '@/lib/config/themes';
 import { UserLocationProvider } from '@/lib/location/provider';
 import { createClient } from '@/lib/supabase/server';
+import type { Data } from '@puckeditor/core';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 
@@ -46,6 +48,8 @@ export default async function RootLayout({
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  const puckRoot = config.puckRoot as Data | null;
+
   return (
     <html lang="en">
       <head>
@@ -54,8 +58,16 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col">
         <ConfigProvider config={config} theme={theme}>
           <UserLocationProvider>
-            <Navigation isAuthenticated={!!user} />
-            <main className="flex-1">{children}</main>
+            {puckRoot ? (
+              <PuckRootRenderer data={puckRoot}>
+                <main className="flex-1">{children}</main>
+              </PuckRootRenderer>
+            ) : (
+              <>
+                <Navigation isAuthenticated={!!user} />
+                <main className="flex-1">{children}</main>
+              </>
+            )}
           </UserLocationProvider>
         </ConfigProvider>
       </body>

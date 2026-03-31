@@ -19,4 +19,9 @@ export const DEFAULT_CONFIG: SiteConfig = {
   setupComplete: false,
   landingPage: null,
   platformDomain: null,
+  puckPages: null,
+  puckRoot: null,
+  puckTemplate: null,
+  puckPagesDraft: null,
+  puckRootDraft: null,
 };

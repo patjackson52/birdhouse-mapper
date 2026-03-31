@@ -26,6 +26,11 @@ describe('buildSiteConfig', () => {
       custom_nav_items: [{ label: 'Blog', href: '/blog' }],
       landing_page: null,
       logo_url: null,
+      puck_pages: null,
+      puck_root: null,
+      puck_template: null,
+      puck_pages_draft: null,
+      puck_root_draft: null,
     };
 
     const config = buildSiteConfig(org, property);
@@ -70,6 +75,11 @@ describe('buildSiteConfig', () => {
       custom_nav_items: null,
       landing_page: null,
       logo_url: 'https://example.com/prop-logo.png',
+      puck_pages: null,
+      puck_root: null,
+      puck_template: null,
+      puck_pages_draft: null,
+      puck_root_draft: null,
     };
 
     const config = buildSiteConfig(org, property);
@@ -99,6 +109,11 @@ describe('buildSiteConfig', () => {
       custom_nav_items: null,
       landing_page: null,
       logo_url: null,
+      puck_pages: null,
+      puck_root: null,
+      puck_template: null,
+      puck_pages_draft: null,
+      puck_root_draft: null,
     };
 
     const config = buildSiteConfig(org, property);
@@ -128,6 +143,11 @@ describe('buildSiteConfig', () => {
       custom_nav_items: null,
       landing_page: null,
       logo_url: null,
+      puck_pages: null,
+      puck_root: null,
+      puck_template: null,
+      puck_pages_draft: null,
+      puck_root_draft: null,
     };
 
     const config = buildSiteConfig(org, property);
