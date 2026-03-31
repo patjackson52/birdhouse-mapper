@@ -1,5 +1,8 @@
 import type { Data, Config } from '@puckeditor/core';
 
+// Re-export field value types for component use
+export type { LinkValue, IconValue } from './fields/link-utils';
+
 // ---- Component prop types (page components) ----
 
 export interface HeroProps {
