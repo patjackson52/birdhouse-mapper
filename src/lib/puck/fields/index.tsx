@@ -17,7 +17,7 @@ export function imagePickerField(label: string, fetchAssets: () => Promise<Array
   return {
     type: 'custom' as const,
     label,
-    render: ({ value, onChange }: { value: string; onChange: (val: string) => void }) => (
+    render: ({ value, onChange }: { value: any; onChange: (val: any) => void }) => (
       <ImagePickerField value={value || ''} onChange={onChange} fetchAssets={fetchAssets} />
     ),
   };

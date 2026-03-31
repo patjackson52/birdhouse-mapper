@@ -32,10 +32,10 @@ export function IconRenderer({ icon, size = 20, className }: IconRendererProps) 
           const style = icon!.style || 'outline';
           if (style === 'solid') {
             const mod = await import('@heroicons/react/24/solid');
-            Component = (mod as Record<string, ComponentType<any>>)[`${icon!.name}Icon`];
+            Component = (mod as unknown as Record<string, ComponentType<any>>)[`${icon!.name}Icon`];
           } else {
             const mod = await import('@heroicons/react/24/outline');
-            Component = (mod as Record<string, ComponentType<any>>)[`${icon!.name}Icon`];
+            Component = (mod as unknown as Record<string, ComponentType<any>>)[`${icon!.name}Icon`];
           }
         }
 
