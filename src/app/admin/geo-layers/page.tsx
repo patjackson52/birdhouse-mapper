@@ -252,11 +252,6 @@ export default function GeoLayersAdminPage() {
 
       {loading ? (
         <p className="text-gray-500">Loading layers...</p>
-      ) : layers.length === 0 ? (
-        <div className="card p-8 text-center text-gray-500">
-          <p>No geo layers yet.</p>
-          <p className="text-sm mt-1">Import a GeoJSON, Shapefile, or KML file to get started.</p>
-        </div>
       ) : (
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
@@ -272,6 +267,13 @@ export default function GeoLayersAdminPage() {
               </tr>
             </thead>
             <tbody>
+              {layers.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-gray-500 text-sm">
+                    No geo layers yet. Import a GeoJSON, Shapefile, or KML file to get started.
+                  </td>
+                </tr>
+              )}
               {layers.map((layer) => {
                 const assignedIds = getAssignedPropertyIds(layer.id);
                 const isExpanded = expandedLayerId === layer.id;
