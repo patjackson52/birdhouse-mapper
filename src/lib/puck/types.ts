@@ -1,4 +1,5 @@
 import type { Data, Config } from '@puckeditor/core';
+import type { LinkValue, IconValue } from './fields/link-utils';
 
 // Re-export field value types for component use
 export type { LinkValue, IconValue } from './fields/link-utils';
@@ -11,7 +12,8 @@ export interface HeroProps {
   backgroundImageUrl: string;
   overlay: 'primary' | 'dark' | 'none';
   ctaLabel: string;
-  ctaHref: string;
+  ctaHref: string | LinkValue;
+  icon?: IconValue;
 }
 
 export interface RichTextProps {
@@ -25,13 +27,13 @@ export interface ImageBlockProps {
   alt: string;
   caption: string;
   width: 'small' | 'medium' | 'full';
-  linkHref: string;
+  linkHref: string | LinkValue;
 }
 
 export interface ButtonGroupProps {
   buttons: Array<{
     label: string;
-    href: string;
+    href: string | LinkValue;
     style: 'primary' | 'outline';
     size: 'default' | 'large';
   }>;
@@ -40,7 +42,7 @@ export interface ButtonGroupProps {
 export interface LinkListProps {
   items: Array<{
     label: string;
-    url: string;
+    url: string | LinkValue;
     description: string;
   }>;
   layout: 'inline' | 'stacked';
@@ -81,8 +83,9 @@ export interface CardProps {
   imageUrl: string;
   title: string;
   text: string;
-  linkHref: string;
+  linkHref: string | LinkValue;
   linkLabel: string;
+  icon?: IconValue;
 }
 
 export interface MapPreviewProps {
@@ -110,6 +113,17 @@ export interface HeaderBarProps {
   layout: 'centered' | 'left-aligned';
   showTagline: boolean;
   backgroundColor: 'primary' | 'primary-dark' | 'surface' | 'default';
+  logoUrl?: string;
+  icon?: IconValue;
+  iconPosition?: 'before-name' | 'after-name' | 'above-name';
+  nameSize?: 'small' | 'medium' | 'large' | 'xl';
+  nameWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  nameColor?: string;
+  taglineSize?: 'small' | 'medium' | 'large' | 'xl';
+  taglineWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  taglineColor?: string;
+  links?: Array<{ label: string; href: string }>;
+  linkColor?: string;
 }
 
 export interface NavBarProps {
@@ -120,14 +134,14 @@ export interface NavBarProps {
 
 export interface AnnouncementBarProps {
   text: string;
-  linkUrl: string;
+  linkUrl: string | LinkValue;
   backgroundColor: 'primary' | 'accent' | 'surface';
 }
 
 export interface FooterColumnsProps {
   columns: Array<{
     title: string;
-    links: Array<{ label: string; url: string }>;
+    links: Array<{ label: string; url: string | LinkValue }>;
   }>;
   showBranding: boolean;
   copyrightText: string;
@@ -144,7 +158,7 @@ export interface SocialLinksProps {
 
 export interface SimpleFooterProps {
   text: string;
-  links: Array<{ label: string; url: string }>;
+  links: Array<{ label: string; url: string | LinkValue }>;
   showPoweredBy: boolean;
 }
 
