@@ -4,6 +4,8 @@ import { getConfig } from '@/lib/config/server';
 import { LandingRenderer } from '@/components/landing/LandingRenderer';
 import { HomeMapView } from '@/components/map/HomeMapView';
 import { PlatformLanding } from '@/components/platform/PlatformLanding';
+import { PuckPageRenderer } from '@/components/puck/PuckPageRenderer';
+import type { Data } from '@puckeditor/core';
 
 interface HomePageProps {
   searchParams: Record<string, string | string[] | undefined>;
@@ -32,6 +34,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       }
     }
     redirect(`/map?${query.toString()}`);
+  }
+
+  // Puck landing page (new system) — takes priority over legacy
+  const puckLandingData = config.puckPages?.['/'];
+  if (puckLandingData) {
+    return (
+      <main className="pb-20 md:pb-0">
+        <PuckPageRenderer data={puckLandingData as Data} />
+      </main>
+    );
   }
 
   // Landing page enabled — render blocks
