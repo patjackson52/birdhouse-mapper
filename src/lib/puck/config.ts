@@ -98,7 +98,7 @@ export const pageConfig: Config<PageComponents> = {
         columns: 1,
       },
       fields: {
-        content: { type: 'textarea', label: 'Content' },
+        content: { type: 'richtext', label: 'Content', contentEditable: true },
         alignment: {
           type: 'radio',
           label: 'Alignment',
@@ -361,7 +361,7 @@ export const pageConfig: Config<PageComponents> = {
       fields: {
         imageUrl: imagePickerField('Image', fetchLandingAssets),
         title: { type: 'text', label: 'Title' },
-        text: { type: 'textarea', label: 'Text' },
+        text: { type: 'richtext', label: 'Text' },
         linkHref: linkField('Link URL'),
         linkLabel: { type: 'text', label: 'Link Label' },
         icon: iconPickerField('Icon'),
@@ -413,7 +413,7 @@ export const pageConfig: Config<PageComponents> = {
         style: 'default',
       },
       fields: {
-        quote: { type: 'textarea', label: 'Quote' },
+        quote: { type: 'richtext', label: 'Quote' },
         attribution: { type: 'text', label: 'Attribution' },
         photoUrl: imagePickerField('Photo', fetchLandingAssets),
         style: {
