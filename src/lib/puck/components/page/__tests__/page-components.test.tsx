@@ -33,6 +33,18 @@ describe('Hero', () => {
     render(<Hero title="Hello" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="Click me" ctaHref="" />);
     expect(screen.queryByRole('link')).toBeNull();
   });
+
+  it('renders CTA with LinkValue object', () => {
+    render(<Hero title="Hello" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="Go" ctaHref={{ href: '/signup', target: '_blank', color: '#ff0000' }} />);
+    const link = screen.getByRole('link', { name: 'Go' });
+    expect(link.getAttribute('href')).toBe('/signup');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('renders optional icon without crashing', () => {
+    render(<Hero title="Hello" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" icon={{ set: 'lucide', name: 'Bird' }} />);
+    expect(screen.getByRole('heading', { name: 'Hello' })).toBeDefined();
+  });
 });
 
 // RichText
@@ -79,6 +91,13 @@ describe('ImageBlock', () => {
     const link = screen.getByRole('link');
     expect(link.getAttribute('href')).toBe('https://example.com');
   });
+
+  it('wraps in link with LinkValue object', () => {
+    render(<ImageBlock url="/bird.jpg" alt="Bird" caption="" width="medium" linkHref={{ href: 'https://example.com', target: '_blank' }} />);
+    const link = screen.getByRole('link');
+    expect(link.getAttribute('href')).toBe('https://example.com');
+    expect(link.getAttribute('target')).toBe('_blank');
+  });
 });
 
 // ButtonGroup
@@ -103,6 +122,12 @@ describe('ButtonGroup', () => {
     render(<ButtonGroup buttons={[{ label: 'External', href: 'https://example.com', style: 'primary', size: 'default' }]} />);
     const link = screen.getByRole('link', { name: 'External' });
     expect(link.getAttribute('target')).toBe('_blank');
+  });
+
+  it('handles LinkValue objects in buttons', () => {
+    render(<ButtonGroup buttons={[{ label: 'Go', href: { href: '/page' }, style: 'primary', size: 'default' }]} />);
+    const link = screen.getByRole('link', { name: 'Go' });
+    expect(link.getAttribute('href')).toBe('/page');
   });
 });
 
@@ -135,6 +160,18 @@ describe('LinkList', () => {
     );
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.className).toContain('flex-wrap');
+  });
+
+  it('handles LinkValue objects in items', () => {
+    render(
+      <LinkList
+        items={[{ label: 'Link', url: { href: 'https://example.com', target: '_blank', color: '#ff0000' }, description: '' }]}
+        layout="stacked"
+      />
+    );
+    const link = screen.getByRole('link', { name: 'Link' });
+    expect(link.getAttribute('href')).toBe('https://example.com');
+    expect(link.getAttribute('target')).toBe('_blank');
   });
 });
 
