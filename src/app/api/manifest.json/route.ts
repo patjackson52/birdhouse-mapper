@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config/server';
+import { getLogoUrlServer } from '@/lib/config/logo-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,8 +8,8 @@ export async function GET(_request: NextRequest) {
   const config = await getConfig();
 
   const manifest = {
-    name: config.siteName || 'BirdhouseMapper',
-    short_name: config.siteName?.slice(0, 12) || 'BirdMapper',
+    name: config.siteName || 'FieldMapper',
+    short_name: config.siteName?.slice(0, 12) || 'FieldMapper',
     description: config.tagline || 'Field mapping for conservation teams',
     start_url: '/map',
     display: 'standalone' as const,
@@ -17,17 +18,17 @@ export async function GET(_request: NextRequest) {
     background_color: '#ffffff',
     icons: [
       {
-        src: config.logoUrl || '/icons/icon-192.png',
+        src: getLogoUrlServer(config.logoUrl, 'icon-192.png'),
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: config.logoUrl || '/icons/icon-512.png',
+        src: getLogoUrlServer(config.logoUrl, 'icon-512.png'),
         sizes: '512x512',
         type: 'image/png',
       },
       {
-        src: config.logoUrl || '/icons/icon-512-maskable.png',
+        src: getLogoUrlServer(config.logoUrl, 'icon-512-maskable.png'),
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
