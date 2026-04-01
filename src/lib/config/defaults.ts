@@ -2,6 +2,8 @@ import type { SiteConfig } from './types';
 
 export const DEFAULT_CONFIG: SiteConfig = {
   siteName: 'Field Mapper',
+  propertyName: null,
+  pwaName: null,
   tagline: 'Map and track points of interest',
   locationName: '',
   propertyId: null,

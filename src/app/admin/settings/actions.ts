@@ -8,6 +8,7 @@ export interface OrgSettings {
   name: string;
   slug: string;
   tagline: string | null;
+  pwa_name: string | null;
   logo_url: string | null;
   favicon_url: string | null;
   theme: unknown | null;
@@ -22,7 +23,7 @@ export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: st
 
   const { data, error } = await supabase
     .from('orgs')
-    .select('name, slug, tagline, logo_url, favicon_url, theme, subscription_tier, subscription_status')
+    .select('name, slug, tagline, pwa_name, logo_url, favicon_url, theme, subscription_tier, subscription_status')
     .eq('id', tenant.orgId)
     .single();
 
@@ -35,6 +36,7 @@ export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: st
       name: data.name,
       slug: data.slug,
       tagline: data.tagline,
+      pwa_name: data.pwa_name,
       logo_url: data.logo_url,
       favicon_url: data.favicon_url,
       theme: data.theme,
@@ -48,6 +50,7 @@ export interface OrgSettingsUpdates {
   name?: string;
   slug?: string;
   tagline?: string;
+  pwa_name?: string;
   logo_url?: string;
   theme?: unknown;
 }
@@ -75,6 +78,7 @@ export async function updateOrgSettings(
   if (updates.name !== undefined) payload.name = updates.name;
   if (updates.slug !== undefined) payload.slug = updates.slug;
   if (updates.tagline !== undefined) payload.tagline = updates.tagline;
+  if (updates.pwa_name !== undefined) payload.pwa_name = updates.pwa_name;
   if (updates.logo_url !== undefined) payload.logo_url = updates.logo_url;
   if (updates.theme !== undefined) payload.theme = updates.theme;
 

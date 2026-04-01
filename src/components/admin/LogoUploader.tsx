@@ -32,13 +32,17 @@ export default function LogoUploader({ currentLogoUrl, scope, propertyId, onUplo
     const formData = new FormData();
     formData.set('logo', file);
 
-    const result = await uploadLogo(formData, scope, propertyId);
-    setUploading(false);
-
-    if (result.error) {
-      setError(result.error);
-    } else if (result.basePath) {
-      onUploaded(result.basePath);
+    try {
+      const result = await uploadLogo(formData, scope, propertyId);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.basePath) {
+        onUploaded(result.basePath);
+      }
+    } catch {
+      setError('Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -46,13 +50,17 @@ export default function LogoUploader({ currentLogoUrl, scope, propertyId, onUplo
     setUploading(true);
     setError(null);
 
-    const result = await uploadDefaultLogo(defaultName, scope, propertyId);
-    setUploading(false);
-
-    if (result.error) {
-      setError(result.error);
-    } else if (result.basePath) {
-      onUploaded(result.basePath);
+    try {
+      const result = await uploadDefaultLogo(defaultName, scope, propertyId);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.basePath) {
+        onUploaded(result.basePath);
+      }
+    } catch {
+      setError('Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
     }
   }
 

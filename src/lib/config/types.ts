@@ -2,6 +2,8 @@ import type { LandingPageConfig } from './landing-types';
 
 export interface SiteConfig {
   siteName: string;
+  propertyName: string | null;
+  pwaName: string | null;
   tagline: string;
   locationName: string;
   propertyId: string | null;
@@ -47,6 +49,7 @@ export interface SiteConfig {
 export function buildSiteConfig(
   org: {
     name: string;
+    pwa_name?: string | null;
     tagline: string | null;
     logo_url: string | null;
     favicon_url: string | null;
@@ -55,6 +58,8 @@ export function buildSiteConfig(
   },
   property: {
     id?: string;
+    name?: string;
+    pwa_name?: string | null;
     description: string | null;
     map_default_lat: number | null;
     map_default_lng: number | null;
@@ -77,6 +82,8 @@ export function buildSiteConfig(
 ): SiteConfig {
   return {
     siteName: org.name,
+    propertyName: property.name ?? null,
+    pwaName: property.pwa_name ?? org.pwa_name ?? null,
     tagline: org.tagline ?? '',
     locationName: property.description ?? '',
     propertyId: property.id ?? null,

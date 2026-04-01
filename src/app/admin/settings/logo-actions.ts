@@ -1,5 +1,7 @@
 'use server';
 
+import fs from 'fs/promises';
+import path from 'path';
 import sharp from 'sharp';
 import { createClient } from '@/lib/supabase/server';
 import { getTenantContext } from '@/lib/tenant/server';
@@ -95,19 +97,16 @@ export async function uploadDefaultLogo(
   scope: 'org' | 'property',
   propertyId?: string,
 ): Promise<{ success?: boolean; basePath?: string; error?: string }> {
-  const supabase = createClient();
-  const tenant = await getTenantContext();
-  if (!tenant.orgId) return { error: 'No org context' };
+  try {
+    // Read the default logo from the filesystem (works in both dev and production)
+    const filePath = path.join(process.cwd(), 'public', 'defaults', 'logos', `${defaultName}.png`);
+    const buffer = await fs.readFile(filePath);
 
-  // Read the default logo from public/defaults/logos/
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-  const response = await fetch(`${baseUrl}/defaults/logos/${defaultName}.png`);
-  if (!response.ok) return { error: 'Default logo not found' };
+    const formData = new FormData();
+    formData.set('logo', new Blob([buffer], { type: 'image/png' }), `${defaultName}.png`);
 
-  const buffer = Buffer.from(await response.arrayBuffer());
-
-  const formData = new FormData();
-  formData.set('logo', new Blob([buffer], { type: 'image/png' }), `${defaultName}.png`);
-
-  return uploadLogo(formData, scope, propertyId);
+    return uploadLogo(formData, scope, propertyId);
+  } catch {
+    return { error: 'Default logo not found' };
+  }
 }

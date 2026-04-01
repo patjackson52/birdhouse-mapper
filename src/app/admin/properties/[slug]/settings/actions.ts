@@ -14,6 +14,7 @@ const ORG_KEY_TO_COLUMN: Record<string, string> = {
 
 /** Keys that map to columns on the properties table */
 const PROPERTY_KEY_TO_COLUMN: Record<string, string> = {
+  pwa_name: 'pwa_name',
   location_name: 'description',
   map_style: 'map_style',
   custom_map: 'custom_map',
