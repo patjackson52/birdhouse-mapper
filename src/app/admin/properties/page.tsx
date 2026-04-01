@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge, derivePropertyStatus } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -36,12 +37,8 @@ function toSlug(name: string): string {
 export default function PropertiesPage() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
 
-  const [properties, setProperties] = useState<Property[]>([]);
-  const [itemCounts, setItemCounts] = useState<Record<string, number>>({});
-  const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
-  const [customDomains, setCustomDomains] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
   const [showCreateForm, setShowCreateForm] = useState(false);
 
@@ -52,12 +49,15 @@ export default function PropertiesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
-  async function loadProperties() {
-    const result = await getProperties();
-    if (result.properties) {
-      const props = result.properties as Property[];
-      setProperties(props);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'properties'],
+    queryFn: async () => {
+      const result = await getProperties();
+      if (!result.properties) {
+        return { properties: [], itemCounts: {}, memberCounts: {}, customDomains: {} };
+      }
 
+      const props = result.properties as Property[];
       const supabase = createClient();
       const propertyIds = props.map((p) => p.id);
 
@@ -74,36 +74,36 @@ export default function PropertiesPage() {
           .eq('status', 'active'),
       ]);
 
+      const itemCounts: Record<string, number> = {};
       if (itemsRes.data) {
-        const counts: Record<string, number> = {};
         for (const item of itemsRes.data) {
-          counts[item.property_id] = (counts[item.property_id] || 0) + 1;
+          itemCounts[item.property_id] = (itemCounts[item.property_id] || 0) + 1;
         }
-        setItemCounts(counts);
       }
 
+      const memberCounts: Record<string, number> = {};
       if (membershipsRes.data) {
-        const counts: Record<string, number> = {};
         for (const m of membershipsRes.data) {
-          counts[m.property_id] = (counts[m.property_id] || 0) + 1;
+          memberCounts[m.property_id] = (memberCounts[m.property_id] || 0) + 1;
         }
-        setMemberCounts(counts);
       }
 
+      const customDomains: Record<string, string> = {};
       if (domainsRes.data) {
-        const domains: Record<string, string> = {};
         for (const d of domainsRes.data) {
-          domains[d.property_id] = d.domain;
+          customDomains[d.property_id] = d.domain;
         }
-        setCustomDomains(domains);
       }
-    }
-    setLoading(false);
-  }
 
-  useEffect(() => {
-    loadProperties();
-  }, []);
+      return { properties: props, itemCounts, memberCounts, customDomains };
+    },
+  });
+
+  const properties = data?.properties ?? [];
+  const itemCounts = data?.itemCounts ?? {};
+  const memberCounts = data?.memberCounts ?? {};
+  const customDomains = data?.customDomains ?? {};
+  const loading = isLoading;
 
   function handleNameChange(name: string) {
     setFormName(name);
@@ -138,7 +138,7 @@ export default function PropertiesPage() {
     const action = property.deleted_at !== null ? unarchiveProperty : archiveProperty;
     startTransition(async () => {
       await action(property.id);
-      await loadProperties();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'properties'] });
     });
   }
 
