@@ -52,6 +52,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "serwist": "^9.5.7",
+    "sharp": "^0.34.5",
     "shpjs": "^6.2.0",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
@@ -68,6 +69,7 @@
     "@types/proj4": "^2.5.6",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "@types/sharp": "^0.31.1",
     "@types/shpjs": "^3.4.7",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.4.17",
