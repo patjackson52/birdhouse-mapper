@@ -6,6 +6,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getOrgSettings, updateOrgSettings } from './actions';
 import type { OrgSettingsUpdates } from './actions';
 import type { SubscriptionTier, SubscriptionStatus } from '@/lib/types';
+import LogoUploader from '@/components/admin/LogoUploader';
+import { getLogoUrl } from '@/lib/config/logo';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -54,7 +56,6 @@ export default function OrgSettingsPage() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [tagline, setTagline] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
   const [themeJson, setThemeJson] = useState('');
   const [themeJsonError, setThemeJsonError] = useState('');
 
@@ -76,7 +77,6 @@ export default function OrgSettingsPage() {
       setName(settings.name ?? '');
       setSlug(settings.slug ?? '');
       setTagline(settings.tagline ?? '');
-      setLogoUrl(settings.logo_url ?? '');
       setThemeJson(settings.theme ? JSON.stringify(settings.theme, null, 2) : '');
     }
   }, [settings]);
@@ -101,7 +101,6 @@ export default function OrgSettingsPage() {
       if (name !== settings.name) updates.name = name;
       if (slug !== settings.slug) updates.slug = slug;
       if (tagline !== (settings.tagline ?? '')) updates.tagline = tagline;
-      if (logoUrl !== (settings.logo_url ?? '')) updates.logo_url = logoUrl;
       const currentThemeStr = settings.theme ? JSON.stringify(settings.theme) : '';
       const newThemeStr = parsedTheme !== undefined ? JSON.stringify(parsedTheme) : '';
       if (newThemeStr !== currentThemeStr) updates.theme = parsedTheme ?? null;
@@ -215,33 +214,15 @@ export default function OrgSettingsPage() {
           </h2>
 
           <div>
-            <label htmlFor="org-logo" className="label">
-              Logo URL
-            </label>
-            <input
-              id="org-logo"
-              type="url"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              className="input-field"
-              placeholder="https://example.com/logo.png"
+            <label className="label">Logo</label>
+            <LogoUploader
+              currentLogoUrl={settings?.logo_url ? getLogoUrl(settings.logo_url, 'original.png') : null}
+              scope="org"
+              onUploaded={async () => {
+                await queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] });
+                router.refresh();
+              }}
             />
-            <p className="mt-1 text-xs text-sage">
-              Full URL to your logo image. Direct upload support coming soon.
-            </p>
-            {logoUrl && (
-              <div className="mt-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={logoUrl}
-                  alt="Logo preview"
-                  className="h-12 object-contain rounded border border-sage-light"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-              </div>
-            )}
           </div>
 
           <div>
