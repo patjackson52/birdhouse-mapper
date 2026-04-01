@@ -118,6 +118,12 @@ async function executeMutation(
 
 // ---- Inbound Sync (Server → Client) ----
 
+// Tables that have an `updated_at` column for delta sync.
+// Tables not listed here only have `created_at` — we use that instead.
+const TABLES_WITH_UPDATED_AT = new Set([
+  'items', 'properties', 'orgs', 'roles', 'org_memberships', 'entities', 'entity_types',
+]);
+
 const SYNC_TABLES = [
   'items', 'item_types', 'custom_fields', 'item_updates', 'update_types',
   'photos', 'entities', 'entity_types', 'geo_layers', 'properties', 'orgs',
@@ -152,7 +158,9 @@ export async function syncPropertyData(
       query = query.eq('id', orgId);
     }
 
-    query = query.gte('updated_at', lastSynced);
+    // Use updated_at for delta sync on tables that have it, created_at otherwise
+    const timestampColumn = TABLES_WITH_UPDATED_AT.has(tableName) ? 'updated_at' : 'created_at';
+    query = query.gte(timestampColumn, lastSynced);
 
     const { data, error } = await query;
 
@@ -182,7 +190,9 @@ export async function syncPropertyData(
   for (const mutation of pendingMutations) {
     if (mutation.property_id !== propertyId) continue;
     const serverRecord = await db.table(mutation.table).get(mutation.record_id);
-    if (serverRecord && new Date(serverRecord.updated_at).getTime() > mutation.created_at) {
+    if (!serverRecord) continue;
+    const serverTimestamp = serverRecord.updated_at || serverRecord.created_at;
+    if (serverTimestamp && new Date(serverTimestamp).getTime() > mutation.created_at) {
       await db.mutation_queue.delete(mutation.id);
       await db.photo_blobs.where('mutation_id').equals(mutation.id).delete();
     }
