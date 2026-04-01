@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { Item, ItemStatus, ItemType, CustomField } from '@/lib/types';
-import { createClient } from '@/lib/supabase/client';
+import { useOfflineStore } from '@/lib/offline/provider';
+import { useConfig } from '@/lib/config/client';
 import ItemCard from '@/components/item/ItemCard';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Footer from '@/components/layout/Footer';
@@ -20,25 +21,32 @@ export default function ListPage() {
   const [filter, setFilter] = useState<ItemStatus | 'all'>('all');
   const [sort, setSort] = useState<SortOption>('name');
   const { position } = useUserLocation();
+  const config = useConfig();
+  const propertyId = config.propertyId;
+  const offlineStore = useOfflineStore();
 
   useEffect(() => {
     async function fetchData() {
-      const supabase = createClient();
+      if (!propertyId) { setLoading(false); return; }
 
-      const [itemRes, typeRes, fieldRes] = await Promise.all([
-        supabase.from('items').select('*').order('name', { ascending: true }),
-        supabase.from('item_types').select('*').order('sort_order', { ascending: true }),
-        supabase.from('custom_fields').select('*').order('sort_order', { ascending: true }),
+      // Resolve orgId from the properties table in IndexedDB
+      const property = await offlineStore.db.properties.get(propertyId);
+      const orgId = property?.org_id;
+
+      const [itemData, typeData, fieldData] = await Promise.all([
+        offlineStore.getItems(propertyId),
+        orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
+        orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
       ]);
 
-      if (itemRes.data) setItems(itemRes.data);
-      if (typeRes.data) setItemTypes(typeRes.data);
-      if (fieldRes.data) setCustomFields(fieldRes.data);
+      setItems(itemData);
+      setItemTypes(typeData);
+      setCustomFields(fieldData);
       setLoading(false);
     }
 
     fetchData();
-  }, []);
+  }, [propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
 
