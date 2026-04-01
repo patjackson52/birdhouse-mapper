@@ -43,7 +43,7 @@ describe('OfflineDatabase', () => {
       longitude: -93.0,
       item_type_id: 'type-1',
       custom_field_values: {},
-      status: 'active',
+      status: 'active' as const,
       created_at: '2026-03-31T00:00:00Z',
       updated_at: '2026-03-31T00:00:00Z',
       created_by: null,
@@ -59,9 +59,9 @@ describe('OfflineDatabase', () => {
 
   it('should query items by property_id index', async () => {
     await db.items.bulkPut([
-      { id: 'a', name: 'A', org_id: 'org-1', property_id: 'prop-1', _synced_at: '', latitude: 0, longitude: 0, item_type_id: 't', custom_field_values: {}, status: 'active', created_at: '', updated_at: '', created_by: null, description: null },
-      { id: 'b', name: 'B', org_id: 'org-1', property_id: 'prop-2', _synced_at: '', latitude: 0, longitude: 0, item_type_id: 't', custom_field_values: {}, status: 'active', created_at: '', updated_at: '', created_by: null, description: null },
-      { id: 'c', name: 'C', org_id: 'org-1', property_id: 'prop-1', _synced_at: '', latitude: 0, longitude: 0, item_type_id: 't', custom_field_values: {}, status: 'active', created_at: '', updated_at: '', created_by: null, description: null },
+      { id: 'a', name: 'A', org_id: 'org-1', property_id: 'prop-1', _synced_at: '', latitude: 0, longitude: 0, item_type_id: 't', custom_field_values: {}, status: 'active' as const, created_at: '', updated_at: '', created_by: null, description: null },
+      { id: 'b', name: 'B', org_id: 'org-1', property_id: 'prop-2', _synced_at: '', latitude: 0, longitude: 0, item_type_id: 't', custom_field_values: {}, status: 'active' as const, created_at: '', updated_at: '', created_by: null, description: null },
+      { id: 'c', name: 'C', org_id: 'org-1', property_id: 'prop-1', _synced_at: '', latitude: 0, longitude: 0, item_type_id: 't', custom_field_values: {}, status: 'active' as const, created_at: '', updated_at: '', created_by: null, description: null },
     ]);
 
     const prop1Items = await db.items.where('property_id').equals('prop-1').toArray();
