@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ImportFlow = dynamic(() => import('@/components/geo/ImportFlow'), {
   ssr: false,
@@ -21,73 +22,51 @@ import {
 import type { GeoLayerSummary, GeoLayerProperty } from '@/lib/geo/types';
 
 export default function GeoLayersAdminPage() {
-  const [orgId, setOrgId] = useState<string | null>(null);
-  const [layers, setLayers] = useState<GeoLayerSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [showImport, setShowImport] = useState(false);
   const [showAiImport, setShowAiImport] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [properties, setProperties] = useState<Array<{ id: string; name: string }>>([]);
-  const [assignments, setAssignments] = useState<GeoLayerProperty[]>([]);
   const [expandedLayerId, setExpandedLayerId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) return;
-      supabase
-        .from('org_memberships')
-        .select('org_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
-        .then(({ data }) => {
-          if (data?.org_id) setOrgId(data.org_id);
-        });
-    });
-  }, []);
+  const { data: orgId } = useQuery({
+    queryKey: ['admin', 'org-id'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data } = await supabase.from('org_memberships').select('org_id').eq('user_id', user.id).limit(1).single();
+      return data?.org_id ?? null;
+    },
+  });
 
-  const loadLayers = useCallback(async () => {
-    if (!orgId) return;
-    const result = await listGeoLayers(orgId);
-    if ('error' in result) {
-      setMessage({ type: 'error', text: result.error });
-    } else {
-      setLayers(result.layers);
-    }
-    setLoading(false);
-  }, [orgId]);
+  const { data: layersData, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'geo-layers', orgId],
+    queryFn: async () => {
+      if (!orgId) return { layers: [], assignments: [], properties: [] };
+      const supabase = createClient();
+      const [layersResult, assignmentsResult, propertiesResult] = await Promise.all([
+        listGeoLayers(orgId),
+        getOrgLayerAssignments(orgId),
+        supabase.from('properties').select('id, name, slug').eq('org_id', orgId).is('deleted_at', null).order('name', { ascending: true }),
+      ]);
+      return {
+        layers: 'error' in layersResult ? [] : layersResult.layers,
+        assignments: 'error' in assignmentsResult ? [] : assignmentsResult.assignments,
+        properties: (propertiesResult.data ?? []).map((p: { id: string; name: string; slug: string }) => ({ id: p.id, name: p.name || p.slug })),
+      };
+    },
+    enabled: !!orgId,
+  });
 
-  const loadAssignments = useCallback(async () => {
-    if (!orgId) return;
-    const result = await getOrgLayerAssignments(orgId);
-    if (!('error' in result)) {
-      setAssignments(result.assignments);
-    }
-  }, [orgId]);
+  const layers: GeoLayerSummary[] = layersData?.layers ?? [];
+  const assignments: GeoLayerProperty[] = layersData?.assignments ?? [];
+  const properties: Array<{ id: string; name: string }> = layersData?.properties ?? [];
 
-  useEffect(() => {
-    loadLayers();
-    loadAssignments();
-  }, [loadLayers, loadAssignments]);
-
-  useEffect(() => {
-    if (!orgId) return;
-    const supabase = createClient();
-    supabase
-      .from('properties')
-      .select('id, name, slug')
-      .eq('org_id', orgId)
-      .is('deleted_at', null)
-      .order('name', { ascending: true })
-      .then(({ data }) => {
-        if (data) {
-          setProperties(data.map((p: { id: string; name: string; slug: string }) => ({ id: p.id, name: p.name || p.slug })));
-        }
-      });
-  }, [orgId]);
+  function invalidateLayers() {
+    return queryClient.invalidateQueries({ queryKey: ['admin', 'geo-layers', orgId] });
+  }
 
   function getAssignedPropertyIds(layerId: string): Set<string> {
     return new Set(
@@ -106,7 +85,7 @@ export default function GeoLayersAdminPage() {
     if ('error' in result) {
       setMessage({ type: 'error', text: result.error });
     } else {
-      loadAssignments();
+      await invalidateLayers();
     }
   }
 
@@ -148,8 +127,7 @@ export default function GeoLayersAdminPage() {
 
     setMessage({ type: 'success', text: `Layer "${data.name}" imported successfully` });
     setShowImport(false);
-    loadLayers();
-    loadAssignments();
+    await invalidateLayers();
   };
 
   const handleDelete = async (layer: GeoLayerSummary) => {
@@ -159,8 +137,7 @@ export default function GeoLayersAdminPage() {
       setMessage({ type: 'error', text: result.error });
     } else {
       setMessage({ type: 'success', text: `Layer "${layer.name}" deleted` });
-      loadLayers();
-      loadAssignments();
+      await invalidateLayers();
     }
   };
 
@@ -171,7 +148,7 @@ export default function GeoLayersAdminPage() {
       setMessage({ type: 'error', text: result.error });
     } else {
       setEditingId(null);
-      loadLayers();
+      await invalidateLayers();
     }
   };
 
@@ -181,7 +158,7 @@ export default function GeoLayersAdminPage() {
       setMessage({ type: 'error', text: result.error });
     } else {
       setMessage({ type: 'success', text: 'Layer published — now visible on maps' });
-      loadLayers();
+      await invalidateLayers();
     }
   };
 
@@ -191,7 +168,7 @@ export default function GeoLayersAdminPage() {
       setMessage({ type: 'error', text: result.error });
     } else {
       setMessage({ type: 'success', text: 'Layer unpublished — hidden from maps' });
-      loadLayers();
+      await invalidateLayers();
     }
   };
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { Entity, EntityType, EntityTypeField } from '@/lib/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -11,55 +12,50 @@ import EntityCard from '@/components/admin/EntityCard';
 export default function EntitiesPage() {
   const params = useParams();
   const entityTypeId = params.entityTypeId as string;
+  const queryClient = useQueryClient();
 
-  const [entityType, setEntityType] = useState<EntityType | null>(null);
-  const [fields, setFields] = useState<EntityTypeField[]>([]);
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [loading, setLoading] = useState(true);
   const [editingEntity, setEditingEntity] = useState<Entity | undefined>(undefined);
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchData();
-  }, [entityTypeId]);
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'property', 'entities', entityTypeId],
+    queryFn: async () => {
+      const supabase = createClient();
 
-  async function fetchData() {
-    const supabase = createClient();
+      const [etRes, entitiesRes] = await Promise.all([
+        supabase
+          .from('entity_types')
+          .select('*, entity_type_fields(*)')
+          .eq('id', entityTypeId)
+          .single(),
+        supabase
+          .from('entities')
+          .select('*')
+          .eq('entity_type_id', entityTypeId)
+          .order('sort_order', { ascending: true }),
+      ]);
 
-    const [etRes, entitiesRes] = await Promise.all([
-      supabase
-        .from('entity_types')
-        .select('*, entity_type_fields(*)')
-        .eq('id', entityTypeId)
-        .single(),
-      supabase
-        .from('entities')
-        .select('*')
-        .eq('entity_type_id', entityTypeId)
-        .order('sort_order', { ascending: true }),
-    ]);
+      const entityType = etRes.data ? (etRes.data as EntityType) : null;
+      const fields = etRes.data
+        ? ((etRes.data as EntityType & { entity_type_fields: EntityTypeField[] }).entity_type_fields || [])
+            .sort((a: EntityTypeField, b: EntityTypeField) => a.sort_order - b.sort_order)
+        : [];
+      const entities: Entity[] = entitiesRes.data ?? [];
 
-    if (etRes.data) {
-      setEntityType(etRes.data as EntityType);
-      setFields(
-        ((etRes.data as EntityType & { entity_type_fields: EntityTypeField[] }).entity_type_fields || [])
-          .sort((a: EntityTypeField, b: EntityTypeField) => a.sort_order - b.sort_order)
-      );
-    }
-    if (entitiesRes.data) setEntities(entitiesRes.data);
-    setLoading(false);
-  }
+      return { entityType, fields, entities };
+    },
+  });
 
-  function handleSaved(saved: Entity) {
-    if (editingEntity) {
-      setEntities((prev) => prev.map((e) => (e.id === saved.id ? saved : e)));
-    } else {
-      setEntities((prev) => [...prev, saved]);
-    }
+  const entityType = data?.entityType ?? null;
+  const fields = data?.fields ?? [];
+  const entities = data?.entities ?? [];
+
+  async function handleSaved(_saved: Entity) {
     setEditingEntity(undefined);
     setShowAdd(false);
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'property', 'entities', entityTypeId] });
   }
 
   async function handleDelete(entity: Entity) {
@@ -85,7 +81,7 @@ export default function EntitiesPage() {
     if (err) {
       setError(err.message);
     } else {
-      setEntities((prev) => prev.filter((e) => e.id !== entity.id));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property', 'entities', entityTypeId] });
     }
   }
 
