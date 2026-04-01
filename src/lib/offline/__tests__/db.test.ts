@@ -18,9 +18,11 @@ describe('OfflineDatabase', () => {
       'entities',
       'entity_types',
       'geo_layers',
+      'item_entities',
       'item_types',
       'item_updates',
       'items',
+      'location_history',
       'mutation_queue',
       'org_memberships',
       'orgs',
@@ -30,6 +32,7 @@ describe('OfflineDatabase', () => {
       'roles',
       'sync_metadata',
       'tile_cache_metadata',
+      'update_entities',
       'update_types',
     ]);
   });

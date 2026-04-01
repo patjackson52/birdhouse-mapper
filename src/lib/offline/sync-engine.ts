@@ -95,10 +95,20 @@ async function executeMutation(
       return error ? error.message : null;
     }
     case 'delete': {
-      const { error } = await supabase
-        .from(mutation.table)
-        .delete()
-        .eq('id', mutation.record_id);
+      // If the payload contains filter criteria other than 'id', use those instead
+      // of the default eq('id', record_id). This supports join-table deletes like
+      // item_entities where all rows matching item_id should be removed.
+      const payloadKeys = Object.keys(mutation.payload || {});
+      const hasCustomFilter = payloadKeys.length > 0 && !(payloadKeys.length === 1 && payloadKeys[0] === 'id');
+      let deleteQuery = supabase.from(mutation.table).delete();
+      if (hasCustomFilter) {
+        for (const [key, value] of Object.entries(mutation.payload as Record<string, unknown>)) {
+          deleteQuery = deleteQuery.eq(key, value as string);
+        }
+      } else {
+        deleteQuery = deleteQuery.eq('id', mutation.record_id);
+      }
+      const { error } = await deleteQuery;
       return error ? error.message : null;
     }
     default:
@@ -172,7 +182,7 @@ export async function syncPropertyData(
   for (const mutation of pendingMutations) {
     if (mutation.property_id !== propertyId) continue;
     const serverRecord = await db.table(mutation.table).get(mutation.record_id);
-    if (serverRecord && serverRecord._synced_at > new Date(mutation.created_at).toISOString()) {
+    if (serverRecord && new Date(serverRecord.updated_at).getTime() > mutation.created_at) {
       await db.mutation_queue.delete(mutation.id);
       await db.photo_blobs.where('mutation_id').equals(mutation.id).delete();
     }

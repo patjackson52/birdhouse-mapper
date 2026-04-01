@@ -33,6 +33,9 @@ export class OfflineDatabase extends Dexie {
   entities!: EntityTable<Cached<Entity>, 'id'>;
   entity_types!: EntityTable<Cached<EntityType>, 'id'>;
   geo_layers!: EntityTable<Cached<Record<string, unknown>>, 'id'>;
+  item_entities!: EntityTable<Cached<Record<string, unknown>>, 'id'>;
+  update_entities!: EntityTable<Cached<Record<string, unknown>>, 'id'>;
+  location_history!: EntityTable<Cached<Record<string, unknown>>, 'id'>;
   properties!: EntityTable<Cached<Property>, 'id'>;
   orgs!: EntityTable<Cached<Org>, 'id'>;
   roles!: EntityTable<Cached<Role>, 'id'>;
@@ -55,6 +58,9 @@ export class OfflineDatabase extends Dexie {
       entities: 'id, entity_type_id, org_id',
       entity_types: 'id, org_id',
       geo_layers: 'id, org_id, property_id',
+      item_entities: 'id, item_id, entity_id, org_id',
+      update_entities: 'id, update_id, entity_id, org_id',
+      location_history: 'id, item_id, org_id, property_id',
       properties: 'id, org_id, slug',
       orgs: 'id, slug',
       roles: 'id, org_id',
