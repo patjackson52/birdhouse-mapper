@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { Entity } from '@/lib/types';
 
@@ -12,23 +13,16 @@ interface EntitySelectProps {
 }
 
 export default function EntitySelect({ entityTypeId, entityTypeName, selectedIds, onChange }: EntitySelectProps) {
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  useEffect(() => {
-    async function fetch() {
+  const { data: entities = [], isLoading: loading } = useQuery({
+    queryKey: ['entities', entityTypeId],
+    queryFn: async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from('entities')
-        .select('*')
-        .eq('entity_type_id', entityTypeId)
-        .order('sort_order', { ascending: true });
-      if (data) setEntities(data);
-      setLoading(false);
-    }
-    fetch();
-  }, [entityTypeId]);
+      const { data } = await supabase.from('entities').select('*').eq('entity_type_id', entityTypeId).order('sort_order', { ascending: true });
+      return (data ?? []) as Entity[];
+    },
+  });
 
   function toggleEntity(id: string) {
     if (selectedIds.includes(id)) {

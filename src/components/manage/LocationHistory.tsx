@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { LocationHistory as LocationHistoryType, Profile } from '@/lib/types';
 import { formatShortDate } from '@/lib/utils';
@@ -11,46 +11,21 @@ interface LocationHistoryProps {
 }
 
 export default function LocationHistory({ itemId, onRevert }: LocationHistoryProps) {
-  const [history, setHistory] = useState<LocationHistoryType[]>([]);
-  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: ['location-history', itemId],
+    queryFn: async () => {
       const supabase = createClient();
-
-      const { data: historyData } = await supabase
-        .from('location_history')
-        .select('*')
-        .eq('item_id', itemId)
-        .order('created_at', { ascending: false });
-
-      if (!historyData || historyData.length === 0) {
-        setLoading(false);
-        return;
-      }
-
-      setHistory(historyData);
-
+      const { data: historyData } = await supabase.from('location_history').select('*').eq('item_id', itemId).order('created_at', { ascending: false });
+      if (!historyData || historyData.length === 0) return { history: [], profiles: {} };
       const creatorIds = Array.from(new Set(historyData.map((h) => h.created_by)));
-      const { data: profileData } = await supabase
-        .from('users')
-        .select('*')
-        .in('id', creatorIds);
-
-      if (profileData) {
-        const profileMap: Record<string, Profile> = {};
-        for (const p of profileData) {
-          profileMap[p.id] = p;
-        }
-        setProfiles(profileMap);
-      }
-
-      setLoading(false);
-    }
-
-    fetchData();
-  }, [itemId]);
+      const { data: profileData } = await supabase.from('users').select('*').in('id', creatorIds);
+      const profiles: Record<string, Profile> = {};
+      if (profileData) { for (const p of profileData) { profiles[p.id] = p; } }
+      return { history: historyData as LocationHistoryType[], profiles };
+    },
+  });
+  const history = queryData?.history ?? [];
+  const profiles = queryData?.profiles ?? {};
 
   if (loading) return null;
 
