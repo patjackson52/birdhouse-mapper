@@ -1,0 +1,113 @@
+'use server';
+
+import sharp from 'sharp';
+import { createClient } from '@/lib/supabase/server';
+import { getTenantContext } from '@/lib/tenant/server';
+
+export async function uploadLogo(
+  formData: FormData,
+  scope: 'org' | 'property',
+  propertyId?: string,
+): Promise<{ success?: boolean; basePath?: string; error?: string }> {
+  const supabase = createClient();
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
+  const file = formData.get('logo') as File | null;
+  if (!file) return { error: 'No file provided' };
+
+  if (!file.type.startsWith('image/')) {
+    return { error: 'File must be an image' };
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return { error: 'Image must be under 5MB' };
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const basePath = scope === 'property' && propertyId
+    ? `${tenant.orgId}/${propertyId}`
+    : `${tenant.orgId}`;
+
+  // Generate variants
+  const variants: { name: string; buffer: Buffer }[] = [];
+
+  // Original (max 1024px, preserve aspect ratio)
+  const original = await sharp(buffer).resize(1024, 1024, { fit: 'inside', withoutEnlargement: true }).png().toBuffer();
+  variants.push({ name: 'original.png', buffer: original });
+
+  // PWA icons (square, cover)
+  const icon192 = await sharp(buffer).resize(192, 192, { fit: 'cover' }).png().toBuffer();
+  variants.push({ name: 'icon-192.png', buffer: icon192 });
+
+  const icon512 = await sharp(buffer).resize(512, 512, { fit: 'cover' }).png().toBuffer();
+  variants.push({ name: 'icon-512.png', buffer: icon512 });
+
+  // Maskable icon (20% safe zone padding)
+  const maskableInner = Math.floor(512 * 0.8);
+  const padding = Math.floor((512 - maskableInner) / 2);
+  const maskable = await sharp(buffer)
+    .resize(maskableInner, maskableInner, { fit: 'cover' })
+    .extend({ top: padding, bottom: padding, left: padding, right: padding, background: { r: 37, g: 99, b: 235, alpha: 1 } })
+    .png()
+    .toBuffer();
+  variants.push({ name: 'icon-512-maskable.png', buffer: maskable });
+
+  // Favicon
+  const favicon = await sharp(buffer).resize(32, 32, { fit: 'cover' }).png().toBuffer();
+  variants.push({ name: 'favicon-32.png', buffer: favicon });
+
+  // Upload all variants to branding bucket
+  for (const variant of variants) {
+    const { error } = await supabase.storage
+      .from('branding')
+      .upload(`${basePath}/${variant.name}`, variant.buffer, {
+        contentType: 'image/png',
+        upsert: true,
+      });
+    if (error) {
+      return { error: `Failed to upload ${variant.name}: ${error.message}` };
+    }
+  }
+
+  // Save base path to org or property
+  if (scope === 'property' && propertyId) {
+    const { error } = await supabase
+      .from('properties')
+      .update({ logo_url: basePath })
+      .eq('id', propertyId);
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await supabase
+      .from('orgs')
+      .update({ logo_url: basePath })
+      .eq('id', tenant.orgId);
+    if (error) return { error: error.message };
+  }
+
+  return { success: true, basePath };
+}
+
+export async function uploadDefaultLogo(
+  defaultName: string,
+  scope: 'org' | 'property',
+  propertyId?: string,
+): Promise<{ success?: boolean; basePath?: string; error?: string }> {
+  const supabase = createClient();
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
+  // Read the default logo from public/defaults/logos/
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const response = await fetch(`${baseUrl}/defaults/logos/${defaultName}.png`);
+  if (!response.ok) return { error: 'Default logo not found' };
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+
+  const formData = new FormData();
+  formData.set('logo', new Blob([buffer], { type: 'image/png' }), `${defaultName}.png`);
+
+  return uploadLogo(formData, scope, propertyId);
+}
