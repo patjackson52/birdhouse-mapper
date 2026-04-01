@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/admin/StatusBadge';
@@ -35,10 +36,8 @@ function formatDate(dateStr: string | null): string {
 
 export default function MembersPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const [members, setMembers] = useState<Member[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   // Invite form state
@@ -49,32 +48,29 @@ export default function MembersPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
 
-  async function loadData() {
-    const supabase = createClient();
+  const { data: queryData, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'members'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const [membersResult, rolesResult] = await Promise.all([
+        getOrgMembers(),
+        supabase.from('roles').select('id, name, base_role').order('name', { ascending: true }),
+      ]);
+      return {
+        members: (membersResult.members ?? []) as Member[],
+        roles: (rolesResult.data ?? []) as Role[],
+      };
+    },
+  });
 
-    const [membersResult, rolesResult] = await Promise.all([
-      getOrgMembers(),
-      supabase.from('roles').select('id, name, base_role').order('name', { ascending: true }),
-    ]);
-
-    if (membersResult.members) {
-      setMembers(membersResult.members as Member[]);
-    }
-
-    if (rolesResult.data) {
-      setRoles(rolesResult.data);
-      if (rolesResult.data.length > 0 && !inviteRoleId) {
-        setInviteRoleId(rolesResult.data[0].id);
-      }
-    }
-
-    setLoading(false);
-  }
+  const members = queryData?.members ?? [];
+  const roles = queryData?.roles ?? [];
 
   useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (roles.length > 0 && !inviteRoleId) {
+      setInviteRoleId(roles[0].id);
+    }
+  }, [roles, inviteRoleId]);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
@@ -95,7 +91,7 @@ export default function MembersPage() {
 
     setInviteSuccess(true);
     setInviteEmail('');
-    await loadData();
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'members'] });
   }
 
   function handleCancelInvite() {
