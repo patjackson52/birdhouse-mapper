@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { ItemType } from '@/lib/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -9,6 +10,8 @@ import ItemTypeEditor from '@/components/admin/ItemTypeEditor';
 
 export default function TypesPage() {
   const queryClient = useQueryClient();
+  const params = useParams();
+  const slug = params.slug as string;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
@@ -18,7 +21,7 @@ export default function TypesPage() {
   const [adding, setAdding] = useState(false);
 
   const { data, isLoading: loading } = useQuery({
-    queryKey: ['admin', 'property-types'],
+    queryKey: ['admin', 'property', slug, 'types'],
     queryFn: async () => {
       const supabase = createClient();
 
@@ -63,7 +66,7 @@ export default function TypesPage() {
 
       if (error) throw error;
 
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-types'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'types'] });
       setNewName('');
       setNewIcon('📍');
       setNewColor('#5D7F3A');
@@ -79,14 +82,14 @@ export default function TypesPage() {
     const supabase = createClient();
     const { error } = await supabase.from('item_types').update(updates).eq('id', id);
     if (error) throw error;
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'property-types'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'types'] });
   }
 
   async function handleDeleteType(id: string) {
     const supabase = createClient();
     const { error } = await supabase.from('item_types').delete().eq('id', id);
     if (error) throw error;
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'property-types'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'types'] });
     if (expandedId === id) setExpandedId(null);
   }
 
@@ -104,7 +107,7 @@ export default function TypesPage() {
       supabase.from('item_types').update({ sort_order: current.sort_order }).eq('id', swap.id),
     ]);
 
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'property-types'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'types'] });
   }
 
   if (loading) return <LoadingSpinner className="py-12" />;

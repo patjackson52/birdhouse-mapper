@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter, useParams } from 'next/navigation';
 import PermissionEditor from '@/components/admin/PermissionEditor';
 import { getRoles, updateRole } from '../actions';
@@ -21,6 +21,8 @@ export default function RoleEditorPage() {
   const router = useRouter();
   const params = useParams();
   const roleId = params.roleId as string;
+  const queryClient = useQueryClient();
+  const initialized = useRef(false);
 
   // Editable fields
   const [name, setName] = useState('');
@@ -48,7 +50,8 @@ export default function RoleEditorPage() {
   const loading = isLoading;
 
   useEffect(() => {
-    if (role) {
+    if (role && !initialized.current) {
+      initialized.current = true;
       setName(role.name);
       setDescription(role.description ?? '');
       setPermissions(role.permissions);
@@ -76,6 +79,7 @@ export default function RoleEditorPage() {
     } else {
       setSaveStatus('success');
       setSaveMessage('Role saved successfully.');
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'roles', roleId] });
     }
   }
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import type { Item, ItemUpdate, UpdateType, Role } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import StatusBadge from '@/components/item/StatusBadge';
@@ -22,11 +22,13 @@ type UserWithMembership = {
 
 export default function PropertyDataPage() {
   const router = useRouter();
+  const params = useParams();
+  const slug = params.slug as string;
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'users' | 'items' | 'updates'>('items');
 
   const { data, isLoading: loading } = useQuery({
-    queryKey: ['admin', 'property-data'],
+    queryKey: ['admin', 'property', slug, 'data'],
     queryFn: async () => {
       const supabase = createClient();
 
@@ -84,7 +86,7 @@ export default function PropertyDataPage() {
     const { error } = await supabase.from('items').delete().eq('id', id);
 
     if (!error) {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-data'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'data'] });
     }
   }
 
@@ -95,7 +97,7 @@ export default function PropertyDataPage() {
     const { error } = await supabase.from('item_updates').delete().eq('id', id);
 
     if (!error) {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-data'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'data'] });
     }
   }
 
@@ -107,7 +109,7 @@ export default function PropertyDataPage() {
       .eq('id', membershipId);
 
     if (!error) {
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-data'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'data'] });
     }
   }
 
