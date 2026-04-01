@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { useOfflineStore } from '@/lib/offline/provider';
+import { useConfig } from '@/lib/config/client';
+import { storePhotoBlob } from '@/lib/offline/photo-store';
+import { enqueueMutation } from '@/lib/offline/mutations';
 import type { ItemStatus, ItemType, CustomField, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
@@ -21,11 +24,15 @@ export default function ItemForm() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const config = useConfig();
+  const propertyId = config.propertyId;
+  const offlineStore = useOfflineStore();
 
   // Item types and custom fields from DB
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState('');
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -40,11 +47,19 @@ export default function ItemForm() {
   // Fetch item types and custom fields
   useEffect(() => {
     async function fetchTypes() {
-      const supabase = createClient();
-      const { data: types } = await supabase
-        .from('item_types')
-        .select('*')
-        .order('sort_order', { ascending: true });
+      if (!propertyId) return;
+
+      // Resolve orgId from the properties table in IndexedDB
+      const property = await offlineStore.db.properties.get(propertyId);
+      const resolvedOrgId = property?.org_id;
+      if (!resolvedOrgId) return;
+      setOrgId(resolvedOrgId);
+
+      const [types, fields, allEntityTypes] = await Promise.all([
+        offlineStore.getItemTypes(resolvedOrgId),
+        offlineStore.getCustomFields(resolvedOrgId),
+        offlineStore.getEntityTypes(resolvedOrgId),
+      ]);
 
       if (types) {
         setItemTypes(types);
@@ -53,24 +68,17 @@ export default function ItemForm() {
         }
       }
 
-      const { data: fields } = await supabase
-        .from('custom_fields')
-        .select('*')
-        .order('sort_order', { ascending: true });
-
       if (fields) setCustomFields(fields);
 
-      // Fetch entity types that link to items
-      const { data: etData } = await supabase
-        .from('entity_types')
-        .select('*')
-        .contains('link_to', ['items'])
-        .order('sort_order', { ascending: true });
-      if (etData) setEntityTypes(etData);
+      // Filter entity types that link to items
+      const itemEntityTypes = allEntityTypes.filter(
+        (et) => Array.isArray(et.link_to) && et.link_to.includes('items')
+      );
+      setEntityTypes(itemEntityTypes);
     }
 
     fetchTypes();
-  }, []);
+  }, [propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fields for the selected type
   const typeFields = customFields.filter((f) => f.item_type_id === selectedTypeId);
@@ -89,13 +97,15 @@ export default function ItemForm() {
       setError('Please select an item type.');
       return;
     }
+    if (!orgId || !propertyId) {
+      setError('Missing organization or property context.');
+      return;
+    }
 
     setError('');
     setSaving(true);
 
     try {
-      const supabase = createClient();
-
       // Build custom field values (only non-empty)
       const cfValues: Record<string, unknown> = {};
       for (const [fieldId, value] of Object.entries(customFieldValues)) {
@@ -109,46 +119,42 @@ export default function ItemForm() {
         }
       }
 
-      const { data: item, error: insertError } = await supabase
-        .from('items')
-        .insert({
-          name,
-          description: description || null,
-          latitude,
-          longitude,
-          item_type_id: selectedTypeId,
-          custom_field_values: cfValues,
-          status,
-        })
-        .select()
-        .single();
+      const { item, mutationId } = await offlineStore.insertItem({
+        name,
+        description: description || null,
+        latitude,
+        longitude,
+        item_type_id: selectedTypeId,
+        custom_field_values: cfValues,
+        status,
+        org_id: orgId,
+        property_id: propertyId,
+      });
 
-      if (insertError) throw insertError;
-
-      // Upload photos
+      // Store photos as blobs for offline sync
       for (let i = 0; i < photos.length; i++) {
         const file = photos[i];
-        const path = `${item.id}/${Date.now()}_${i}.jpg`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('item-photos')
-          .upload(path, file);
-
-        if (!uploadError) {
-          await supabase.from('photos').insert({
-            item_id: item.id,
-            storage_path: path,
-            is_primary: i === 0,
-          });
-        }
+        await storePhotoBlob(offlineStore.db, {
+          mutation_id: mutationId,
+          blob: file,
+          filename: `${item.id}/${Date.now()}_${i}.jpg`,
+          item_id: item.id,
+          update_id: null,
+          is_primary: i === 0,
+        });
       }
 
-      // Save entity associations (batch insert per entity type)
+      // Save entity associations via mutation queue
       const allEntityIds = Object.values(selectedEntityIds).flat();
-      if (allEntityIds.length > 0) {
-        await supabase.from('item_entities').insert(
-          allEntityIds.map((entityId) => ({ item_id: item.id, entity_id: entityId }))
-        );
+      for (const entityId of allEntityIds) {
+        await enqueueMutation(offlineStore.db, {
+          table: 'item_entities',
+          operation: 'insert',
+          record_id: crypto.randomUUID(),
+          payload: { item_id: item.id, entity_id: entityId },
+          org_id: orgId,
+          property_id: propertyId,
+        });
       }
 
       router.push('/manage');
