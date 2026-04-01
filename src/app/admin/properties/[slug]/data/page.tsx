@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import type { Item, ItemUpdate, UpdateType, Role } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
@@ -21,16 +22,12 @@ type UserWithMembership = {
 
 export default function PropertyDataPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<UserWithMembership[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [updates, setUpdates] = useState<(ItemUpdate & { item_name?: string; update_type_name?: string })[]>([]);
-  const [updateTypes, setUpdateTypes] = useState<UpdateType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'users' | 'items' | 'updates'>('items');
 
-  useEffect(() => {
-    async function fetchData() {
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'property-data'],
+    queryFn: async () => {
       const supabase = createClient();
 
       const [membershipRes, roleRes, itemRes, updateRes, typeRes] = await Promise.all([
@@ -44,36 +41,41 @@ export default function PropertyDataPage() {
         supabase.from('update_types').select('*').order('sort_order', { ascending: true }),
       ]);
 
-      if (membershipRes.data) {
-        setUsers(membershipRes.data.map((m: any) => ({
-          id: m.users.id,
-          display_name: m.users.display_name,
-          email: m.users.email,
-          is_temporary: m.users.is_temporary,
-          created_at: m.users.created_at,
-          role_name: m.roles.name,
-          role_id: m.role_id,
-          membership_id: m.id,
-        })));
-      }
-      if (roleRes.data) setAvailableRoles(roleRes.data);
-      if (itemRes.data) setItems(itemRes.data);
-      if (typeRes.data) setUpdateTypes(typeRes.data);
-      if (updateRes.data) {
-        const typeMap = new Map((typeRes.data || []).map((t) => [t.id, t]));
-        const enriched = updateRes.data.map((u) => ({
-          ...u,
-          item_name: itemRes.data?.find((b) => b.id === u.item_id)?.name,
-          update_type_name: typeMap.get(u.update_type_id)?.name,
-        }));
-        setUpdates(enriched);
-      }
+      const users: UserWithMembership[] = membershipRes.data
+        ? membershipRes.data.map((m: any) => ({
+            id: m.users.id,
+            display_name: m.users.display_name,
+            email: m.users.email,
+            is_temporary: m.users.is_temporary,
+            created_at: m.users.created_at,
+            role_name: m.roles.name,
+            role_id: m.role_id,
+            membership_id: m.id,
+          }))
+        : [];
 
-      setLoading(false);
-    }
+      const availableRoles: Role[] = roleRes.data ?? [];
+      const items: Item[] = itemRes.data ?? [];
+      const updateTypes: UpdateType[] = typeRes.data ?? [];
 
-    fetchData();
-  }, []);
+      const typeMap = new Map((typeRes.data || []).map((t) => [t.id, t]));
+      const updates: (ItemUpdate & { item_name?: string; update_type_name?: string })[] = updateRes.data
+        ? updateRes.data.map((u) => ({
+            ...u,
+            item_name: itemRes.data?.find((b) => b.id === u.item_id)?.name,
+            update_type_name: typeMap.get(u.update_type_id)?.name,
+          }))
+        : [];
+
+      return { users, availableRoles, items, updates, updateTypes };
+    },
+  });
+
+  const users = data?.users ?? [];
+  const availableRoles = data?.availableRoles ?? [];
+  const items = data?.items ?? [];
+  const updates = data?.updates ?? [];
+  const updateTypes = data?.updateTypes ?? [];
 
   async function handleDeleteItem(id: string) {
     if (!confirm('Delete this item and all its updates? This cannot be undone.')) return;
@@ -82,8 +84,7 @@ export default function PropertyDataPage() {
     const { error } = await supabase.from('items').delete().eq('id', id);
 
     if (!error) {
-      setItems((prev) => prev.filter((b) => b.id !== id));
-      setUpdates((prev) => prev.filter((u) => u.item_id !== id));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-data'] });
     }
   }
 
@@ -94,7 +95,7 @@ export default function PropertyDataPage() {
     const { error } = await supabase.from('item_updates').delete().eq('id', id);
 
     if (!error) {
-      setUpdates((prev) => prev.filter((u) => u.id !== id));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-data'] });
     }
   }
 
@@ -106,12 +107,7 @@ export default function PropertyDataPage() {
       .eq('id', membershipId);
 
     if (!error) {
-      const roleName = availableRoles.find(r => r.id === newRoleId)?.name ?? '';
-      setUsers((prev) =>
-        prev.map((u) => u.membership_id === membershipId
-          ? { ...u, role_id: newRoleId, role_name: roleName }
-          : u)
-      );
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'property-data'] });
     }
   }
 
