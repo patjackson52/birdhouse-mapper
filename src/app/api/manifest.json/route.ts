@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(_request: NextRequest) {
   const config = await getConfig();
 
-  const appName = config.propertyName || config.siteName || 'FieldMapper';
+  const appName = config.pwaName || config.propertyName || config.siteName || 'FieldMapper';
 
   const manifest = {
     name: appName,

@@ -56,6 +56,7 @@ export default function OrgSettingsPage() {
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [tagline, setTagline] = useState('');
+  const [pwaName, setPwaName] = useState('');
   const [themeJson, setThemeJson] = useState('');
   const [themeJsonError, setThemeJsonError] = useState('');
 
@@ -77,6 +78,7 @@ export default function OrgSettingsPage() {
       setName(settings.name ?? '');
       setSlug(settings.slug ?? '');
       setTagline(settings.tagline ?? '');
+      setPwaName(settings.pwa_name ?? '');
       setThemeJson(settings.theme ? JSON.stringify(settings.theme, null, 2) : '');
     }
   }, [settings]);
@@ -101,6 +103,7 @@ export default function OrgSettingsPage() {
       if (name !== settings.name) updates.name = name;
       if (slug !== settings.slug) updates.slug = slug;
       if (tagline !== (settings.tagline ?? '')) updates.tagline = tagline;
+      if (pwaName !== (settings.pwa_name ?? '')) updates.pwa_name = pwaName;
       const currentThemeStr = settings.theme ? JSON.stringify(settings.theme) : '';
       const newThemeStr = parsedTheme !== undefined ? JSON.stringify(parsedTheme) : '';
       if (newThemeStr !== currentThemeStr) updates.theme = parsedTheme ?? null;
@@ -204,6 +207,24 @@ export default function OrgSettingsPage() {
               className="input-field"
               placeholder="A short description of your org"
             />
+          </div>
+
+          <div>
+            <label htmlFor="org-pwa-name" className="label">
+              PWA App Name
+            </label>
+            <input
+              id="org-pwa-name"
+              type="text"
+              value={pwaName}
+              onChange={(e) => setPwaName(e.target.value)}
+              className="input-field"
+              placeholder={settings?.name ?? 'My App'}
+            />
+            <p className="mt-1 text-xs text-sage">
+              Custom name shown when installed as a mobile app. Leave blank to
+              use the org name.
+            </p>
           </div>
         </section>
 

@@ -225,6 +225,7 @@ export default function SettingsPage() {
 function GeneralTab({ config, onSave, saving }: TabProps) {
   const [siteName, setSiteName] = useState(config.siteName);
   const [tagline, setTagline] = useState(config.tagline);
+  const [pwaName, setPwaName] = useState(config.pwaName ?? '');
   const [locationName, setLocationName] = useState(config.locationName);
   const [lat, setLat] = useState(config.mapCenter.lat);
   const [lng, setLng] = useState(config.mapCenter.lng);
@@ -246,6 +247,7 @@ function GeneralTab({ config, onSave, saving }: TabProps) {
     onSave([
       { key: 'site_name', value: siteName },
       { key: 'tagline', value: tagline },
+      { key: 'pwa_name', value: pwaName || null },
       { key: 'location_name', value: locationName },
       { key: 'map_center', value: { lat, lng, zoom } },
       { key: 'map_style', value: mapStyleId || null },
@@ -273,6 +275,20 @@ function GeneralTab({ config, onSave, saving }: TabProps) {
           onChange={(e) => setTagline(e.target.value)}
           className="input-field"
         />
+      </div>
+      <div>
+        <label htmlFor="pwa-name" className="label">PWA App Name</label>
+        <input
+          id="pwa-name"
+          type="text"
+          value={pwaName}
+          onChange={(e) => setPwaName(e.target.value)}
+          className="input-field"
+          placeholder={config.propertyName || config.siteName}
+        />
+        <p className="text-xs text-sage mt-1">
+          Custom name shown when installed as a mobile app. Leave blank to use the property or org name.
+        </p>
       </div>
       <div>
         <label htmlFor="location" className="label">Location Name</label>
