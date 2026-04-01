@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import type { Item } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
@@ -9,24 +9,15 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { usePermissions } from '@/lib/permissions/hooks';
 
 export default function ManageDashboard() {
-  const [items, setItems] = useState<Item[]>([]);
-  const [loading, setLoading] = useState(true);
   const { permissions } = usePermissions();
-
-  useEffect(() => {
-    async function fetchData() {
+  const { data: items = [], isLoading: loading } = useQuery({
+    queryKey: ['manage', 'dashboard'],
+    queryFn: async () => {
       const supabase = createClient();
-      const { data } = await supabase
-        .from('items')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (data) setItems(data);
-      setLoading(false);
-    }
-
-    fetchData();
-  }, []);
+      const { data } = await supabase.from('items').select('*').order('name', { ascending: true });
+      return (data ?? []) as Item[];
+    },
+  });
 
   const stats = {
     total: items.length,
