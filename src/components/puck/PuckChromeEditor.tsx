@@ -4,6 +4,7 @@ import { Puck } from '@puckeditor/core';
 import '@puckeditor/core/dist/index.css';
 import { chromeConfig } from '@/lib/puck/chrome-config';
 import { savePuckRootDraft, publishPuckRoot } from '@/app/admin/site-builder/actions';
+import { PuckSuggestionsProvider } from '@/lib/puck/fields';
 import type { Data } from '@puckeditor/core';
 import { useState, useCallback } from 'react';
 
@@ -13,8 +14,10 @@ interface PuckChromeEditorProps {
 
 export function PuckChromeEditor({ initialData }: PuckChromeEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [puckData, setPuckData] = useState<Data>(initialData);
 
   const handleChange = useCallback(async (data: Data) => {
+    setPuckData(data);
     setIsSaving(true);
     await savePuckRootDraft(data);
     setIsSaving(false);
@@ -30,12 +33,14 @@ export function PuckChromeEditor({ initialData }: PuckChromeEditorProps) {
 
   return (
     <div className="h-screen">
-      <Puck
-        config={chromeConfig}
-        data={initialData}
-        onChange={handleChange}
-        onPublish={handlePublish}
-      />
+      <PuckSuggestionsProvider data={puckData}>
+        <Puck
+          config={chromeConfig}
+          data={initialData}
+          onChange={handleChange}
+          onPublish={handlePublish}
+        />
+      </PuckSuggestionsProvider>
     </div>
   );
 }
