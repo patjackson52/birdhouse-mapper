@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { useOfflineStore } from '@/lib/offline/provider';
+import { useConfig } from '@/lib/config/client';
+import { storePhotoBlob } from '@/lib/offline/photo-store';
+import { enqueueMutation } from '@/lib/offline/mutations';
 import type { Item, ItemType, UpdateType, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
@@ -15,6 +18,11 @@ export default function UpdateForm() {
   const searchParams = useSearchParams();
   const preselectedItemId = searchParams.get('item') ?? null;
   const isLocked = preselectedItemId !== null;
+
+  const config = useConfig();
+  const propertyId = config.propertyId;
+  const offlineStore = useOfflineStore();
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   const [items, setItems] = useState<Item[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
@@ -39,20 +47,24 @@ export default function UpdateForm() {
 
   useEffect(() => {
     async function fetchData() {
-      const supabase = createClient();
+      if (!propertyId) return;
 
-      const { data: itemData } = await supabase
-        .from('items')
-        .select('*')
-        .neq('status', 'removed')
-        .order('name', { ascending: true });
+      // Resolve orgId from the properties table in IndexedDB
+      const property = await offlineStore.db.properties.get(propertyId);
+      const resolvedOrgId = property?.org_id;
+      if (!resolvedOrgId) return;
+      setOrgId(resolvedOrgId);
 
-      if (itemData) setItems(itemData);
+      const [itemData, typeData, itData, allEntityTypes] = await Promise.all([
+        offlineStore.getItems(propertyId),
+        offlineStore.getUpdateTypes(resolvedOrgId),
+        offlineStore.getItemTypes(resolvedOrgId),
+        offlineStore.getEntityTypes(resolvedOrgId),
+      ]);
 
-      const { data: typeData } = await supabase
-        .from('update_types')
-        .select('*')
-        .order('sort_order', { ascending: true });
+      // Sort items by name for the dropdown
+      const sortedItems = [...itemData].sort((a, b) => a.name.localeCompare(b.name));
+      setItems(sortedItems);
 
       if (typeData) {
         setUpdateTypes(typeData);
@@ -61,23 +73,17 @@ export default function UpdateForm() {
         if (firstGlobal) setUpdateTypeId(firstGlobal.id);
       }
 
-      // Fetch item types for context card icon
-      const { data: itData } = await supabase
-        .from('item_types')
-        .select('*');
       if (itData) setItemTypes(itData);
 
-      // Fetch entity types that link to updates
-      const { data: etData } = await supabase
-        .from('entity_types')
-        .select('*')
-        .contains('link_to', ['updates'])
-        .order('sort_order', { ascending: true });
-      if (etData) setEntityTypes(etData);
+      // Filter entity types that link to updates
+      const updateEntityTypes = allEntityTypes.filter(
+        (et) => Array.isArray(et.link_to) && et.link_to.includes('updates')
+      );
+      setEntityTypes(updateEntityTypes);
     }
 
     fetchData();
-  }, []);
+  }, [propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-select nearest item if within 100m (only when not locked)
   useEffect(() => {
@@ -132,50 +138,48 @@ export default function UpdateForm() {
       setError('Please select an update type.');
       return;
     }
+    if (!orgId || !propertyId) {
+      setError('Missing organization or property context.');
+      return;
+    }
 
     setError('');
     setSaving(true);
 
     try {
-      const supabase = createClient();
+      const { update, mutationId } = await offlineStore.insertItemUpdate({
+        item_id: itemId,
+        update_type_id: updateTypeId,
+        content: content || null,
+        update_date: updateDate,
+        org_id: orgId,
+        property_id: propertyId,
+      });
 
-      const { data: update, error: insertError } = await supabase
-        .from('item_updates')
-        .insert({
-          item_id: itemId,
-          update_type_id: updateTypeId,
-          content: content || null,
-          update_date: updateDate,
-        })
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      // Upload photos
+      // Store photos as blobs for offline sync
       for (let i = 0; i < photos.length; i++) {
         const file = photos[i];
-        const path = `${itemId}/updates/${update.id}/${Date.now()}_${i}.jpg`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('item-photos')
-          .upload(path, file);
-
-        if (!uploadError) {
-          await supabase.from('photos').insert({
-            item_id: itemId,
-            update_id: update.id,
-            storage_path: path,
-          });
-        }
+        await storePhotoBlob(offlineStore.db, {
+          mutation_id: mutationId,
+          blob: file,
+          filename: `${itemId}/updates/${update.id}/${Date.now()}_${i}.jpg`,
+          item_id: itemId,
+          update_id: update.id,
+          is_primary: false,
+        });
       }
 
-      // Save entity associations (batch insert)
+      // Save entity associations via mutation queue
       const allEntityIds = Object.values(selectedEntityIds).flat();
-      if (allEntityIds.length > 0) {
-        await supabase.from('update_entities').insert(
-          allEntityIds.map((entityId) => ({ update_id: update.id, entity_id: entityId }))
-        );
+      for (const entityId of allEntityIds) {
+        await enqueueMutation(offlineStore.db, {
+          table: 'update_entities',
+          operation: 'insert',
+          record_id: crypto.randomUUID(),
+          payload: { update_id: update.id, entity_id: entityId },
+          org_id: orgId,
+          property_id: propertyId,
+        });
       }
 
       router.push('/manage');

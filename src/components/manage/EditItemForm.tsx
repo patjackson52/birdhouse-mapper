@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
+import { useOfflineStore } from '@/lib/offline/provider';
+import { useConfig } from '@/lib/config/client';
+import { storePhotoBlob } from '@/lib/offline/photo-store';
+import { enqueueMutation } from '@/lib/offline/mutations';
 import { createClient } from '@/lib/supabase/client';
 import type { ItemStatus, ItemType, CustomField, Photo, EntityType } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
@@ -45,6 +49,10 @@ export default function EditItemForm({
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const config = useConfig();
+  const propertyId = config.propertyId;
+  const offlineStore = useOfflineStore();
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   // Item types and custom fields from DB
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
@@ -80,43 +88,35 @@ export default function EditItemForm({
   const originalLatitude = initialData.latitude;
   const originalLongitude = initialData.longitude;
 
-  // Fetch item types and custom fields
+  // Fetch item types, custom fields, and entity types from offline store
   useEffect(() => {
     async function fetchTypes() {
-      const supabase = createClient();
-      const { data: types } = await supabase
-        .from('item_types')
-        .select('*')
-        .order('sort_order', { ascending: true });
+      if (!propertyId) return;
 
-      if (types) {
-        setItemTypes(types);
-      }
+      // Resolve orgId from the properties table in IndexedDB
+      const property = await offlineStore.db.properties.get(propertyId);
+      const resolvedOrgId = property?.org_id;
+      if (!resolvedOrgId) return;
+      setOrgId(resolvedOrgId);
 
-      const { data: fields } = await supabase
-        .from('custom_fields')
-        .select('*')
-        .order('sort_order', { ascending: true });
+      const [types, fields, allEntityTypes] = await Promise.all([
+        offlineStore.getItemTypes(resolvedOrgId),
+        offlineStore.getCustomFields(resolvedOrgId),
+        offlineStore.getEntityTypes(resolvedOrgId),
+      ]);
 
+      if (types) setItemTypes(types);
       if (fields) setCustomFields(fields);
+
+      // Filter entity types that link to items
+      const itemEntityTypes = allEntityTypes.filter(
+        (et) => Array.isArray(et.link_to) && et.link_to.includes('items')
+      );
+      setEntityTypes(itemEntityTypes);
     }
 
     fetchTypes();
-  }, []);
-
-  // Fetch entity types linked to items
-  useEffect(() => {
-    async function fetchEntityTypes() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('entity_types')
-        .select('*')
-        .contains('link_to', ['items'])
-        .order('sort_order');
-      if (data) setEntityTypes(data);
-    }
-    fetchEntityTypes();
-  }, []);
+  }, [propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fields for the selected type
   const typeFields = customFields.filter((f) => f.item_type_id === selectedTypeId);
@@ -147,19 +147,23 @@ export default function EditItemForm({
       setError('Please select an item type.');
       return;
     }
+    if (!orgId || !propertyId) {
+      setError('Missing organization or property context.');
+      return;
+    }
 
     setError('');
     setSaving(true);
 
     try {
-      const supabase = createClient();
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError('You must be logged in to edit items.');
-        setSaving(false);
-        return;
+      // Get current user (for location_history created_by)
+      let userId: string | null = null;
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id ?? null;
+      } catch {
+        // Offline — userId will be null
       }
 
       // Build custom field values (only non-empty, only for current type's fields)
@@ -179,10 +183,10 @@ export default function EditItemForm({
         }
       }
 
-      // Update the item
-      const { error: updateError } = await supabase
-        .from('items')
-        .update({
+      // Update the item via offline store
+      const { mutationId } = await offlineStore.updateItem(
+        itemId,
+        {
           name,
           description: description || null,
           latitude,
@@ -190,85 +194,102 @@ export default function EditItemForm({
           item_type_id: selectedTypeId,
           custom_field_values: cfValues,
           status,
-        })
-        .eq('id', itemId);
+        },
+        orgId,
+        propertyId,
+      );
 
-      if (updateError) throw updateError;
-
-      // If location changed, insert into location_history
+      // If location changed, enqueue location_history insert
       if (latitude !== originalLatitude || longitude !== originalLongitude) {
-        const { error: historyError } = await supabase.from('location_history').insert({
-          item_id: itemId,
-          latitude,
-          longitude,
-          created_by: user.id,
+        await enqueueMutation(offlineStore.db, {
+          table: 'location_history',
+          operation: 'insert',
+          record_id: crypto.randomUUID(),
+          payload: {
+            item_id: itemId,
+            latitude,
+            longitude,
+            created_by: userId,
+          },
+          org_id: orgId,
+          property_id: propertyId,
         });
-        if (historyError) throw historyError;
       }
 
-      // Update entities: delete all existing, then insert current selection
-      await supabase.from('item_entities').delete().eq('item_id', itemId);
+      // Update entities: enqueue delete all existing, then insert current selection
+      await enqueueMutation(offlineStore.db, {
+        table: 'item_entities',
+        operation: 'delete',
+        record_id: itemId,
+        payload: { item_id: itemId },
+        org_id: orgId,
+        property_id: propertyId,
+      });
 
       const allEntityIds = Object.values(selectedEntityIds).flat();
-      const entityRows = allEntityIds.map((entityId) => ({ item_id: itemId, entity_id: entityId }));
-      if (entityRows.length > 0) {
-        await supabase.from('item_entities').insert(entityRows);
+      for (const entityId of allEntityIds) {
+        await enqueueMutation(offlineStore.db, {
+          table: 'item_entities',
+          operation: 'insert',
+          record_id: crypto.randomUUID(),
+          payload: { item_id: itemId, entity_id: entityId },
+          org_id: orgId,
+          property_id: propertyId,
+        });
       }
 
-      // Handle photo removals
+      // Handle photo removals via mutation queue
       const remainingExistingPhotos = existingPhotos.filter(
         (p) => !photosToRemove.includes(p.id)
       );
 
       if (photosToRemove.length > 0) {
-        const photosBeingRemoved = existingPhotos.filter((p) =>
-          photosToRemove.includes(p.id)
-        );
+        for (const photoId of photosToRemove) {
+          await enqueueMutation(offlineStore.db, {
+            table: 'photos',
+            operation: 'delete',
+            record_id: photoId,
+            payload: { id: photoId },
+            org_id: orgId,
+            property_id: propertyId,
+          });
+        }
 
-        // Delete photo rows
-        await supabase
-          .from('photos')
-          .delete()
-          .in('id', photosToRemove);
-
-        // Delete storage objects
-        const pathsToRemove = photosBeingRemoved.map((p) => p.storage_path);
-        if (pathsToRemove.length > 0) {
-          await supabase.storage.from('item-photos').remove(pathsToRemove);
+        // Also remove from local IndexedDB cache
+        for (const photoId of photosToRemove) {
+          await offlineStore.db.photos.delete(photoId);
         }
 
         // If primary photo was removed, reassign primary
+        const photosBeingRemoved = existingPhotos.filter((p) =>
+          photosToRemove.includes(p.id)
+        );
         const primaryRemoved = photosBeingRemoved.some((p) => p.is_primary);
         if (primaryRemoved && remainingExistingPhotos.length > 0) {
-          await supabase
-            .from('photos')
-            .update({ is_primary: true })
-            .eq('id', remainingExistingPhotos[0].id);
+          await enqueueMutation(offlineStore.db, {
+            table: 'photos',
+            operation: 'update',
+            record_id: remainingExistingPhotos[0].id,
+            payload: { is_primary: true },
+            org_id: orgId,
+            property_id: propertyId,
+          });
         }
       }
 
-      // Determine if new photos need a primary:
-      // If no existing photos remain, OR if the primary was removed and no existing
-      // photos remain to receive it (reassignment above only fires when remaining > 0),
-      // then the first new upload should be primary.
-      const needsPrimaryFromNew =
-        remainingExistingPhotos.length === 0;
+      // Store new photos as blobs for offline sync
+      const needsPrimaryFromNew = remainingExistingPhotos.length === 0;
 
       for (let i = 0; i < photos.length; i++) {
         const file = photos[i];
-        const path = `${itemId}/${Date.now()}_${i}.jpg`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('item-photos')
-          .upload(path, file);
-
-        if (!uploadError) {
-          await supabase.from('photos').insert({
-            item_id: itemId,
-            storage_path: path,
-            is_primary: needsPrimaryFromNew && i === 0,
-          });
-        }
+        await storePhotoBlob(offlineStore.db, {
+          mutation_id: mutationId,
+          blob: file,
+          filename: `${itemId}/${Date.now()}_${i}.jpg`,
+          item_id: itemId,
+          update_id: null,
+          is_primary: needsPrimaryFromNew && i === 0,
+        });
       }
 
       router.push('/manage');
