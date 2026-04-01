@@ -1,0 +1,56 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link "📍 Test Org E2E test organization" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]: 📍
+        - generic [ref=e7]:
+          - generic [ref=e8]: Test Org
+          - text: E2E test organization
+      - navigation [ref=e9]:
+        - link "Map" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - link "List" [ref=e11] [cursor=pointer]:
+          - /url: /list
+        - link "About" [ref=e12] [cursor=pointer]:
+          - /url: /about
+        - link "Manage" [ref=e14] [cursor=pointer]:
+          - /url: /manage
+        - link "Site Settings" [ref=e15] [cursor=pointer]:
+          - /url: /admin/settings
+          - img [ref=e16]
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - generic [ref=e23]:
+          - link "Leaflet" [ref=e24] [cursor=pointer]:
+            - /url: https://leafletjs.com
+            - img [ref=e25]
+            - text: Leaflet
+          - text: "| ©"
+          - link "OpenStreetMap" [ref=e29] [cursor=pointer]:
+            - /url: https://www.openstreetmap.org/copyright
+          - text: contributors ©
+          - link "CARTO" [ref=e30] [cursor=pointer]:
+            - /url: https://carto.com/
+        - button "Enter fullscreen" [ref=e31] [cursor=pointer]:
+          - img [ref=e32]
+        - button "Locate me" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - heading "Legend" [level=4] [ref=e41]
+            - button "Hide legend" [ref=e42] [cursor=pointer]:
+              - img [ref=e43]
+          - generic [ref=e45]:
+            - generic [ref=e48]: Active
+            - generic [ref=e51]: Planned
+            - generic [ref=e54]: Needs Repair
+        - button "Quick add item" [ref=e55] [cursor=pointer]: +
+      - link "View as List" [ref=e56] [cursor=pointer]:
+        - /url: /list
+  - alert [ref=e57]
+```
