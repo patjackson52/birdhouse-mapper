@@ -13,7 +13,7 @@ import type {
   Entity,
   EntityType,
 } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
+import { useOfflineStore } from "@/lib/offline/provider";
 import DetailPanel from "@/components/item/DetailPanel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { usePermissions } from "@/lib/permissions/hooks";
@@ -60,6 +60,7 @@ function HomeMapViewContent() {
   const deepLinkedRef = useRef(false);
   const config = useConfig();
   const propertyId = config.propertyId;
+  const offlineStore = useOfflineStore();
 
   const [geoLayers, setGeoLayers] = useState<GeoLayerSummary[]>([]);
   const [visibleGeoLayerIds, setVisibleGeoLayerIds] = useState<Set<string>>(new Set());
@@ -68,34 +69,42 @@ function HomeMapViewContent() {
 
   useEffect(() => {
     async function fetchData() {
-      const supabase = createClient();
+      if (!propertyId) { setLoading(false); return; }
 
-      const [itemRes, typeRes, fieldRes, userRes] = await Promise.all([
-        supabase
-          .from("items")
-          .select("*")
-          .neq("status", "removed")
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("item_types")
-          .select("*")
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("custom_fields")
-          .select("*")
-          .order("sort_order", { ascending: true }),
-        supabase.auth.getUser(),
+      // Resolve orgId from the properties table in IndexedDB
+      const property = await offlineStore.db.properties.get(propertyId);
+      const orgId = property?.org_id;
+
+      const [itemData, typeData, fieldData] = await Promise.all([
+        offlineStore.getItems(propertyId),
+        orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
+        orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
       ]);
 
-      if (itemRes.data) setItems(itemRes.data);
-      if (typeRes.data) setItemTypes(typeRes.data);
-      if (fieldRes.data) setCustomFields(fieldRes.data);
-      setIsAuthenticated(!!userRes.data.user);
+      setItems(itemData);
+      setItemTypes(typeData);
+      setCustomFields(fieldData);
+
+      // Check authentication via cached session
+      try {
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsAuthenticated(!!user);
+      } catch {
+        setIsAuthenticated(false);
+      }
+
       setLoading(false);
+
+      // Trigger background sync
+      if (orgId) {
+        offlineStore.syncProperty(propertyId, orgId);
+      }
     }
 
     fetchData();
-  }, []);
+  }, [propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch geo layers for this property
   useEffect(() => {
@@ -167,70 +176,42 @@ function HomeMapViewContent() {
   }
 
   async function handleMarkerClick(item: Item) {
-    const supabase = createClient();
-
-    // Fetch fresh item data (state may be stale after editing)
-    const { data: freshItem } = await supabase
-      .from('items')
-      .select('*')
-      .eq('id', item.id)
-      .single();
-
+    // Fetch fresh item data from offline store (state may be stale after editing)
+    const freshItem = await offlineStore.getItem(item.id);
     const currentItem = freshItem || item;
 
-    const [updateRes, photoRes, updateTypeRes, itemEntitiesRes] = await Promise.all([
-      supabase
-        .from("item_updates")
-        .select("*")
-        .eq("item_id", item.id)
-        .order("update_date", { ascending: false }),
-      supabase.from("photos").select("*").eq("item_id", item.id),
-      supabase
-        .from("update_types")
-        .select("*")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("item_entities")
-        .select("entity_id, entities(*, entity_types(*))")
-        .eq("item_id", item.id),
+    const orgId = currentItem.org_id;
+
+    const [updates, photos, updateTypeData, entities, entityTypes] = await Promise.all([
+      offlineStore.getItemUpdates(item.id),
+      offlineStore.getPhotos(item.id),
+      offlineStore.getUpdateTypes(orgId),
+      offlineStore.getEntities(orgId),
+      offlineStore.getEntityTypes(orgId),
     ]);
 
-    const updateTypes = updateTypeRes.data || [];
-    const typeMap = new Map(updateTypes.map((t) => [t.id, t]));
+    const typeMap = new Map(updateTypeData.map((t) => [t.id, t]));
+    const entityTypeMap = new Map(entityTypes.map((t) => [t.id, t]));
     const itemType = itemTypes.find((t) => t.id === currentItem.item_type_id);
     const fields = customFields.filter(
       (f) => f.item_type_id === currentItem.item_type_id,
     );
 
-    const itemEntities: (Entity & { entity_type: EntityType })[] = ((itemEntitiesRes.data || []) as unknown as { entity_id: string; entities: Entity & { entity_types: EntityType } }[]).map(
-      (row) => ({ ...row.entities, entity_type: row.entities.entity_types })
-    );
-
-    // Fetch entities for each update
-    const updateIds = (updateRes.data || []).map((u) => u.id);
-    const updateEntitiesRes = updateIds.length > 0
-      ? await supabase
-          .from('update_entities')
-          .select('update_id, entity_id, entities(*, entity_types(*))')
-          .in('update_id', updateIds)
-      : { data: [] };
-
-    const updateEntitiesMap = new Map<string, (Entity & { entity_type: EntityType })[]>();
-    for (const row of ((updateEntitiesRes.data || []) as unknown as { update_id: string; entity_id: string; entities: Entity & { entity_types: EntityType } }[])) {
-      if (!updateEntitiesMap.has(row.update_id)) updateEntitiesMap.set(row.update_id, []);
-      updateEntitiesMap.get(row.update_id)!.push({ ...row.entities, entity_type: row.entities.entity_types });
-    }
+    // For entity associations, we read from the entities cached in IndexedDB.
+    // item_entities join table isn't cached separately, so entities are included directly.
+    // TODO: When item_entities are synced to IndexedDB, filter them here.
+    const itemEntities: (Entity & { entity_type: EntityType })[] = [];
 
     setSelectedItem({
       ...currentItem,
       item_type: itemType!,
-      updates: (updateRes.data || []).map((u) => ({
+      updates: updates.map((u) => ({
         ...u,
         update_type: typeMap.get(u.update_type_id)!,
         photos: [],
-        entities: updateEntitiesMap.get(u.id) || [],
+        entities: [],
       })),
-      photos: photoRes.data || [],
+      photos: photos,
       custom_fields: fields,
       entities: itemEntities,
     });
