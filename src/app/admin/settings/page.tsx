@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getOrgSettings, updateOrgSettings } from './actions';
-import type { OrgSettings, OrgSettingsUpdates } from './actions';
+import type { OrgSettingsUpdates } from './actions';
 import type { SubscriptionTier, SubscriptionStatus } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
@@ -44,8 +45,7 @@ const STATUS_COLORS: Record<SubscriptionStatus, string> = {
 
 export default function OrgSettingsPage() {
   const router = useRouter();
-  const [settings, setSettings] = useState<OrgSettings | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -57,24 +57,27 @@ export default function OrgSettingsPage() {
   const [themeJson, setThemeJson] = useState('');
   const [themeJsonError, setThemeJsonError] = useState('');
 
-  useEffect(() => {
-    async function load() {
+  const { data: settings, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'settings'],
+    queryFn: async () => {
       const result = await getOrgSettings();
       if (result.error) {
         setMessage(`Error: ${result.error}`);
-      } else if (result.data) {
-        const s = result.data;
-        setSettings(s);
-        setName(s.name ?? '');
-        setSlug(s.slug ?? '');
-        setTagline(s.tagline ?? '');
-        setLogoUrl(s.logo_url ?? '');
-        setThemeJson(s.theme ? JSON.stringify(s.theme, null, 2) : '');
+        return null;
       }
-      setLoading(false);
+      return result.data ?? null;
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setName(settings.name ?? '');
+      setSlug(settings.slug ?? '');
+      setTagline(settings.tagline ?? '');
+      setLogoUrl(settings.logo_url ?? '');
+      setThemeJson(settings.theme ? JSON.stringify(settings.theme, null, 2) : '');
     }
-    load();
-  }, []);
+  }, [settings]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -111,9 +114,7 @@ export default function OrgSettingsPage() {
       setMessage(`Error: ${result.error}`);
     } else {
       setMessage('Settings saved!');
-      // Refresh local settings snapshot
-      const fresh = await getOrgSettings();
-      if (fresh.data) setSettings(fresh.data);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] });
       router.refresh();
       setTimeout(() => setMessage(''), 3000);
     }
