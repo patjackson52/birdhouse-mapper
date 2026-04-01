@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/__tests__/setup.ts'],
+    setupFiles: ['./src/__tests__/setup.ts', 'fake-indexeddb/auto'],
     exclude: ['**/node_modules/**', '**/.worktrees/**', '**/dist/**', '**/e2e/**'],
   },
   resolve: {

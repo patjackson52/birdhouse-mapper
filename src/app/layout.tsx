@@ -5,6 +5,7 @@ import { ConfigProvider } from '@/lib/config/client';
 import { getConfig } from '@/lib/config/server';
 import { resolveTheme, themeToCssVars } from '@/lib/config/themes';
 import { UserLocationProvider } from '@/lib/location/provider';
+import { OfflineProvider } from '@/lib/offline/provider';
 import { createClient } from '@/lib/supabase/server';
 import type { Data } from '@puckeditor/core';
 import type { Metadata } from 'next';
@@ -57,22 +58,39 @@ export default async function RootLayout({
     <html lang="en">
       <head>
         <style dangerouslySetInnerHTML={{ __html: `:root { ${cssVars} }` }} />
+        <link rel="manifest" href="/api/manifest.json" />
+        <meta name="theme-color" content="#2563eb" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className="min-h-screen flex flex-col">
         <ConfigProvider config={config} theme={theme}>
           <UserLocationProvider>
-            {puckRoot ? (
-              <PuckRootRenderer data={puckRoot}>
-                <main className="flex-1">{children}</main>
-              </PuckRootRenderer>
-            ) : (
-              <>
-                <Navigation isAuthenticated={!!user} />
-                <main className="flex-1">{children}</main>
-              </>
-            )}
+            <OfflineProvider>
+              {puckRoot ? (
+                <PuckRootRenderer data={puckRoot}>
+                  <main className="flex-1">{children}</main>
+                </PuckRootRenderer>
+              ) : (
+                <>
+                  <Navigation isAuthenticated={!!user} />
+                  <main className="flex-1">{children}</main>
+                </>
+              )}
+            </OfflineProvider>
           </UserLocationProvider>
         </ConfigProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    `,
+          }}
+        />
       </body>
     </html>
   );

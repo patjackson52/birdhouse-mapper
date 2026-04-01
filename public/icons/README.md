@@ -1,0 +1,1 @@
+TODO: Generate PWA icons from app logo at 192x192, 512x512, and 512x512 maskable sizes

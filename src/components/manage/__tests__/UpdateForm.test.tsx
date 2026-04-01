@@ -3,6 +3,52 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UpdateForm from '@/components/manage/UpdateForm';
 
+// ── Hoisted mock data (available before vi.mock factories run) ────────────────
+const { mockItems, mockItemTypes, mockUpdateTypes } = vi.hoisted(() => {
+  const mockItems = [
+    {
+      id: 'item-1',
+      name: 'Box Alpha',
+      status: 'active',
+      item_type_id: 'type-1',
+      latitude: 0,
+      longitude: 0,
+      description: null,
+      custom_field_values: {},
+      created_at: '',
+      updated_at: '',
+      created_by: null,
+      org_id: 'org-1',
+      property_id: 'prop-1',
+    },
+    {
+      id: 'item-2',
+      name: 'Box Beta',
+      status: 'planned',
+      item_type_id: 'type-1',
+      latitude: 0,
+      longitude: 0,
+      description: null,
+      custom_field_values: {},
+      created_at: '',
+      updated_at: '',
+      created_by: null,
+      org_id: 'org-1',
+      property_id: 'prop-1',
+    },
+  ];
+
+  const mockItemTypes = [
+    { id: 'type-1', name: 'Birdbox', icon: '🐦', color: '#00ff00', sort_order: 1, created_at: '', org_id: 'org-1' },
+  ];
+
+  const mockUpdateTypes = [
+    { id: 'ut-1', name: 'Inspection', icon: '🔍', is_global: true, item_type_id: null, sort_order: 1, org_id: 'org-1' },
+  ];
+
+  return { mockItems, mockItemTypes, mockUpdateTypes };
+});
+
 // ── Navigation mocks ────────────────────────────────────────────────────────
 const mockPush = vi.fn();
 const mockBack = vi.fn();
@@ -17,6 +63,12 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: mockSearchParamsGet,
   }),
+}));
+
+// ── Config mock ──────────────────────────────────────────────────────────────
+vi.mock('@/lib/config/client', () => ({
+  useConfig: () => ({ propertyId: 'prop-1' }),
+  useTheme: () => ({}),
 }));
 
 // ── Location provider mock ───────────────────────────────────────────────────
@@ -43,50 +95,47 @@ vi.mock('@/components/item/StatusBadge', () => ({
   ),
 }));
 
-// ── Supabase mock ─────────────────────────────────────────────────────────────
-const mockItems = [
-  {
-    id: 'item-1',
-    name: 'Box Alpha',
-    status: 'active',
-    item_type_id: 'type-1',
-    latitude: 0,
-    longitude: 0,
-    description: null,
-    custom_field_values: {},
-    created_at: '',
-    updated_at: '',
-    created_by: null,
-    org_id: 'org-1',
-    property_id: 'prop-1',
-  },
-  {
-    id: 'item-2',
-    name: 'Box Beta',
-    status: 'planned',
-    item_type_id: 'type-1',
-    latitude: 0,
-    longitude: 0,
-    description: null,
-    custom_field_values: {},
-    created_at: '',
-    updated_at: '',
-    created_by: null,
-    org_id: 'org-1',
-    property_id: 'prop-1',
-  },
-];
+// ── Offline store mock ────────────────────────────────────────────────────────
+vi.mock('@/lib/offline/provider', () => ({
+  useOfflineStore: () => ({
+    getItems: vi.fn().mockResolvedValue(mockItems),
+    getItemTypes: vi.fn().mockResolvedValue(mockItemTypes),
+    getUpdateTypes: vi.fn().mockResolvedValue(mockUpdateTypes),
+    getEntityTypes: vi.fn().mockResolvedValue([]),
+    getCustomFields: vi.fn().mockResolvedValue([]),
+    getEntities: vi.fn().mockResolvedValue([]),
+    getItem: vi.fn().mockResolvedValue(undefined),
+    getItemUpdates: vi.fn().mockResolvedValue([]),
+    getPhotos: vi.fn().mockResolvedValue([]),
+    insertItem: vi.fn().mockResolvedValue({ item: { id: 'test-id' }, mutationId: 'mut-id' }),
+    updateItem: vi.fn().mockResolvedValue({ mutationId: 'mut-id' }),
+    deleteItem: vi.fn().mockResolvedValue({ mutationId: 'mut-id' }),
+    insertItemUpdate: vi.fn().mockResolvedValue({ update: { id: 'update-id' }, mutationId: 'mut-id' }),
+    isOnline: true,
+    pendingCount: 0,
+    isSyncing: false,
+    syncProperty: vi.fn(),
+    triggerSync: vi.fn(),
+    db: {
+      orgs: { toArray: vi.fn().mockResolvedValue([]) },
+      properties: {
+        toArray: vi.fn().mockResolvedValue([]),
+        get: vi.fn().mockResolvedValue({ org_id: 'org-1' }),
+      },
+    },
+  }),
+}));
 
-const mockItemTypes = [
-  { id: 'type-1', name: 'Birdbox', icon: '🐦', color: '#00ff00', sort_order: 1, created_at: '', org_id: 'org-1' },
-];
+vi.mock('@/lib/offline/mutations', () => ({
+  enqueueMutation: vi.fn().mockResolvedValue('mock-mut-id'),
+}));
 
-const mockUpdateTypes = [
-  { id: 'ut-1', name: 'Inspection', icon: '🔍', is_global: true, item_type_id: null, sort_order: 1, org_id: 'org-1' },
-];
+vi.mock('@/lib/offline/photo-store', () => ({
+  storePhotoBlob: vi.fn().mockResolvedValue('mock-blob-id'),
+}));
 
+// ── Supabase mock (retained in case any transitive deps use it) ───────────────
 function makeChain(data: unknown) {
-  // Make the chain itself a thenable so `await supabase.from(x).select('*')` works
   const resolved = { data, error: null };
   const promise = Promise.resolve(resolved);
   const chain: Record<string, unknown> = {
