@@ -438,13 +438,17 @@ describe('resolveTenant', () => {
       expect(result?.source).toBe('default');
     });
 
-    it('platform domain with port in hostname matches Signal 0', async () => {
+    it('localhost skips Signal 0 even when PLATFORM_DOMAIN=localhost', async () => {
       process.env.PLATFORM_DOMAIN = 'localhost';
-      const client = createMockClient({});
+      const client = createMockClient({
+        orgs: { id: 'org-1', slug: 'test-org', default_property_id: 'prop-1' },
+      });
 
+      // localhost should fall through to Signal D (default org) because
+      // platform context with subdomain-based routing doesn't work on localhost
       const result = await resolveTenant('localhost:3000', '/', client);
 
-      expect(result?.source).toBe('platform');
+      expect(result?.source).toBe('default');
     });
   });
 });

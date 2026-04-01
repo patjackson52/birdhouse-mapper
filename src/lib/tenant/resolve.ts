@@ -34,7 +34,9 @@ export async function resolveTenant(
   const hostnameWithoutPort = hostname.replace(/:\d+$/, '');
 
   // Signal 0: Platform root — exact match on PLATFORM_DOMAIN with no subdomain
-  if (platformDomain && hostnameWithoutPort === platformDomain) {
+  // Skip on localhost — platform context doesn't make sense for local development
+  // where subdomain-based org routing isn't available
+  if (platformDomain && hostnameWithoutPort === platformDomain && hostnameWithoutPort !== 'localhost') {
     return {
       orgId: null,
       orgSlug: null,
