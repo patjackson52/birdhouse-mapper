@@ -116,6 +116,7 @@ export interface HeaderBarProps {
   logoUrl?: string;
   icon?: IconValue;
   iconPosition?: 'before-name' | 'after-name' | 'above-name';
+  taglinePosition?: 'below' | 'grouped';
   nameSize?: 'small' | 'medium' | 'large' | 'xl';
   nameWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
   nameColor?: string;
