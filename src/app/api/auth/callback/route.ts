@@ -50,6 +50,11 @@ export async function GET(request: Request) {
 
           const org = (membership?.orgs as any);
           if (org?.slug) {
+            const requestHost = new URL(request.url).hostname;
+            // On localhost, stay on the same origin — subdomain URLs don't work
+            if (requestHost === 'localhost') {
+              return NextResponse.redirect(new URL('/manage', origin));
+            }
             // Prefer primary custom domain, fall back to platform subdomain
             const primaryDomain = org.custom_domains?.find((d: any) => d.is_primary)?.domain;
             if (primaryDomain) {
