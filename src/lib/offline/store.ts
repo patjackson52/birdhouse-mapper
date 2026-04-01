@@ -56,7 +56,7 @@ export async function getEntityTypes(db: OfflineDatabase, orgId: string): Promis
 
 // ---- Writes ----
 
-interface InsertItemParams {
+export interface InsertItemParams {
   name: string;
   description: string | null;
   latitude: number;
@@ -128,7 +128,7 @@ export async function deleteItem(
   return updateItem(db, itemId, { status: 'removed' }, orgId, propertyId);
 }
 
-interface InsertItemUpdateParams {
+export interface InsertItemUpdateParams {
   item_id: string;
   update_type_id: string;
   content: string | null;
