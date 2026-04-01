@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -30,12 +31,8 @@ export default function PropertyMembersPage() {
   const slug = params.slug as string;
 
   const [isPending, startTransition] = useTransition();
+  const queryClient = useQueryClient();
 
-  const [property, setProperty] = useState<Property | null>(null);
-  const [members, setMembers] = useState<PropertyMember[]>([]);
-  const [availableRoles, setAvailableRoles] = useState<Role[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Per-member "add override" dropdown state: userId → selected roleId
@@ -47,35 +44,41 @@ export default function PropertyMembersPage() {
   // Data loading
   // ---------------------------------------------------------------------------
 
-  async function loadData() {
-    setLoading(true);
-    setPageError(null);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'property', slug, 'members'],
+    queryFn: async () => {
+      const [membersResult, rolesResult] = await Promise.all([
+        getPropertyMembers(slug),
+        createClient()
+          .from('roles')
+          .select('id, name, base_role')
+          .neq('base_role', 'platform_admin')
+          .order('sort_order', { ascending: true }),
+      ]);
 
-    const [membersResult, rolesResult] = await Promise.all([
-      getPropertyMembers(slug),
-      createClient()
-        .from('roles')
-        .select('id, name, base_role')
-        .neq('base_role', 'platform_admin')
-        .order('sort_order', { ascending: true }),
-    ]);
+      if (membersResult.error || !membersResult.property) {
+        return {
+          error: membersResult.error ?? 'Property not found',
+          property: null,
+          members: [] as PropertyMember[],
+          availableRoles: [] as Role[],
+        };
+      }
 
-    if (membersResult.error || !membersResult.property) {
-      setPageError(membersResult.error ?? 'Property not found');
-      setLoading(false);
-      return;
-    }
+      return {
+        error: null,
+        property: membersResult.property,
+        members: membersResult.members ?? [],
+        availableRoles: (rolesResult.data ?? []) as Role[],
+      };
+    },
+  });
 
-    setProperty(membersResult.property);
-    setMembers(membersResult.members ?? []);
-    setAvailableRoles((rolesResult.data ?? []) as Role[]);
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug]);
+  const loading = isLoading;
+  const property = data?.property ?? null;
+  const members = data?.members ?? [];
+  const availableRoles = data?.availableRoles ?? [];
+  const pageError = data?.error ?? null;
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -98,7 +101,7 @@ export default function PropertyMembersPage() {
           delete next[userId];
           return next;
         });
-        await loadData();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'members'] });
       }
     });
   }
@@ -112,7 +115,7 @@ export default function PropertyMembersPage() {
       if (result.error) {
         setActionError(result.error);
       } else {
-        await loadData();
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'property', slug, 'members'] });
       }
     });
   }
