@@ -32,6 +32,7 @@ export function HeaderBar({
   logoUrl,
   icon,
   iconPosition = 'before-name',
+  taglinePosition = 'below',
   nameSize = 'medium',
   nameWeight = 'bold',
   nameColor,
@@ -44,6 +45,7 @@ export function HeaderBar({
   const config = useConfig();
   const alignClass = layout === 'centered' ? 'text-center' : 'text-left';
   const displayLogo = logoUrl || config.logoUrl;
+  const isGrouped = taglinePosition === 'grouped' && showTagline && config.tagline;
 
   const nameNode = (
     <span
@@ -53,6 +55,22 @@ export function HeaderBar({
       {config.siteName}
     </span>
   );
+
+  const taglineNode = (
+    <span
+      className={`opacity-80 ${sizeClasses[taglineSize]} ${weightClasses[taglineWeight]}`}
+      style={taglineColor ? { color: taglineColor } : undefined}
+    >
+      {config.tagline}
+    </span>
+  );
+
+  const titleStack = isGrouped ? (
+    <div className="flex flex-col">
+      {nameNode}
+      {taglineNode}
+    </div>
+  ) : nameNode;
 
   const iconNode = icon ? <IconRenderer icon={icon} size={nameSize === 'xl' ? 28 : nameSize === 'large' ? 24 : 20} /> : null;
 
@@ -65,13 +83,13 @@ export function HeaderBar({
             {iconPosition === 'above-name' && iconNode && (
               <div className="flex flex-col items-center gap-1">
                 {iconNode}
-                {nameNode}
+                {titleStack}
               </div>
             )}
             {iconPosition !== 'above-name' && (
               <>
                 {iconPosition === 'before-name' && iconNode}
-                {nameNode}
+                {titleStack}
                 {iconPosition === 'after-name' && iconNode}
               </>
             )}
@@ -95,7 +113,7 @@ export function HeaderBar({
           )}
         </div>
 
-        {showTagline && config.tagline && (
+        {showTagline && !isGrouped && config.tagline && (
           <p
             className={`mt-0.5 opacity-80 ${sizeClasses[taglineSize]} ${weightClasses[taglineWeight]}`}
             style={taglineColor ? { color: taglineColor } : undefined}

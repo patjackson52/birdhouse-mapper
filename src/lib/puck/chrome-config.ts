@@ -63,6 +63,14 @@ export const chromeConfig: Config<ChromeComponents> = {
             { label: 'No', value: false },
           ],
         },
+        taglinePosition: {
+          type: 'radio',
+          label: 'Tagline Position',
+          options: [
+            { label: 'Below Header', value: 'below' },
+            { label: 'Grouped with Title', value: 'grouped' },
+          ],
+        },
         backgroundColor: {
           type: 'select',
           label: 'Background Color',
@@ -131,7 +139,7 @@ export const chromeConfig: Config<ChromeComponents> = {
       },
       resolveFields: (data: any, { fields }: any) => {
         if (!data.props.showTagline) {
-          const { taglineSize, taglineWeight, taglineColor, ...rest } = fields;
+          const { taglinePosition, taglineSize, taglineWeight, taglineColor, ...rest } = fields;
           return rest;
         }
         return fields;
