@@ -2,6 +2,7 @@ import type { LandingPageConfig } from './landing-types';
 
 export interface SiteConfig {
   siteName: string;
+  propertyName: string | null;
   tagline: string;
   locationName: string;
   propertyId: string | null;
@@ -55,6 +56,7 @@ export function buildSiteConfig(
   },
   property: {
     id?: string;
+    name?: string;
     description: string | null;
     map_default_lat: number | null;
     map_default_lng: number | null;
@@ -77,6 +79,7 @@ export function buildSiteConfig(
 ): SiteConfig {
   return {
     siteName: org.name,
+    propertyName: property.name ?? null,
     tagline: org.tagline ?? '',
     locationName: property.description ?? '',
     propertyId: property.id ?? null,
