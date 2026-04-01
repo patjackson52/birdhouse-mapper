@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getOrgSettings, updateOrgSettings } from './actions';
@@ -46,6 +46,7 @@ const STATUS_COLORS: Record<SubscriptionStatus, string> = {
 export default function OrgSettingsPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const initialized = useRef(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -70,7 +71,8 @@ export default function OrgSettingsPage() {
   });
 
   useEffect(() => {
-    if (settings) {
+    if (settings && !initialized.current) {
+      initialized.current = true;
       setName(settings.name ?? '');
       setSlug(settings.slug ?? '');
       setTagline(settings.tagline ?? '');
