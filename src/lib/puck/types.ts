@@ -123,7 +123,7 @@ export interface HeaderBarProps {
   taglineSize?: 'small' | 'medium' | 'large' | 'xl';
   taglineWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
   taglineColor?: string;
-  links?: Array<{ label: string; href: string }>;
+  links?: Array<{ label: string; href: string | LinkValue }>;
   linkColor?: string;
 }
 

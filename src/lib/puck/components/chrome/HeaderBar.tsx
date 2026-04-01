@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useConfig } from '@/lib/config/client';
 import type { HeaderBarProps } from '../../types';
+import { resolveLink } from '../../fields/link-utils';
 import { IconRenderer } from '../../icons/IconRenderer';
 
 const bgClasses = {
@@ -97,18 +98,21 @@ export function HeaderBar({
 
           {links && links.length > 0 && (
             <nav className="flex items-center gap-4">
-              {links.map((link, i) => (
-                <Link
-                  key={i}
-                  href={link.href}
-                  target={link.href.startsWith('http') ? '_blank' : undefined}
-                  rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}
-                  className="text-sm hover:underline"
-                  style={linkColor ? { color: linkColor } : undefined}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {links.map((link, i) => {
+                const resolved = resolveLink(link.href);
+                return (
+                  <Link
+                    key={i}
+                    href={resolved.href}
+                    target={resolved.target}
+                    rel={resolved.target === '_blank' ? 'noopener noreferrer' : undefined}
+                    className="text-sm hover:underline"
+                    style={linkColor ? { color: linkColor } : undefined}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
           )}
         </div>
