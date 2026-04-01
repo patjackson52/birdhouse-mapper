@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useRouter, useParams } from 'next/navigation';
 import PermissionEditor from '@/components/admin/PermissionEditor';
 import { getRoles, updateRole } from '../actions';
@@ -21,10 +22,6 @@ export default function RoleEditorPage() {
   const params = useParams();
   const roleId = params.roleId as string;
 
-  const [role, setRole] = useState<Role | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-
   // Editable fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -35,31 +32,28 @@ export default function RoleEditorPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
 
-  useEffect(() => {
-    async function load() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'roles', roleId],
+    queryFn: async () => {
       const result = await getRoles();
-      if (!result.roles) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
-
+      if (!result.roles) return { role: null, notFound: true };
       const found = (result.roles as Role[]).find((r) => r.id === roleId);
-      if (!found) {
-        setNotFound(true);
-        setLoading(false);
-        return;
-      }
+      if (!found) return { role: null, notFound: true };
+      return { role: found, notFound: false };
+    },
+  });
 
-      setRole(found);
-      setName(found.name);
-      setDescription(found.description ?? '');
-      setPermissions(found.permissions);
-      setLoading(false);
+  const role = data?.role ?? null;
+  const notFound = data?.notFound ?? false;
+  const loading = isLoading;
+
+  useEffect(() => {
+    if (role) {
+      setName(role.name);
+      setDescription(role.description ?? '');
+      setPermissions(role.permissions);
     }
-
-    load();
-  }, [roleId]);
+  }, [role]);
 
   async function handleSave() {
     if (!role || !permissions) return;
@@ -82,8 +76,6 @@ export default function RoleEditorPage() {
     } else {
       setSaveStatus('success');
       setSaveMessage('Role saved successfully.');
-      // Refresh role data
-      setRole((prev) => prev ? { ...prev, name: name.trim(), description: description.trim() || null, permissions } : prev);
     }
   }
 
