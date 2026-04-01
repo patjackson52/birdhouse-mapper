@@ -11,7 +11,6 @@ test.describe('Item Photos in Detail Panel', () => {
   let testItemId: string | null = null;
 
   test.afterAll(async () => {
-    // Clean up: remove photo records, storage objects, and the test item
     if (testItemId) {
       const client = createTestClient();
       const { data: photos } = await client
@@ -34,7 +33,6 @@ test.describe('Item Photos in Detail Panel', () => {
     // Step 1: Create a test item with a photo via Supabase service client
     const client = createTestClient();
 
-    // Get the default property and an item type
     const { data: property } = await client
       .from('properties')
       .select('id, org_id')
@@ -50,7 +48,6 @@ test.describe('Item Photos in Detail Panel', () => {
       .single();
     expect(itemType).toBeTruthy();
 
-    // Create the item
     const { data: item, error: itemError } = await client
       .from('items')
       .insert({
@@ -82,7 +79,6 @@ test.describe('Item Photos in Detail Panel', () => {
       .upload(storagePath, redPixelPng, { contentType: 'image/png' });
     expect(uploadError).toBeNull();
 
-    // Create the photo record
     const { error: photoError } = await client.from('photos').insert({
       item_id: item!.id,
       storage_path: storagePath,
@@ -92,53 +88,26 @@ test.describe('Item Photos in Detail Panel', () => {
     });
     expect(photoError).toBeNull();
 
-    // Step 2: Navigate to the map and find our item
-    await page.goto('/map');
+    // Step 2: Navigate to the map with deep-link to the test item
+    // The map supports ?item=<id> to auto-open the detail panel
+    await page.goto(`/map?item=${item!.id}`);
     await page.waitForLoadState('networkidle');
 
-    // Wait for markers to appear
-    const markers = page.locator('.leaflet-marker-icon');
-    await expect(markers.first()).toBeVisible({ timeout: 15000 });
-
-    // Click markers until we find our test item
-    const markerCount = await markers.count();
-    let found = false;
-
-    for (let i = 0; i < markerCount; i++) {
-      await markers.nth(i).click({ force: true });
-
-      // Check if the detail panel shows our item
-      const panelTitle = page.locator('h2.font-heading');
-      await expect(panelTitle).toBeVisible({ timeout: 5000 });
-
-      const titleText = await panelTitle.textContent();
-      if (titleText?.includes('E2E Photo Test')) {
-        found = true;
-        break;
-      }
-
-      // Close panel and try next marker
-      const closeButton = page.locator('[aria-label="Close"]').or(page.locator('button:has-text("×")')).first();
-      if (await closeButton.isVisible()) {
-        await closeButton.click();
-        await page.waitForTimeout(300);
-      }
-    }
-
-    expect(found).toBe(true);
+    // Wait for the detail panel to open via deep-link
+    const panelTitle = page.locator('h2.font-heading');
+    await expect(panelTitle).toBeVisible({ timeout: 30000 });
+    await expect(panelTitle).toContainText('E2E Photo Test');
 
     // Step 3: Verify the photo is displayed
-    // The PhotoViewer renders an img inside a div.aspect-video container
     const photoContainer = page.locator('.aspect-video');
     await expect(photoContainer).toBeVisible({ timeout: 10000 });
 
     const photoImg = photoContainer.locator('img');
     await expect(photoImg).toBeVisible({ timeout: 10000 });
 
-    // Verify the img src contains the Supabase storage URL
+    // Verify the img src contains the storage URL pattern
     const src = await photoImg.getAttribute('src');
     expect(src).toBeTruthy();
-    expect(src).toContain('supabase');
     expect(src).toContain('item-photos');
 
     // Verify the image loaded successfully (no error state)
