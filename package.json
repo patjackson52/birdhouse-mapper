@@ -25,6 +25,7 @@
     "@formkit/auto-animate": "^0.9.0",
     "@heroicons/react": "^2.2.0",
     "@puckeditor/core": "^0.21.1",
+    "@serwist/next": "^9.5.7",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.0",
     "@tmcw/togeojson": "^7.1.2",
@@ -33,6 +34,7 @@
     "@turf/helpers": "^7.3.4",
     "@turf/intersect": "^7.3.4",
     "ai": "^6.0.138",
+    "dexie": "^4.4.2",
     "framer-motion": "^12.38.0",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
@@ -48,6 +50,7 @@
     "react-leaflet": "^4.2.1",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "serwist": "^9.5.7",
     "shpjs": "^6.2.0",
     "xlsx": "^0.18.5",
     "zod": "^4.3.6"
