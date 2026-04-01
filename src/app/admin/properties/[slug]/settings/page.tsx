@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useConfig } from '@/lib/config/client';
 import { useRouter, useParams } from 'next/navigation';
@@ -31,33 +32,32 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
-  const [propertyId, setPropertyId] = useState<string | null>(null);
-  const [propertyGeoLayers, setPropertyGeoLayers] = useState<GeoLayerSummary[]>([]);
-  const [layerAssignments, setLayerAssignments] = useState<GeoLayerProperty[]>([]);
   const [currentBoundaryId, setCurrentBoundaryId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from('properties')
-      .select('id')
-      .eq('slug', slug)
-      .single()
-      .then(({ data }) => {
-        if (data) setPropertyId(data.id);
-      });
-  }, [slug]);
+  const { data: propertyId } = useQuery({
+    queryKey: ['admin', 'property', slug, 'id'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data } = await supabase.from('properties').select('id').eq('slug', slug).single();
+      return data?.id ?? null;
+    },
+  });
 
-  useEffect(() => {
-    if (activeTab === 'geo-layers' && propertyId) {
-      getPropertyGeoLayers(propertyId).then((result) => {
-        if ('success' in result) {
-          setPropertyGeoLayers(result.layers);
-          setLayerAssignments(result.assignments);
-        }
-      });
-    }
-  }, [activeTab, propertyId]);
+  const { data: geoLayerData } = useQuery({
+    queryKey: ['admin', 'property', slug, 'geo-layers'],
+    queryFn: async () => {
+      if (!propertyId) return { layers: [], assignments: [] };
+      const result = await getPropertyGeoLayers(propertyId);
+      if ('success' in result) {
+        return { layers: result.layers, assignments: result.assignments };
+      }
+      return { layers: [], assignments: [] };
+    },
+    enabled: activeTab === 'geo-layers' && !!propertyId,
+  });
+
+  const propertyGeoLayers: GeoLayerSummary[] = geoLayerData?.layers ?? [];
+  const layerAssignments: GeoLayerProperty[] = geoLayerData?.assignments ?? [];
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'general', label: 'General' },
