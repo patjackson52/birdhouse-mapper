@@ -5,6 +5,7 @@ import { ConfigProvider } from '@/lib/config/client';
 import { getConfig } from '@/lib/config/server';
 import { resolveTheme, themeToCssVars } from '@/lib/config/themes';
 import { UserLocationProvider } from '@/lib/location/provider';
+import QueryProvider from '@/components/QueryProvider';
 import { OfflineProvider } from '@/lib/offline/provider';
 import { createClient } from '@/lib/supabase/server';
 import type { Data } from '@puckeditor/core';
@@ -67,16 +68,18 @@ export default async function RootLayout({
         <ConfigProvider config={config} theme={theme}>
           <UserLocationProvider>
             <OfflineProvider>
-              {puckRoot ? (
-                <PuckRootRenderer data={puckRoot}>
-                  <main className="flex-1">{children}</main>
-                </PuckRootRenderer>
-              ) : (
-                <>
-                  <Navigation isAuthenticated={!!user} />
-                  <main className="flex-1">{children}</main>
-                </>
-              )}
+              <QueryProvider>
+                {puckRoot ? (
+                  <PuckRootRenderer data={puckRoot}>
+                    <main className="flex-1">{children}</main>
+                  </PuckRootRenderer>
+                ) : (
+                  <>
+                    <Navigation isAuthenticated={!!user} />
+                    <main className="flex-1">{children}</main>
+                  </>
+                )}
+              </QueryProvider>
             </OfflineProvider>
           </UserLocationProvider>
         </ConfigProvider>
