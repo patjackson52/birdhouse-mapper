@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
@@ -100,11 +101,7 @@ function DnsInfoPanel({ domain }: { domain: OrgDomain }) {
 }
 
 export default function DomainsPage() {
-  const [orgDomains, setOrgDomains] = useState<OrgDomain[]>([]);
-  const [propertyDomains, setPropertyDomains] = useState<OrgDomain[]>([]);
-  const [properties, setProperties] = useState<PropertyInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [orgId, setOrgId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // Add domain form state
   const [showAddForm, setShowAddForm] = useState(false);
@@ -120,74 +117,80 @@ export default function DomainsPage() {
   const [checkingDomain, setCheckingDomain] = useState<string | null>(null);
   const [addingSubdomain, setAddingSubdomain] = useState<string | null>(null);
 
-  const loadData = useCallback(async () => {
-    const supabase = createClient();
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['admin', 'domains'],
+    queryFn: async () => {
+      const supabase = createClient();
 
-    // Get org context from the current user's membership
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+      // Get org context from the current user's membership
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { orgDomains: [], propertyDomains: [], properties: [], orgId: null };
 
-    const { data: membership } = await supabase
-      .from('org_memberships')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single();
+      const { data: membership } = await supabase
+        .from('org_memberships')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
 
-    if (!membership) return;
-    setOrgId(membership.org_id);
+      if (!membership) return { orgDomains: [], propertyDomains: [], properties: [], orgId: null };
 
-    // Fetch domains with property join
-    const { data: domainsData } = await supabase
-      .from('custom_domains')
-      .select(`
-        id,
-        domain,
-        domain_type,
-        status,
-        ssl_status,
-        is_primary,
-        property_id,
-        verified_at,
-        created_at,
-        verification_token,
-        properties ( name )
-      `)
-      .eq('org_id', membership.org_id)
-      .order('created_at', { ascending: true });
+      const orgId = membership.org_id;
 
-    const rows: OrgDomain[] = (domainsData || []).map((d: Record<string, unknown>) => ({
-      id: d.id as string,
-      domain: d.domain as string,
-      domain_type: (d.domain_type as string) || 'subdomain',
-      status: d.status as string,
-      ssl_status: (d.ssl_status as string) ?? null,
-      is_primary: d.is_primary as boolean,
-      property_id: (d.property_id as string) ?? null,
-      property_name: (d.properties as { name: string } | null)?.name ?? null,
-      verified_at: (d.verified_at as string) ?? null,
-      created_at: d.created_at as string,
-      verification_token: (d.verification_token as string) ?? null,
-    }));
+      // Fetch domains with property join
+      const { data: domainsData } = await supabase
+        .from('custom_domains')
+        .select(`
+          id,
+          domain,
+          domain_type,
+          status,
+          ssl_status,
+          is_primary,
+          property_id,
+          verified_at,
+          created_at,
+          verification_token,
+          properties ( name )
+        `)
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: true });
 
-    setOrgDomains(rows.filter((r) => r.property_id === null));
-    setPropertyDomains(rows.filter((r) => r.property_id !== null));
+      const rows: OrgDomain[] = (domainsData || []).map((d: Record<string, unknown>) => ({
+        id: d.id as string,
+        domain: d.domain as string,
+        domain_type: (d.domain_type as string) || 'subdomain',
+        status: d.status as string,
+        ssl_status: (d.ssl_status as string) ?? null,
+        is_primary: d.is_primary as boolean,
+        property_id: (d.property_id as string) ?? null,
+        property_name: (d.properties as { name: string } | null)?.name ?? null,
+        verified_at: (d.verified_at as string) ?? null,
+        created_at: d.created_at as string,
+        verification_token: (d.verification_token as string) ?? null,
+      }));
 
-    // Fetch properties
-    const { data: propsData } = await supabase
-      .from('properties')
-      .select('id, name, slug, primary_custom_domain_id')
-      .eq('org_id', membership.org_id)
-      .is('deleted_at', null)
-      .order('name', { ascending: true });
+      const orgDomains = rows.filter((r) => r.property_id === null);
+      const propertyDomains = rows.filter((r) => r.property_id !== null);
 
-    setProperties((propsData || []) as PropertyInfo[]);
-    setLoading(false);
-  }, []);
+      // Fetch properties
+      const { data: propsData } = await supabase
+        .from('properties')
+        .select('id, name, slug, primary_custom_domain_id')
+        .eq('org_id', orgId)
+        .is('deleted_at', null)
+        .order('name', { ascending: true });
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+      const properties = (propsData || []) as PropertyInfo[];
+
+      return { orgDomains, propertyDomains, properties, orgId };
+    },
+  });
+
+  const orgDomains = data?.orgDomains ?? [];
+  const propertyDomains = data?.propertyDomains ?? [];
+  const properties = data?.properties ?? [];
+  const orgId = data?.orgId ?? null;
 
   const primaryOrgDomain = orgDomains.find((d) => d.is_primary && d.property_id === null);
 
@@ -229,21 +232,21 @@ export default function DomainsPage() {
       setFormScope('org');
     }
 
-    await loadData();
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] });
   }
 
   async function handleRemove(domainId: string) {
     const result = await removeCustomDomain(domainId);
     setConfirmRemove(null);
     if (result.success) {
-      await loadData();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] });
     }
   }
 
   async function handleCheckStatus(domainId: string) {
     setCheckingDomain(domainId);
     await checkDomainStatus(domainId);
-    await loadData();
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] });
     setCheckingDomain(null);
   }
 
@@ -255,7 +258,7 @@ export default function DomainsPage() {
     const result = await addCustomDomain(orgId, subdomain, property.id);
 
     if (result.success) {
-      await loadData();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'domains'] });
     }
     setAddingSubdomain(null);
   }
