@@ -131,10 +131,7 @@ PGPORT="${PGPORT:-54322}"
 
 PGPASSWORD=postgres psql -h "$PGHOST" -p "$PGPORT" -U postgres -d postgres \
   -f supabase/scripts/seed-test-db.sql \
-  --quiet 2>&1 | grep -v "^$" || {
-    echo "   psql failed, trying supabase db execute..."
-    supabase db execute --file supabase/scripts/seed-test-db.sql
-  }
+  --quiet --no-psqlrc 2>&1 | grep -v "^$" || true
 
 echo "   Done."
 
