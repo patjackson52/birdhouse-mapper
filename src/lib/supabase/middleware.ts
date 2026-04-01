@@ -170,9 +170,10 @@ export async function updateSession(request: NextRequest) {
   // --- Setup complete check ---
   const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/');
   const isAuthCallback = pathname.startsWith('/api/auth/');
-  const isStaticAsset = pathname.startsWith('/_next/');
+  const isStaticAsset = pathname.startsWith('/_next/') || pathname.startsWith('/favicon');
+  const isAuthPage = ['/login', '/signup', '/signin'].includes(pathname);
 
-  if (!isSetupRoute && !isAuthCallback && !isStaticAsset) {
+  if (!isSetupRoute && !isAuthCallback && !isStaticAsset && !isAuthPage) {
     const setupDoneCookie = request.cookies.get('setup_done');
 
     if (!setupDoneCookie) {
