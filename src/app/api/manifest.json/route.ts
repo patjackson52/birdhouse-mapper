@@ -7,9 +7,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(_request: NextRequest) {
   const config = await getConfig();
 
+  const appName = config.propertyName || config.siteName || 'FieldMapper';
+
   const manifest = {
-    name: config.siteName || 'FieldMapper',
-    short_name: config.siteName?.slice(0, 12) || 'FieldMapper',
+    name: appName,
+    short_name: appName.slice(0, 12),
     description: config.tagline || 'Field mapping for conservation teams',
     start_url: '/map',
     display: 'standalone' as const,

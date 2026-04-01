@@ -11,6 +11,8 @@ import { MAP_STYLES, MAP_STYLE_CATEGORIES, THEME_DEFAULT_MAP_STYLE } from '@/lib
 import OverlayEditor from '@/components/manage/OverlayEditor';
 import { createClient } from '@/lib/supabase/client';
 import { getPropertyGeoLayers, setPropertyBoundary } from '@/app/admin/geo-layers/actions';
+import LogoUploader from '@/components/admin/LogoUploader';
+import { getLogoUrl } from '@/lib/config/logo';
 import type { GeoLayerSummary, GeoLayerProperty } from '@/lib/geo/types';
 
 const CenterPicker = dynamic(() => import('@/components/manage/CenterPicker'), {
@@ -121,7 +123,25 @@ export default function SettingsPage() {
         <GeneralTab config={config} onSave={handleSave} saving={saving} />
       )}
       {activeTab === 'appearance' && (
-        <AppearanceTab config={config} onSave={handleSave} saving={saving} />
+        <div className="space-y-8">
+          <AppearanceTab config={config} onSave={handleSave} saving={saving} />
+          {propertyId && (
+            <section className="card space-y-4">
+              <h2 className="font-heading text-lg font-semibold text-forest-dark">Property Logo</h2>
+              <p className="text-sm text-sage">
+                Upload a logo for this property. Overrides the org-level logo for PWA icons and branding.
+              </p>
+              <LogoUploader
+                currentLogoUrl={config.logoUrl ? getLogoUrl(config.logoUrl, 'original.png') : null}
+                scope="property"
+                propertyId={propertyId}
+                onUploaded={() => {
+                  router.refresh();
+                }}
+              />
+            </section>
+          )}
+        </div>
       )}
       {activeTab === 'custommap' && (
         <div>

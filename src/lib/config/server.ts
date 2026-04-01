@@ -46,7 +46,7 @@ export const getConfig = unstable_cache(
 
     const { data: property, error: propError } = await supabase
       .from('properties')
-      .select('id, description, map_default_lat, map_default_lng, map_default_zoom, map_style, custom_map, about_content, about_page_enabled, footer_text, footer_links, custom_nav_items, landing_page, logo_url, puck_pages, puck_root, puck_template, puck_pages_draft, puck_root_draft')
+      .select('id, name, description, map_default_lat, map_default_lng, map_default_zoom, map_style, custom_map, about_content, about_page_enabled, footer_text, footer_links, custom_nav_items, landing_page, logo_url, puck_pages, puck_root, puck_template, puck_pages_draft, puck_root_draft')
       .eq('id', propertyId)
       .single();
 
