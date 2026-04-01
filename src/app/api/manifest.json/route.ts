@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConfig } from '@/lib/config/server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_request: NextRequest) {
   const config = await getConfig();
 

@@ -75,6 +75,39 @@ function HomeMapViewContent() {
       const property = await offlineStore.db.properties.get(propertyId);
       const orgId = property?.org_id;
 
+      // If no property in IndexedDB yet and we're online, sync first to bootstrap
+      if (!property && offlineStore.isOnline) {
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          // Get the property from Supabase to find orgId
+          const { data: propData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
+          if (propData) {
+            await offlineStore.db.properties.put({ ...propData, _synced_at: new Date().toISOString() });
+            await offlineStore.syncProperty(propertyId, propData.org_id);
+            // Re-read property after sync
+            const freshProp = await offlineStore.db.properties.get(propertyId);
+            if (freshProp) {
+              const [itemData, typeData, fieldData] = await Promise.all([
+                offlineStore.getItems(propertyId),
+                offlineStore.getItemTypes(freshProp.org_id),
+                offlineStore.getCustomFields(freshProp.org_id),
+              ]);
+              setItems(itemData);
+              setItemTypes(typeData);
+              setCustomFields(fieldData);
+            }
+          }
+          const { data: { user } } = await supabase.auth.getUser();
+          setIsAuthenticated(!!user);
+        } catch {
+          setIsAuthenticated(false);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Read from IndexedDB (cached data available)
       const [itemData, typeData, fieldData] = await Promise.all([
         offlineStore.getItems(propertyId),
         orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
@@ -97,9 +130,18 @@ function HomeMapViewContent() {
 
       setLoading(false);
 
-      // Trigger background sync
-      if (orgId) {
-        offlineStore.syncProperty(propertyId, orgId);
+      // Trigger background sync and refresh data when done
+      if (orgId && offlineStore.isOnline) {
+        offlineStore.syncProperty(propertyId, orgId).then(async () => {
+          const [freshItems, freshTypes, freshFields] = await Promise.all([
+            offlineStore.getItems(propertyId),
+            offlineStore.getItemTypes(orgId!),
+            offlineStore.getCustomFields(orgId!),
+          ]);
+          setItems(freshItems);
+          setItemTypes(freshTypes);
+          setCustomFields(freshFields);
+        });
       }
     }
 
