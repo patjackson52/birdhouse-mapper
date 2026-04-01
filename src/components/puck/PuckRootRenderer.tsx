@@ -1,3 +1,5 @@
+'use client';
+
 import { Render } from '@puckeditor/core';
 import { chromeConfig } from '@/lib/puck/chrome-config';
 import type { Data } from '@puckeditor/core';
