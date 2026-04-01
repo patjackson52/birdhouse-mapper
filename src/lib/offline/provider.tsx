@@ -6,6 +6,7 @@ import { useNetworkStatus } from './network';
 import { processOutboundQueue, syncPropertyData } from './sync-engine';
 import { getPendingCount } from './mutations';
 import { createClient } from '@/lib/supabase/client';
+import { useConfig } from '@/lib/config/client';
 import * as store from './store';
 import type { InsertItemParams, InsertItemUpdateParams } from './store';
 import type { Item, ItemUpdate } from '@/lib/types';
@@ -40,6 +41,7 @@ const OfflineContext = createContext<OfflineContextValue | null>(null);
 export function OfflineProvider({ children }: { children: React.ReactNode }) {
   const db = getOfflineDb();
   const { isOnline } = useNetworkStatus();
+  const config = useConfig();
   const [pendingCount, setPendingCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const syncInProgress = useRef(false);
@@ -111,6 +113,17 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh pending count on mount
   useEffect(() => { refreshPendingCount(); }, [refreshPendingCount]);
+
+  // Auto-sync current property when propertyId or online status changes
+  useEffect(() => {
+    if (config.propertyId && isOnline) {
+      db.orgs.toArray().then((orgs) => {
+        if (orgs.length > 0) {
+          syncProperty(config.propertyId!, orgs[0].id);
+        }
+      });
+    }
+  }, [config.propertyId, isOnline, syncProperty, db]);
 
   const value: OfflineContextValue = {
     db, isOnline, pendingCount, isSyncing,
