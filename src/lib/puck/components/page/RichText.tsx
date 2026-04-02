@@ -1,12 +1,14 @@
 import type { RichTextProps } from '../../types';
+import { proseSizeClasses } from '../../text-styles';
 
-export function RichText({ content, alignment, columns }: RichTextProps) {
+export function RichText({ content, alignment, columns, textSize = 'large' }: RichTextProps) {
   const alignClass = alignment === 'center' ? 'text-center' : 'text-left';
   const colClass = columns === 2 ? 'md:columns-2 md:gap-8' : '';
+  const proseSize = proseSizeClasses[textSize];
 
   return (
     <div className={`mx-auto max-w-4xl px-4 py-8 ${alignClass} ${colClass}`}>
-      <div className="prose prose-lg max-w-none prose-headings:text-[var(--color-primary-dark)] prose-a:text-[var(--color-primary)]">
+      <div className={`prose ${proseSize} max-w-none prose-headings:text-[var(--color-primary-dark)] prose-a:text-[var(--color-primary)]`}>
         <RichTextContent content={content} />
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { Config } from '@puckeditor/core';
 import { imagePickerField, iconPickerField, linkField } from './fields';
+import { textSizeField } from './text-styles';
 import { fetchLandingAssets } from './fields/fetch-assets';
 import type {
   HeroProps,
@@ -69,10 +70,12 @@ export const pageConfig: Config<PageComponents> = {
         overlay: 'primary',
         ctaLabel: '',
         ctaHref: '',
+        textSize: 'large',
       },
       fields: {
         title: { type: 'text', label: 'Title' },
         subtitle: { type: 'text', label: 'Subtitle' },
+        textSize: textSizeField(),
         backgroundImageUrl: imagePickerField('Background Image', fetchLandingAssets),
         overlay: {
           type: 'select',
@@ -96,9 +99,11 @@ export const pageConfig: Config<PageComponents> = {
         content: '',
         alignment: 'left',
         columns: 1,
+        textSize: 'large',
       },
       fields: {
         content: { type: 'richtext', label: 'Content', contentEditable: true },
+        textSize: textSizeField(),
         alignment: {
           type: 'radio',
           label: 'Alignment',
@@ -191,6 +196,7 @@ export const pageConfig: Config<PageComponents> = {
       defaultProps: {
         items: [],
         layout: 'stacked',
+        textSize: 'medium',
       },
       fields: {
         items: {
@@ -215,6 +221,7 @@ export const pageConfig: Config<PageComponents> = {
             { label: 'Stacked', value: 'stacked' },
           ],
         },
+        textSize: textSizeField(),
       },
       render: LinkList,
     },
@@ -224,6 +231,7 @@ export const pageConfig: Config<PageComponents> = {
       defaultProps: {
         source: 'manual',
         items: [],
+        textSize: 'large',
       },
       fields: {
         source: {
@@ -246,6 +254,7 @@ export const pageConfig: Config<PageComponents> = {
             value: '0',
           },
         },
+        textSize: textSizeField(),
       },
       render: Stats,
     },
@@ -357,11 +366,13 @@ export const pageConfig: Config<PageComponents> = {
         text: '',
         linkHref: '',
         linkLabel: '',
+        textSize: 'small',
       },
       fields: {
         imageUrl: imagePickerField('Image', fetchLandingAssets),
         title: { type: 'text', label: 'Title' },
         text: { type: 'richtext', label: 'Text' },
+        textSize: textSizeField(),
         linkHref: linkField('Link URL'),
         linkLabel: { type: 'text', label: 'Link Label' },
         icon: iconPickerField('Icon'),
@@ -411,11 +422,13 @@ export const pageConfig: Config<PageComponents> = {
         attribution: '',
         photoUrl: '',
         style: 'default',
+        textSize: 'large',
       },
       fields: {
         quote: { type: 'richtext', label: 'Quote' },
         attribution: { type: 'text', label: 'Attribution' },
         photoUrl: imagePickerField('Photo', fetchLandingAssets),
+        textSize: textSizeField(),
         style: {
           type: 'radio',
           label: 'Style',
