@@ -196,7 +196,7 @@ export default function VaultUploadTab({
               ) : (
                 <>
                   <p className="text-sm text-forest-dark font-medium">
-                    Drag &amp; drop a file, or click to browse
+                    Drop files here or click to browse
                   </p>
                   <p className="text-xs text-gray-400">Any file type accepted</p>
                 </>
