@@ -1,5 +1,6 @@
 import type { Config } from '@puckeditor/core';
 import { imagePickerField, iconPickerField, linkField } from './fields';
+import { textSizeField } from './text-styles';
 import { fetchLandingAssets } from './fields/fetch-assets';
 import type {
   HeroProps,
@@ -96,9 +97,11 @@ export const pageConfig: Config<PageComponents> = {
         content: '',
         alignment: 'left',
         columns: 1,
+        textSize: 'large',
       },
       fields: {
         content: { type: 'richtext', label: 'Content', contentEditable: true },
+        textSize: textSizeField(),
         alignment: {
           type: 'radio',
           label: 'Alignment',

@@ -1,5 +1,6 @@
 import type { Data, Config } from '@puckeditor/core';
 import type { LinkValue, IconValue } from './fields/link-utils';
+import type { TextSize } from './text-styles';
 
 // Re-export field value types for component use
 export type { LinkValue, IconValue } from './fields/link-utils';
@@ -20,6 +21,7 @@ export interface RichTextProps {
   content: string;
   alignment: 'left' | 'center';
   columns: 1 | 2;
+  textSize?: TextSize;
 }
 
 export interface ImageBlockProps {

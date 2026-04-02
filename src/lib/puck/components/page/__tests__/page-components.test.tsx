@@ -65,6 +65,24 @@ describe('RichText', () => {
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.className).toContain('text-left');
   });
+
+  it('applies prose-lg class by default (no textSize prop)', () => {
+    const { container } = render(<RichText content="Hello" alignment="left" columns={1} />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-lg');
+  });
+
+  it('applies prose-sm class when textSize is small', () => {
+    const { container } = render(<RichText content="Hello" alignment="left" columns={1} textSize="small" />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-sm');
+  });
+
+  it('applies prose-xl class when textSize is xl', () => {
+    const { container } = render(<RichText content="Hello" alignment="left" columns={1} textSize="xl" />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-xl');
+  });
 });
 
 // ImageBlock
