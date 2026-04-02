@@ -5,8 +5,9 @@ import '@puckeditor/core/dist/index.css';
 import { chromeConfig } from '@/lib/puck/chrome-config';
 import { savePuckRootDraft, publishPuckRoot } from '@/app/admin/site-builder/actions';
 import { PuckSuggestionsProvider } from '@/lib/puck/fields';
+import { sanitizePuckData } from '@/lib/puck/sanitize-data';
 import type { Data } from '@puckeditor/core';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 interface PuckChromeEditorProps {
   initialData: Data;
@@ -14,7 +15,8 @@ interface PuckChromeEditorProps {
 
 export function PuckChromeEditor({ initialData }: PuckChromeEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
-  const [puckData, setPuckData] = useState<Data>(initialData);
+  const sanitizedData = useMemo(() => sanitizePuckData(initialData), [initialData]);
+  const [puckData, setPuckData] = useState<Data>(sanitizedData);
 
   const handleChange = useCallback(async (data: Data) => {
     setPuckData(data);
@@ -36,7 +38,7 @@ export function PuckChromeEditor({ initialData }: PuckChromeEditorProps) {
       <PuckSuggestionsProvider data={puckData}>
         <Puck
           config={chromeConfig}
-          data={initialData}
+          data={sanitizedData}
           onChange={handleChange}
           onPublish={handlePublish}
         />
