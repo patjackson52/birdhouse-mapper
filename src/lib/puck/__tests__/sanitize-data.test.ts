@@ -3,75 +3,58 @@ import { sanitizePuckData } from '../sanitize-data';
 import type { Data } from '@puckeditor/core';
 
 describe('sanitizePuckData', () => {
-  it('removes empty text nodes from ProseMirror JSON content', () => {
+  it('converts empty string richtext content to null', () => {
     const data: Data = {
       root: { props: {} },
       content: [
         {
           type: 'RichText',
-          props: {
-            id: 'rt-1',
-            content: {
-              type: 'doc',
-              content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    { type: 'text', text: '' },
-                    { type: 'text', text: 'Hello' },
-                  ],
-                },
-              ],
-            },
-          },
+          props: { id: 'rt-1', content: '', alignment: 'left', columns: 1 },
         },
       ],
     };
 
     const result = sanitizePuckData(data);
-    const content = (result.content[0].props as any).content;
-    expect(content.content[0].content).toHaveLength(1);
-    expect(content.content[0].content[0].text).toBe('Hello');
+    expect((result.content[0].props as any).content).toBeNull();
   });
 
-  it('preserves valid text nodes', () => {
+  it('converts empty string Card text to null', () => {
     const data: Data = {
       root: { props: {} },
       content: [
         {
-          type: 'RichText',
-          props: {
-            id: 'rt-1',
-            content: {
-              type: 'doc',
-              content: [
-                {
-                  type: 'paragraph',
-                  content: [{ type: 'text', text: 'Hello world' }],
-                },
-              ],
-            },
-          },
+          type: 'Card',
+          props: { id: 'c-1', title: 'Hello', text: '', imageUrl: '', linkHref: '', linkLabel: '' },
         },
       ],
     };
 
     const result = sanitizePuckData(data);
-    const content = (result.content[0].props as any).content;
-    expect(content.content[0].content).toHaveLength(1);
-    expect(content.content[0].content[0].text).toBe('Hello world');
+    expect((result.content[0].props as any).text).toBeNull();
   });
 
-  it('handles HTML string content without modification', () => {
+  it('converts empty string Testimonial quote to null', () => {
+    const data: Data = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'Testimonial',
+          props: { id: 't-1', quote: '', attribution: '', photoUrl: '', style: 'default' },
+        },
+      ],
+    };
+
+    const result = sanitizePuckData(data);
+    expect((result.content[0].props as any).quote).toBeNull();
+  });
+
+  it('preserves non-empty richtext content', () => {
     const data: Data = {
       root: { props: {} },
       content: [
         {
           type: 'RichText',
-          props: {
-            id: 'rt-1',
-            content: '<p>Hello</p>',
-          },
+          props: { id: 'rt-1', content: '<p>Hello</p>', alignment: 'left', columns: 1 },
         },
       ],
     };
@@ -80,7 +63,23 @@ describe('sanitizePuckData', () => {
     expect((result.content[0].props as any).content).toBe('<p>Hello</p>');
   });
 
-  it('sanitizes zone content', () => {
+  it('preserves non-richtext empty string props', () => {
+    const data: Data = {
+      root: { props: {} },
+      content: [
+        {
+          type: 'Hero',
+          props: { id: 'h-1', title: '', subtitle: '', backgroundImageUrl: '', overlay: 'none', ctaLabel: '', ctaHref: '' },
+        },
+      ],
+    };
+
+    const result = sanitizePuckData(data);
+    expect((result.content[0].props as any).title).toBe('');
+    expect((result.content[0].props as any).subtitle).toBe('');
+  });
+
+  it('sanitizes components inside zones', () => {
     const data: Data = {
       root: { props: {} },
       content: [],
@@ -88,139 +87,70 @@ describe('sanitizePuckData', () => {
         'Section-1:content': [
           {
             type: 'RichText',
-            props: {
-              id: 'rt-z',
-              content: {
-                type: 'doc',
-                content: [
-                  {
-                    type: 'paragraph',
-                    content: [{ type: 'text', text: '' }],
-                  },
-                ],
-              },
-            },
+            props: { id: 'rt-z', content: '', alignment: 'left', columns: 1 },
           },
         ],
       },
     };
 
     const result = sanitizePuckData(data);
-    const content = (result.zones!['Section-1:content'][0].props as any).content;
-    expect(content.content[0].content).toHaveLength(0);
+    expect((result.zones!['Section-1:content'][0].props as any).content).toBeNull();
   });
 
-  it('does not mutate the original data', () => {
-    const original = {
-      type: 'doc',
+  it('sanitizes components inside slot props (nested arrays)', () => {
+    const data: Data = {
+      root: { props: {} },
       content: [
         {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: '' },
-            { type: 'text', text: 'Keep' },
-          ],
+          type: 'Columns',
+          props: {
+            id: 'col-1',
+            'column-1': [
+              {
+                type: 'RichText',
+                props: { id: 'rt-slot', content: '', alignment: 'left', columns: 1 },
+              },
+            ],
+          },
         },
       ],
     };
 
+    const result = sanitizePuckData(data);
+    const slotContent = (result.content[0].props as any)['column-1'];
+    expect(slotContent[0].props.content).toBeNull();
+  });
+
+  it('does not mutate the original data', () => {
     const data: Data = {
       root: { props: {} },
       content: [
         {
           type: 'RichText',
-          props: { id: 'rt-1', content: original },
+          props: { id: 'rt-1', content: '', alignment: 'left', columns: 1 },
         },
       ],
     };
 
     sanitizePuckData(data);
-    expect(original.content[0].content).toHaveLength(2);
+    expect((data.content[0].props as any).content).toBe('');
   });
 
-  it('sanitizes stringified ProseMirror JSON in props', () => {
-    const pmJson = JSON.stringify({
-      type: 'doc',
-      content: [
-        {
-          type: 'paragraph',
-          content: [
-            { type: 'text', text: '' },
-            { type: 'text', text: 'Hello' },
-          ],
-        },
-      ],
-    });
-
-    const data: Data = {
-      root: { props: {} },
-      content: [
-        {
-          type: 'RichText',
-          props: { id: 'rt-1', content: pmJson },
-        },
-      ],
-    };
-
-    const result = sanitizePuckData(data);
-    const content = (result.content[0].props as any).content;
-    // Should have been parsed and sanitized — now an object, not a string
-    expect(typeof content).toBe('object');
-    expect(content.content[0].content).toHaveLength(1);
-    expect(content.content[0].content[0].text).toBe('Hello');
-  });
-
-  it('removes text nodes with null text', () => {
-    const data: Data = {
-      root: { props: {} },
-      content: [
-        {
-          type: 'RichText',
-          props: {
-            id: 'rt-1',
-            content: {
-              type: 'doc',
-              content: [
-                {
-                  type: 'paragraph',
-                  content: [
-                    { type: 'text', text: null },
-                    { type: 'text', text: 'Keep' },
-                  ],
-                },
-              ],
-            },
-          },
-        },
-      ],
-    };
-
-    const result = sanitizePuckData(data);
-    const content = (result.content[0].props as any).content;
-    expect(content.content[0].content).toHaveLength(1);
-    expect(content.content[0].content[0].text).toBe('Keep');
-  });
-
-  it('sanitizes root props (chrome components)', () => {
+  it('sanitizes root content (chrome components)', () => {
     const data = {
       root: {
-        props: {
-          announcement: {
-            type: 'doc',
-            content: [
-              {
-                type: 'paragraph',
-                content: [{ type: 'text', text: '' }],
-              },
-            ],
+        props: {},
+        content: [
+          {
+            type: 'AnnouncementBar',
+            props: { id: 'ab-1', text: '' },
           },
-        },
+        ],
       },
       content: [],
     } as unknown as Data;
 
     const result = sanitizePuckData(data);
-    const announcement = (result.root.props as any).announcement;
-    expect(announcement.content[0].content).toHaveLength(0);
+    expect((result.root as any).content[0].props.text).toBeNull();
   });
 });

@@ -1,85 +1,42 @@
 import type { Data } from '@puckeditor/core';
 
 /**
- * Recursively remove empty text nodes from a ProseMirror JSON tree.
- * ProseMirror throws `RangeError: Empty text nodes are not allowed`
- * when encountering `{ type: "text", text: "" }` during deserialization.
+ * Prop names that are richtext fields in Puck component configs.
+ * Puck's RichTextRender crashes when these are empty strings — it creates
+ * { type: "text", text: "" } which ProseMirror rejects. Setting to null
+ * makes Puck create a safe empty doc instead.
  */
-function stripEmptyTextNodes(node: unknown): unknown {
-  if (!node || typeof node !== 'object') return node;
-  if (Array.isArray(node)) {
-    return node
-      .filter(
-        (item) =>
-          !(
-            item &&
-            typeof item === 'object' &&
-            !Array.isArray(item) &&
-            (item as Record<string, unknown>).type === 'text' &&
-            !(item as Record<string, unknown>).text
-          )
-      )
-      .map(stripEmptyTextNodes);
-  }
-  const obj = node as Record<string, unknown>;
-  const result: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    result[key] = stripEmptyTextNodes(value);
-  }
-  return result;
-}
+const RICHTEXT_PROP_NAMES = ['content', 'text', 'quote'];
 
 /**
- * If a string looks like stringified ProseMirror JSON, parse and sanitize it.
- */
-function sanitizeStringValue(value: string): string | unknown {
-  if (
-    value.startsWith('{') &&
-    value.includes('"type"') &&
-    value.includes('"content"')
-  ) {
-    try {
-      const parsed = JSON.parse(value);
-      if (parsed && typeof parsed === 'object' && parsed.type) {
-        return stripEmptyTextNodes(parsed);
-      }
-    } catch {
-      // Not valid JSON, return as-is
-    }
-  }
-  return value;
-}
-
-/**
- * Sanitize Puck data to remove empty text nodes from richtext (ProseMirror/TipTap) content.
+ * Sanitize Puck data to prevent ProseMirror "Empty text nodes" crash.
  *
- * Handles three cases:
- * 1. ProseMirror JSON nested as objects in component props
- * 2. ProseMirror JSON stored as stringified JSON strings in component props
- * 3. Deeply nested content in zones and slots
+ * Root cause: Puck's RichTextRender converts empty string "" to
+ * { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "" }] }] }
+ * which crashes ProseMirror's Node.fromJSON. Setting empty richtext to null
+ * makes Puck use { type: "doc", content: [] } instead (safe).
  */
 export function sanitizePuckData(data: Data): Data {
   const clone = JSON.parse(JSON.stringify(data));
-
-  function walkProps(props: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(props)) {
-      if (typeof value === 'string') {
-        result[key] = sanitizeStringValue(value);
-      } else if (value && typeof value === 'object') {
-        result[key] = stripEmptyTextNodes(value);
-      } else {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
 
   function walkComponents(
     components: Array<{ type: string; props: Record<string, unknown> }>
   ) {
     for (const component of components) {
-      component.props = walkProps(component.props);
+      if (!component.props) continue;
+      // Nullify empty richtext strings to prevent ProseMirror crash
+      for (let i = 0; i < RICHTEXT_PROP_NAMES.length; i++) {
+        const key = RICHTEXT_PROP_NAMES[i];
+        if (component.props[key] === '') {
+          component.props[key] = null;
+        }
+      }
+      // Recursively walk slot content (arrays of components in props)
+      for (const value of Object.values(component.props)) {
+        if (Array.isArray(value) && value.length > 0 && value[0]?.type && value[0]?.props) {
+          walkComponents(value);
+        }
+      }
     }
   }
 
@@ -93,9 +50,9 @@ export function sanitizePuckData(data: Data): Data {
     }
   }
 
-  // Also walk root props (chrome components may have richtext fields)
-  if (clone.root?.props) {
-    clone.root.props = walkProps(clone.root.props);
+  // Chrome root content also has components with richtext
+  if (clone.root?.content) {
+    walkComponents(clone.root.content);
   }
 
   return clone;
