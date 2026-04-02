@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { HeroProps } from '../../types';
 import { resolveLink } from '../../fields/link-utils';
 import { IconRenderer } from '../../icons/IconRenderer';
+import { heroTitleClasses, heroSubtitleClasses } from '../../text-styles';
 
 const overlayClasses = {
   primary: 'bg-[var(--color-primary)]/70',
@@ -9,7 +10,7 @@ const overlayClasses = {
   none: '',
 };
 
-export function Hero({ title, subtitle, backgroundImageUrl, overlay, ctaLabel, ctaHref, icon }: HeroProps) {
+export function Hero({ title, subtitle, backgroundImageUrl, overlay, ctaLabel, ctaHref, icon, textSize = 'large' }: HeroProps) {
   const cta = resolveLink(ctaHref);
   return (
     <section
@@ -28,8 +29,8 @@ export function Hero({ title, subtitle, backgroundImageUrl, overlay, ctaLabel, c
             <IconRenderer icon={icon} size={48} className="text-white" />
           </div>
         )}
-        {title && <h1 className="text-4xl font-bold md:text-5xl">{title}</h1>}
-        {subtitle && <p className="mt-4 text-lg opacity-90 md:text-xl">{subtitle}</p>}
+        {title && <h1 className={`${heroTitleClasses[textSize]} font-bold`}>{title}</h1>}
+        {subtitle && <p className={`mt-4 ${heroSubtitleClasses[textSize]} opacity-90`}>{subtitle}</p>}
         {ctaLabel && cta.href && (
           <Link
             href={cta.href}

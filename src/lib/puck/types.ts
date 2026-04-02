@@ -15,6 +15,7 @@ export interface HeroProps {
   ctaLabel: string;
   ctaHref: string | LinkValue;
   icon?: IconValue;
+  textSize?: TextSize;
 }
 
 export interface RichTextProps {

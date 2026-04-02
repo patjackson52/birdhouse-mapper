@@ -70,10 +70,12 @@ export const pageConfig: Config<PageComponents> = {
         overlay: 'primary',
         ctaLabel: '',
         ctaHref: '',
+        textSize: 'large',
       },
       fields: {
         title: { type: 'text', label: 'Title' },
         subtitle: { type: 'text', label: 'Subtitle' },
+        textSize: textSizeField(),
         backgroundImageUrl: imagePickerField('Background Image', fetchLandingAssets),
         overlay: {
           type: 'select',

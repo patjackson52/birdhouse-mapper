@@ -45,6 +45,24 @@ describe('Hero', () => {
     render(<Hero title="Hello" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" icon={{ set: 'lucide', name: 'Bird' }} />);
     expect(screen.getByRole('heading', { name: 'Hello' })).toBeDefined();
   });
+
+  it('applies large title classes by default (no textSize prop)', () => {
+    render(<Hero title="Welcome" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" />);
+    const h1 = screen.getByRole('heading', { name: 'Welcome' });
+    expect(h1.className).toContain('text-4xl');
+  });
+
+  it('applies small title classes when textSize is small', () => {
+    render(<Hero title="Welcome" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" textSize="small" />);
+    const h1 = screen.getByRole('heading', { name: 'Welcome' });
+    expect(h1.className).toContain('text-2xl');
+  });
+
+  it('applies xl subtitle classes when textSize is xl', () => {
+    render(<Hero title="Welcome" subtitle="Hello world" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" textSize="xl" />);
+    const subtitle = screen.getByText('Hello world');
+    expect(subtitle.className).toContain('text-2xl');
+  });
 });
 
 // RichText
