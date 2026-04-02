@@ -1,30 +1,50 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { uploadLandingAsset, deleteLandingAsset } from '@/app/admin/landing/actions';
+import { useState } from 'react';
+import { deleteLandingAsset } from '@/app/admin/landing/actions';
 import type { LandingAsset } from '@/lib/config/landing-types';
-import PhotoSourcePicker from '@/components/photos/PhotoSourcePicker';
+import VaultPicker from '@/components/vault/VaultPicker';
+import type { VaultItem } from '@/lib/vault/types';
+import { createClient } from '@/lib/supabase/client';
 
 const MAX_ASSETS = 20;
 
 interface AssetManagerProps {
+  orgId: string;
   assets: LandingAsset[];
   onAssetsChange: (assets: LandingAsset[]) => void;
   referenceLinks: { label: string; url: string }[];
   onReferenceLinksChange: (links: { label: string; url: string }[]) => void;
 }
 
+function vaultItemToLandingAsset(item: VaultItem): LandingAsset {
+  const supabase = createClient();
+  const { data: { publicUrl } } = supabase.storage
+    .from(item.storage_bucket)
+    .getPublicUrl(item.storage_path);
+
+  return {
+    id: item.id,
+    storagePath: item.id,
+    publicUrl,
+    fileName: item.file_name,
+    mimeType: item.mime_type ?? '',
+    category: item.category === 'photo' ? 'image' : 'document',
+    description: '',
+    uploadedAt: item.created_at,
+  };
+}
+
 export default function AssetManager({
+  orgId,
   assets,
   onAssetsChange,
   referenceLinks,
   onReferenceLinksChange,
 }: AssetManagerProps) {
-  const docInputRef = useRef<HTMLInputElement>(null);
-
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [showDocPicker, setShowDocPicker] = useState(false);
 
   const [showAddLink, setShowAddLink] = useState(false);
   const [newLinkLabel, setNewLinkLabel] = useState('');
@@ -34,27 +54,18 @@ export default function AssetManager({
   const docAssets = assets.filter(a => a.category === 'document');
   const atLimit = assets.length >= MAX_ASSETS;
 
-  async function handleDocSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function handleVaultImageSelect(items: VaultItem[]) {
     setUploadError(null);
-    setUploadingDoc(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('category', 'document');
-      const { asset, error } = await uploadLandingAsset(formData);
-      if (error || !asset) {
-        setUploadError(error ?? 'Upload failed');
-      } else {
-        onAssetsChange([...assets, asset]);
-      }
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setUploadingDoc(false);
-      if (docInputRef.current) docInputRef.current.value = '';
-    }
+    const newAssets = items.map(vaultItemToLandingAsset);
+    onAssetsChange([...assets, ...newAssets]);
+    setShowImagePicker(false);
+  }
+
+  function handleVaultDocSelect(items: VaultItem[]) {
+    setUploadError(null);
+    const newAssets = items.map(vaultItemToLandingAsset);
+    onAssetsChange([...assets, ...newAssets]);
+    setShowDocPicker(false);
   }
 
   async function handleDeleteAsset(asset: LandingAsset) {
@@ -114,38 +125,17 @@ export default function AssetManager({
           </div>
         )}
         {imageAssets.length === 0 && (
-          <p className="text-xs text-gray-400 mb-2">No images uploaded yet.</p>
+          <p className="text-xs text-gray-400 mb-2">No images added yet.</p>
         )}
-        {!atLimit && !uploadingImage && (
-          <PhotoSourcePicker
-            accept="image/*"
-            maxFiles={1}
-            maxWidth={2000}
-            multiple={false}
-            onFilesSelected={async (files) => {
-              if (files.length === 0) return;
-              setUploadError(null);
-              setUploadingImage(true);
-              try {
-                const file = files[0];
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('category', 'image');
-                const { asset, error } = await uploadLandingAsset(formData);
-                if (error || !asset) {
-                  setUploadError(error ?? 'Upload failed');
-                } else {
-                  onAssetsChange([...assets, asset]);
-                }
-              } catch (err) {
-                setUploadError(err instanceof Error ? err.message : 'Upload failed');
-              } finally {
-                setUploadingImage(false);
-              }
-            }}
-          />
+        {!atLimit && (
+          <button
+            type="button"
+            onClick={() => setShowImagePicker(true)}
+            className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded px-2 py-1 bg-white"
+          >
+            + Select from Vault
+          </button>
         )}
-        {uploadingImage && <p className="text-xs text-gray-500">Uploading...</p>}
         {atLimit && <p className="text-xs text-gray-400">Asset limit reached (max {MAX_ASSETS}).</p>}
       </div>
 
@@ -170,23 +160,15 @@ export default function AssetManager({
           </div>
         )}
         {docAssets.length === 0 && (
-          <p className="text-xs text-gray-400 mb-2">No documents uploaded yet.</p>
+          <p className="text-xs text-gray-400 mb-2">No documents added yet.</p>
         )}
-        <input
-          ref={docInputRef}
-          type="file"
-          accept=".pdf,.txt,.md"
-          className="hidden"
-          onChange={handleDocSelect}
-        />
         {!atLimit && (
           <button
             type="button"
-            onClick={() => docInputRef.current?.click()}
-            disabled={uploadingDoc}
-            className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded px-2 py-1 bg-white disabled:opacity-50"
+            onClick={() => setShowDocPicker(true)}
+            className="text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 rounded px-2 py-1 bg-white"
           >
-            {uploadingDoc ? 'Uploading…' : '+ Add document'}
+            + Select from Vault
           </button>
         )}
         {atLimit && <p className="text-xs text-gray-400">Asset limit reached (max {MAX_ASSETS}).</p>}
@@ -261,6 +243,32 @@ export default function AssetManager({
           </button>
         )}
       </div>
+
+      {/* VaultPicker modals */}
+      {showImagePicker && (
+        <VaultPicker
+          orgId={orgId}
+          categoryFilter={['photo']}
+          visibilityFilter="public"
+          multiple={false}
+          onSelect={handleVaultImageSelect}
+          onClose={() => setShowImagePicker(false)}
+          defaultUploadCategory="photo"
+          defaultUploadVisibility="public"
+        />
+      )}
+      {showDocPicker && (
+        <VaultPicker
+          orgId={orgId}
+          categoryFilter={['document']}
+          visibilityFilter="public"
+          multiple={false}
+          onSelect={handleVaultDocSelect}
+          onClose={() => setShowDocPicker(false)}
+          defaultUploadCategory="document"
+          defaultUploadVisibility="public"
+        />
+      )}
     </div>
   );
 }

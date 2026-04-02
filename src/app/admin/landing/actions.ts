@@ -5,6 +5,8 @@ import { getConfig, invalidateConfig } from '@/lib/config/server';
 import { revalidateTag } from 'next/cache';
 import type { LandingPageConfig, LandingAsset } from '@/lib/config/landing-types';
 import { landingBlocksSchema } from '@/lib/landing/schemas';
+import { getTenantContext } from '@/lib/tenant/server';
+import { uploadToVault, deleteFromVault } from '@/lib/vault/actions';
 
 export async function getLandingPageConfig(): Promise<LandingPageConfig | null> {
   const config = await getConfig();
@@ -58,49 +60,53 @@ export async function uploadLandingAsset(
     return { asset: null, error: 'File exceeds 10MB limit' };
   }
 
-  const id = crypto.randomUUID();
-  const prefix = category === 'image' ? 'images' : 'documents';
-  const ext = file.name.split('.').pop() || '';
-  const storagePath = `${prefix}/${id}.${ext}`;
+  // Get org id from tenant context
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { asset: null, error: 'No org context' };
 
-  const { error: uploadError } = await supabase.storage
-    .from('landing-assets')
-    .upload(storagePath, file, { contentType: file.type });
+  const base64 = Buffer.from(await file.arrayBuffer()).toString('base64');
+  const result = await uploadToVault({
+    orgId: tenant.orgId,
+    file: { name: file.name, type: file.type, size: file.size, base64 },
+    category: category === 'image' ? 'photo' : 'document',
+    visibility: 'public',
+  });
 
-  if (uploadError) {
-    return { asset: null, error: uploadError.message };
+  if ('error' in result) {
+    return { asset: null, error: result.error };
   }
 
+  const vaultItem = result.item;
   const { data: { publicUrl } } = supabase.storage
-    .from('landing-assets')
-    .getPublicUrl(storagePath);
+    .from(vaultItem.storage_bucket)
+    .getPublicUrl(vaultItem.storage_path);
 
   const asset: LandingAsset = {
-    id,
-    storagePath,
+    id: vaultItem.id,
+    // storagePath stores the vault item id for deletion via deleteFromVault
+    storagePath: vaultItem.id,
     publicUrl,
-    fileName: file.name,
-    mimeType: file.type,
+    fileName: vaultItem.file_name,
+    mimeType: vaultItem.mime_type ?? file.type,
     category,
     description: description || '',
-    uploadedAt: new Date().toISOString(),
+    uploadedAt: vaultItem.created_at,
   };
 
   return { asset, error: null };
 }
 
-export async function deleteLandingAsset(storagePath: string) {
-  const supabase = createClient();
-
-  const { error } = await supabase.storage
-    .from('landing-assets')
-    .remove([storagePath]);
-
-  if (error) {
-    return { error: error.message };
+export async function deleteLandingAsset(vaultItemId: string) {
+  const result = await deleteFromVault(vaultItemId);
+  if ('error' in result) {
+    return { error: result.error };
   }
-
   return { error: null };
+}
+
+export async function getOrgId(): Promise<string | null> {
+  const tenant = await getTenantContext();
+  return tenant.orgId;
 }
 
 import { generateText } from 'ai';
@@ -132,7 +138,15 @@ export async function generateLandingPage(
     > = [];
 
     for (const img of imageAssets) {
-      const { data } = await supabase.storage.from('landing-assets').download(img.storagePath);
+      // storagePath now stores the vault item id; look up actual storage details
+      const { data: vaultItem } = await supabase
+        .from('vault_items')
+        .select('storage_bucket, storage_path')
+        .eq('id', img.storagePath)
+        .single();
+      const bucket = vaultItem?.storage_bucket ?? 'vault-public';
+      const path = vaultItem?.storage_path ?? img.storagePath;
+      const { data } = await supabase.storage.from(bucket).download(path);
       if (data) {
         const base64 = Buffer.from(await data.arrayBuffer()).toString('base64');
         imageContentParts.push({ type: 'image', image: base64, mediaType: img.mimeType });
@@ -146,7 +160,15 @@ export async function generateLandingPage(
     const docAssets = assets.filter(a => a.category === 'document');
     let documentContext = '';
     for (const doc of docAssets) {
-      const { data } = await supabase.storage.from('landing-assets').download(doc.storagePath);
+      // storagePath now stores the vault item id; look up actual storage details
+      const { data: vaultItem } = await supabase
+        .from('vault_items')
+        .select('storage_bucket, storage_path')
+        .eq('id', doc.storagePath)
+        .single();
+      const bucket = vaultItem?.storage_bucket ?? 'vault-public';
+      const path = vaultItem?.storage_path ?? doc.storagePath;
+      const { data } = await supabase.storage.from(bucket).download(path);
       if (data) {
         if (doc.mimeType === 'text/plain' || doc.mimeType === 'text/markdown') {
           const text = await data.text();

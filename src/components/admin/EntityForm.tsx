@@ -34,7 +34,7 @@ export default function EntityForm({ entityType, fields, entity, onSaved, onCanc
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(() => {
     if (!entity?.photo_path) return null;
     const supabase = createClient();
-    const { data } = supabase.storage.from('item-photos').getPublicUrl(entity.photo_path);
+    const { data } = supabase.storage.from('vault-public').getPublicUrl(entity.photo_path);
     return data.publicUrl;
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,7 +95,7 @@ export default function EntityForm({ entityType, fields, entity, onSaved, onCanc
       if (entity) {
         if (photoFile) {
           const path = `entities/${entity.id}/${Date.now()}.jpg`;
-          const { error: uploadErr } = await supabase.storage.from('item-photos').upload(path, photoFile);
+          const { error: uploadErr } = await supabase.storage.from('vault-public').upload(path, photoFile);
           if (uploadErr) throw uploadErr;
           payload.photo_path = path;
         }
@@ -118,7 +118,7 @@ export default function EntityForm({ entityType, fields, entity, onSaved, onCanc
 
         if (photoFile) {
           const path = `entities/${data.id}/${Date.now()}.jpg`;
-          const { error: uploadErr } = await supabase.storage.from('item-photos').upload(path, photoFile);
+          const { error: uploadErr } = await supabase.storage.from('vault-public').upload(path, photoFile);
           if (uploadErr) throw uploadErr;
           await supabase.from('entities').update({ photo_path: path }).eq('id', data.id);
           data.photo_path = path;

@@ -25,24 +25,33 @@ export async function GET(request: Request) {
 
   const service = createServiceClient();
 
-  // Query ai_context_items filtered by org_id (and batch_id if provided)
+  // Query vault_items flagged as ai_context filtered by org_id (and batch_id if provided)
+  // processing_status, content_summary, and batch_id are stored in the metadata jsonb field
   let query = service
-    .from('ai_context_items')
-    .select('id, processing_status, content_summary')
-    .eq('org_id', orgId);
+    .from('vault_items')
+    .select('id, metadata')
+    .eq('org_id', orgId)
+    .eq('is_ai_context', true);
 
   if (batchId) {
-    query = query.eq('batch_id', batchId);
+    query = query.eq('metadata->>batch_id', batchId);
   }
 
-  const { data: items, error: itemsError } = await query;
+  const { data: rawItems, error: itemsError } = await query;
 
   if (itemsError) {
     return NextResponse.json({ error: itemsError.message }, { status: 500 });
   }
 
+  type RawItem = { id: string; metadata: Record<string, unknown> | null };
+  const items = (rawItems ?? []).map((it: RawItem) => ({
+    id: it.id,
+    processing_status: ((it.metadata?.processing_status as string) ?? 'pending'),
+    content_summary: ((it.metadata?.content_summary as string) ?? null) as string | null,
+  }));
+
   // Get geo feature counts per item
-  const itemIds = (items ?? []).map((it: { id: string }) => it.id);
+  const itemIds = items.map((it: { id: string }) => it.id);
 
   type GeoCountRow = { source_item_id: string; count: number };
   let geoCounts: GeoCountRow[] = [];

@@ -61,10 +61,10 @@ export async function uploadLogo(
   const favicon = await sharp(buffer).resize(32, 32, { fit: 'cover' }).png().toBuffer();
   variants.push({ name: 'favicon-32.png', buffer: favicon });
 
-  // Upload all variants to branding bucket
+  // Upload all variants to vault-public bucket
   for (const variant of variants) {
     const { error } = await supabase.storage
-      .from('branding')
+      .from('vault-public')
       .upload(`${basePath}/${variant.name}`, variant.buffer, {
         contentType: 'image/png',
         upsert: true,

@@ -8,12 +8,14 @@ import {
   deleteAiContextItem,
   processUrlContext,
   rebuildOrgSummary,
+  vaultItemToAiContext,
 } from '@/lib/ai-context/actions';
 import { parseFileForAnalysis } from '@/lib/ai-context/parsers';
 import type { AiContextItem, AiContextSummary } from '@/lib/ai-context/types';
+import type { VaultItem } from '@/lib/vault/types';
 import OrgProfileCard from '@/components/ai-context/OrgProfileCard';
 import AiContextTable from '@/components/ai-context/AiContextTable';
-import FileDropZone from '@/components/ai-context/FileDropZone';
+import VaultPicker from '@/components/vault/VaultPicker';
 import ProcessingProgress, { type ProcessingItem } from '@/components/ai-context/ProcessingProgress';
 
 type ItemWithGeoCount = AiContextItem & { geo_count: number };
@@ -27,6 +29,7 @@ export default function AiContextPage() {
 
   // Upload / processing state
   const [uploading, setUploading] = useState(false);
+  const [showVaultPicker, setShowVaultPicker] = useState(false);
   const [processingItems, setProcessingItems] = useState<ProcessingItem[]>([]);
   const [summaryReady, setSummaryReady] = useState(false);
 
@@ -39,11 +42,12 @@ export default function AiContextPage() {
   const loadData = useCallback(async (currentOrgId: string) => {
     const supabase = createClient();
 
-    // Fetch items
-    const { data: itemsData } = await supabase
-      .from('ai_context_items')
+    // Fetch vault items that are ai_context
+    const { data: vaultItems } = await supabase
+      .from('vault_items')
       .select('*')
       .eq('org_id', currentOrgId)
+      .eq('is_ai_context', true)
       .order('created_at', { ascending: false });
 
     // Fetch geo counts per item
@@ -59,9 +63,9 @@ export default function AiContextPage() {
       }
     }
 
-    const enriched: ItemWithGeoCount[] = (itemsData ?? []).map((item) => ({
-      ...(item as AiContextItem),
-      geo_count: geoCountMap[item.id] ?? 0,
+    const enriched: ItemWithGeoCount[] = (vaultItems ?? []).map((vaultItem: VaultItem) => ({
+      ...vaultItemToAiContext(vaultItem),
+      geo_count: geoCountMap[vaultItem.id] ?? 0,
     }));
 
     setItems(enriched);
@@ -128,6 +132,7 @@ export default function AiContextPage() {
     setUploading(true);
     setSummaryReady(false);
     setError(null);
+    setShowVaultPicker(false);
 
     // Build initial processing items list (pending)
     const pendingItems: ProcessingItem[] = files.map((f) => ({
@@ -165,7 +170,7 @@ export default function AiContextPage() {
         }
         const base64 = btoa(binary);
 
-        // Upload to server
+        // Upload to vault via server action
         const uploadResult = await uploadAiContextItem(
           orgId,
           {
@@ -244,6 +249,7 @@ export default function AiContextPage() {
     setUploading(true);
     setSummaryReady(false);
     setError(null);
+    setShowVaultPicker(false);
 
     const pendingItem: ProcessingItem = {
       id: crypto.randomUUID(),
@@ -309,10 +315,20 @@ export default function AiContextPage() {
   async function handleDownload(item: AiContextItem) {
     if (!item.storage_path) return;
 
+    // Find the matching vault item to get the correct bucket
     const supabase = createClient();
+    const { data: vaultItem } = await supabase
+      .from('vault_items')
+      .select('storage_bucket, storage_path')
+      .eq('id', item.id)
+      .single();
+
+    const bucket = vaultItem?.storage_bucket ?? 'vault-private';
+    const path = vaultItem?.storage_path ?? item.storage_path;
+
     const { data, error: downloadError } = await supabase.storage
-      .from('ai-context')
-      .download(item.storage_path);
+      .from(bucket)
+      .download(path);
 
     if (downloadError || !data) {
       setError(`Download failed: ${downloadError?.message ?? 'Unknown error'}`);
@@ -327,6 +343,76 @@ export default function AiContextPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // Handle files selected via VaultPicker (already uploaded — just analyze)
+  async function handleVaultPickerSelect(vaultItems: VaultItem[]) {
+    if (!orgId || vaultItems.length === 0) return;
+
+    setShowVaultPicker(false);
+    setUploading(true);
+    setSummaryReady(false);
+    setError(null);
+
+    const pendingItems: ProcessingItem[] = vaultItems.map((vi) => ({
+      id: vi.id,
+      fileName: vi.file_name,
+      mimeType: vi.mime_type ?? 'application/octet-stream',
+      status: 'processing' as const,
+      contentSummary: null,
+      geoCount: 0,
+    }));
+    setProcessingItems(pendingItems);
+
+    const errors: string[] = [];
+
+    for (const vaultItem of vaultItems) {
+      // Download the file to parse it client-side isn't possible here (server action)
+      // We create a minimal parsedData from vault item metadata
+      const parsedData: import('@/lib/ai-context/types').ParsedFileData = {
+        fileName: vaultItem.file_name,
+        mimeType: vaultItem.mime_type ?? 'application/octet-stream',
+        fileSize: vaultItem.file_size,
+        sourceType: 'file',
+      };
+
+      const analysisResult = await analyzeAiContextItem(vaultItem.id, parsedData);
+
+      if ('error' in analysisResult) {
+        setProcessingItems((prev) =>
+          prev.map((p) => (p.id === vaultItem.id ? { ...p, status: 'error' } : p))
+        );
+        errors.push(`${vaultItem.file_name}: ${analysisResult.error}`);
+      } else {
+        const result = analysisResult.result;
+        setProcessingItems((prev) =>
+          prev.map((p) =>
+            p.id === vaultItem.id
+              ? {
+                  ...p,
+                  status: 'complete',
+                  contentSummary: result.content_summary,
+                  geoCount: result.geo_features?.length ?? 0,
+                }
+              : p
+          )
+        );
+      }
+    }
+
+    // Rebuild org summary
+    const summaryResult = await rebuildOrgSummary(orgId);
+    if ('success' in summaryResult) {
+      setSummary(summaryResult.summary);
+      setSummaryReady(true);
+    }
+
+    if (errors.length > 0) {
+      setError(errors.join('\n'));
+    }
+
+    setUploading(false);
+    await loadData(orgId);
   }
 
   const totalGeoCount = items.reduce((sum, item) => sum + item.geo_count, 0);
@@ -375,12 +461,32 @@ export default function AiContextPage() {
       {/* Upload section */}
       <section className="card space-y-4">
         <h2 className="font-heading text-base font-semibold text-forest-dark">Add Context</h2>
-        <FileDropZone
-          onFilesSelected={handleFilesSelected}
-          onUrlSubmit={handleUrlSubmit}
-          disabled={uploading}
-        />
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={() => setShowVaultPicker(true)}
+            disabled={uploading}
+            className="btn-primary disabled:opacity-50"
+          >
+            Upload or Select Files
+          </button>
+          <p className="text-sm text-sage self-center">
+            Upload documents, images, or geo files to your Data Vault for AI analysis.
+          </p>
+        </div>
       </section>
+
+      {/* VaultPicker modal */}
+      {showVaultPicker && orgId && (
+        <VaultPicker
+          orgId={orgId}
+          defaultUploadCategory="document"
+          defaultUploadVisibility="private"
+          defaultIsAiContext={true}
+          multiple={true}
+          onSelect={handleVaultPickerSelect}
+          onClose={() => setShowVaultPicker(false)}
+        />
+      )}
 
       {/* Processing progress */}
       {processingItems.length > 0 && (

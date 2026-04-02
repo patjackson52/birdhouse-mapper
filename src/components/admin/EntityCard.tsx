@@ -15,7 +15,7 @@ interface EntityCardProps {
 export default function EntityCard({ entity, entityType, fields, onEdit, onDelete }: EntityCardProps) {
   const photoUrl = useMemo(() => {
     if (!entity.photo_path) return null;
-    return createClient().storage.from('item-photos').getPublicUrl(entity.photo_path).data.publicUrl;
+    return createClient().storage.from('vault-public').getPublicUrl(entity.photo_path).data.publicUrl;
   }, [entity.photo_path]);
 
   const fieldValues = fields

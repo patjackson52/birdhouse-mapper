@@ -5,13 +5,14 @@ import type { GalleryBlock, LandingAsset } from '@/lib/config/landing-types';
 import AssetPicker from '@/components/admin/landing/AssetPicker';
 
 interface GalleryEditorProps {
+  orgId: string;
   block: GalleryBlock;
   onChange: (block: GalleryBlock) => void;
   assets: LandingAsset[];
   onAssetsChange: (assets: LandingAsset[]) => void;
 }
 
-export default function GalleryEditor({ block, onChange, assets, onAssetsChange }: GalleryEditorProps) {
+export default function GalleryEditor({ orgId, block, onChange, assets, onAssetsChange }: GalleryEditorProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   function removeImage(index: number) {
@@ -80,6 +81,7 @@ export default function GalleryEditor({ block, onChange, assets, onAssetsChange 
 
       {showPicker && (
         <AssetPicker
+          orgId={orgId}
           assets={assets}
           onSelect={(url) => {
             onChange({ ...block, images: [...block.images, { url, alt: '', caption: undefined }] });

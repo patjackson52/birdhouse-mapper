@@ -239,6 +239,7 @@ export default function OrgSettingsPage() {
             <LogoUploader
               currentLogoUrl={settings?.logo_url ? getLogoUrl(settings.logo_url, 'original.png') : null}
               scope="org"
+              orgId={settings?.id ?? ''}
               onUploaded={async () => {
                 await queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] });
                 router.refresh();

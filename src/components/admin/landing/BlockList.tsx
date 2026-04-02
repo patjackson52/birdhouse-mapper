@@ -65,13 +65,14 @@ function createDefaultBlock(type: LandingBlock['type']): LandingBlock {
 }
 
 interface BlockListProps {
+  orgId: string;
   blocks: LandingBlock[];
   onBlocksChange: (blocks: LandingBlock[]) => void;
   assets: LandingAsset[];
   onAssetsChange: (assets: LandingAsset[]) => void;
 }
 
-export default function BlockList({ blocks, onBlocksChange, assets, onAssetsChange }: BlockListProps) {
+export default function BlockList({ orgId, blocks, onBlocksChange, assets, onAssetsChange }: BlockListProps) {
   const [expandedBlockId, setExpandedBlockId] = useState<string | null>(null);
 
   function moveBlock(index: number, direction: -1 | 1) {
@@ -162,6 +163,7 @@ export default function BlockList({ blocks, onBlocksChange, assets, onAssetsChan
               {isExpanded && (
                 <div className="px-3 py-3 border-t border-gray-200 bg-gray-50">
                   <BlockEditor
+                    orgId={orgId}
                     block={block}
                     onChange={(updated) => updateBlock(i, updated)}
                     assets={assets}
