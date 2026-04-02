@@ -5,9 +5,13 @@ import '@puckeditor/core/dist/index.css';
 import { pageConfig } from '@/lib/puck/config';
 import { savePuckPageDraft, publishPuckPages } from '@/app/admin/site-builder/actions';
 import { PuckSuggestionsProvider } from '@/lib/puck/fields';
+import { sanitizePuckData } from '@/lib/puck/sanitize-data';
+import { patchProseMirrorFromJSON } from '@/lib/puck/patch-prosemirror';
 import type { Data } from '@puckeditor/core';
 import { useState, useCallback, useMemo } from 'react';
-import { sanitizePuckData } from '@/lib/puck/sanitize-data';
+
+// Patch ProseMirror before any editor instance is created
+patchProseMirrorFromJSON();
 
 interface PuckPageEditorProps {
   initialData: Data;
