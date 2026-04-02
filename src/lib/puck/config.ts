@@ -420,11 +420,13 @@ export const pageConfig: Config<PageComponents> = {
         attribution: '',
         photoUrl: '',
         style: 'default',
+        textSize: 'large',
       },
       fields: {
         quote: { type: 'richtext', label: 'Quote' },
         attribution: { type: 'text', label: 'Attribution' },
         photoUrl: imagePickerField('Photo', fetchLandingAssets),
+        textSize: textSizeField(),
         style: {
           type: 'radio',
           label: 'Style',

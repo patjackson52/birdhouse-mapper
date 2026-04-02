@@ -104,6 +104,7 @@ export interface TestimonialProps {
   attribution: string;
   photoUrl: string;
   style: 'default' | 'accent';
+  textSize?: TextSize;
 }
 
 export interface EmbedProps {
