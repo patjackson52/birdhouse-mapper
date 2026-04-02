@@ -229,6 +229,7 @@ export const pageConfig: Config<PageComponents> = {
       defaultProps: {
         source: 'manual',
         items: [],
+        textSize: 'large',
       },
       fields: {
         source: {
@@ -251,6 +252,7 @@ export const pageConfig: Config<PageComponents> = {
             value: '0',
           },
         },
+        textSize: textSizeField(),
       },
       render: Stats,
     },

@@ -57,6 +57,7 @@ export interface StatsProps {
     label: string;
     value: string;
   }>;
+  textSize?: TextSize;
 }
 
 export interface GalleryProps {

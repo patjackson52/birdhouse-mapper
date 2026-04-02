@@ -233,6 +233,33 @@ describe('Stats', () => {
     const { container } = render(<Stats source="manual" items={[]} />);
     expect(container.firstChild).toBeNull();
   });
+
+  it('applies text-3xl to stat values by default (no textSize prop)', () => {
+    const { container } = render(
+      <Stats source="manual" items={[{ value: '42', label: 'Species' }]} />
+    );
+    const valueEl = container.querySelector('.text-3xl') as HTMLElement;
+    expect(valueEl).not.toBeNull();
+    expect(valueEl.textContent).toBe('42');
+  });
+
+  it('applies text-xl to stat values when textSize is small', () => {
+    const { container } = render(
+      <Stats source="manual" items={[{ value: '42', label: 'Species' }]} textSize="small" />
+    );
+    const valueEl = container.querySelector('.text-xl') as HTMLElement;
+    expect(valueEl).not.toBeNull();
+    expect(valueEl.textContent).toBe('42');
+  });
+
+  it('applies text-4xl to stat values when textSize is xl', () => {
+    const { container } = render(
+      <Stats source="manual" items={[{ value: '42', label: 'Species' }]} textSize="xl" />
+    );
+    const valueEl = container.querySelector('.text-4xl') as HTMLElement;
+    expect(valueEl).not.toBeNull();
+    expect(valueEl.textContent).toBe('42');
+  });
 });
 
 // Gallery
