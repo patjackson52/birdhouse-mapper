@@ -2,11 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useParams } from 'next/navigation';
+import { useRef } from 'react';
 
 export default function SiteBuilderLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { slug } = useParams<{ slug: string }>();
   const base = `/admin/properties/${slug}/site-builder`;
+  const previewWindowRef = useRef<Window | null>(null);
 
   const tabs = [
     { label: 'Landing Page', href: `${base}/landing` },
@@ -15,7 +17,13 @@ export default function SiteBuilderLayout({ children }: { children: React.ReactN
   ];
 
   const handlePreview = () => {
-    window.open('/?preview=true', '_blank');
+    // Reuse existing preview window if still open
+    if (previewWindowRef.current && !previewWindowRef.current.closed) {
+      previewWindowRef.current.location.href = '/?preview=true';
+      previewWindowRef.current.focus();
+    } else {
+      previewWindowRef.current = window.open('/?preview=true', 'puck-preview');
+    }
   };
 
   return (
