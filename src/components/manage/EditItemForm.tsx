@@ -510,6 +510,7 @@ export default function EditItemForm({
         <PhotoUploader
           onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])}
           maxFiles={5 - remainingPhotosForDisplay.length}
+          orgId={orgId ?? undefined}
         />
       </div>
 
