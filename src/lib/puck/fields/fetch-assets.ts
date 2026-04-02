@@ -8,23 +8,42 @@ export interface AssetItem {
   fileName: string;
 }
 
-/** Fetch image assets from the landing-assets Supabase bucket */
+/** Fetch image assets from the vault for the Puck editor */
 export async function fetchLandingAssets(): Promise<AssetItem[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.storage
-    .from('landing-assets')
-    .list('images', { limit: 100, sortBy: { column: 'created_at', order: 'desc' } });
+
+  // Get org_id from membership
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: membership } = await supabase
+    .from('org_memberships')
+    .select('org_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .single();
+  if (!membership) return [];
+
+  // Query vault items that are images (photos + branding) and public
+  const { data, error } = await supabase
+    .from('vault_items')
+    .select('id, storage_bucket, storage_path, file_name')
+    .eq('org_id', membership.org_id)
+    .in('category', ['photo', 'branding'])
+    .eq('visibility', 'public')
+    .order('created_at', { ascending: false })
+    .limit(100);
 
   if (error || !data) return [];
 
-  return data
-    .filter((f) => f.name !== '.emptyFolderPlaceholder')
-    .map((f) => {
-      const { data: { publicUrl } } = supabase.storage.from('landing-assets').getPublicUrl(`images/${f.name}`);
-      return {
-        id: f.id ?? f.name,
-        publicUrl,
-        fileName: f.name,
-      };
-    });
+  return data.map((item: any) => {
+    const { data: { publicUrl } } = supabase.storage
+      .from(item.storage_bucket)
+      .getPublicUrl(item.storage_path);
+    return {
+      id: item.id,
+      publicUrl,
+      fileName: item.file_name,
+    };
+  });
 }
