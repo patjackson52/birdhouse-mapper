@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { VaultItem, VaultCategory } from '@/lib/vault/types';
+import { formatBytes } from '@/lib/vault/helpers';
 
 type SortColumn = 'file_name' | 'file_size' | 'created_at';
 type SortDirection = 'asc' | 'desc';
@@ -12,13 +13,6 @@ const CATEGORY_ICONS: Record<VaultCategory, string> = {
   branding: '🎨',
   geospatial: '🗺️',
 };
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
 
 interface VaultTableProps {
   items: VaultItem[];

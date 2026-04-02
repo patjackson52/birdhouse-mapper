@@ -2,6 +2,16 @@ import { createClient } from '@/lib/supabase/client';
 import type { VaultItem } from './types';
 
 /**
+ * Format a byte count into a human-readable string (e.g. "1.2 MB").
+ */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+/**
  * Get the URL for a vault item.
  * - Public items: returns CDN-cacheable public URL (sync)
  * - Private items: returns a signed URL with 1-hour expiry (async)

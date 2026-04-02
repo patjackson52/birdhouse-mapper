@@ -73,6 +73,14 @@ export async function deleteFromVault(
   vaultItemId: string
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated.' };
+  }
 
   const { data: item, error: fetchError } = await supabase
     .from('vault_items')
@@ -114,6 +122,14 @@ export async function updateVaultItem(
   }
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { error: 'Not authenticated.' };
+  }
 
   const { error } = await supabase
     .from('vault_items')

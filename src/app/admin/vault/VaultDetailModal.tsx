@@ -3,18 +3,11 @@
 import { useState, useEffect } from 'react';
 import type { VaultItem } from '@/lib/vault/types';
 import { updateVaultItem, deleteFromVault, setPropertyExclusion } from '@/lib/vault/actions';
-import { getVaultUrl } from '@/lib/vault/helpers';
+import { getVaultUrl, formatBytes } from '@/lib/vault/helpers';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
 
 function isImageMime(mimeType: string | null): boolean {
   return !!mimeType && mimeType.startsWith('image/');

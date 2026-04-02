@@ -198,3 +198,21 @@ create policy vault_private_delete on storage.objects
       select id::text from orgs where id in (select unnest(user_org_admin_org_ids()))
     )
   );
+
+-- Fix ai_context_geo_features FK to point to vault_items
+alter table ai_context_geo_features drop constraint if exists ai_context_geo_features_source_item_id_fkey;
+alter table ai_context_geo_features add constraint ai_context_geo_features_source_item_id_fkey
+  foreign key (source_item_id) references vault_items(id) on delete cascade;
+
+-- Auto-update updated_at on vault_items
+create or replace function update_vault_items_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create trigger trg_vault_items_updated_at
+before update on vault_items
+for each row execute function update_vault_items_updated_at();

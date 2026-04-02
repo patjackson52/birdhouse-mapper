@@ -14,7 +14,8 @@ import {
   File as FileIcon,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { AiContextItem, AiContextSummary } from '@/lib/ai-context/types';
+import type { AiContextSummary } from '@/lib/ai-context/types';
+import type { VaultItem } from '@/lib/vault/types';
 
 interface AiContextPanelProps {
   orgId: string;
@@ -42,7 +43,7 @@ function getFileIcon(mimeType: string | null) {
 }
 
 export default function AiContextPanel({ orgId }: AiContextPanelProps) {
-  const [items, setItems] = useState<AiContextItem[]>([]);
+  const [items, setItems] = useState<VaultItem[]>([]);
   const [summary, setSummary] = useState<AiContextSummary | null>(null);
   const [geoCount, setGeoCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -54,10 +55,10 @@ export default function AiContextPanel({ orgId }: AiContextPanelProps) {
 
       const [itemsResult, summaryResult, geoResult] = await Promise.all([
         supabase
-          .from('ai_context_items')
+          .from('vault_items')
           .select('*')
           .eq('org_id', orgId)
-          .eq('processing_status', 'complete'),
+          .eq('is_ai_context', true),
         supabase
           .from('ai_context_summary')
           .select('*')
@@ -69,7 +70,7 @@ export default function AiContextPanel({ orgId }: AiContextPanelProps) {
           .eq('org_id', orgId),
       ]);
 
-      setItems((itemsResult.data as AiContextItem[]) ?? []);
+      setItems((itemsResult.data as VaultItem[]) ?? []);
       setSummary((summaryResult.data as AiContextSummary | null) ?? null);
       setGeoCount(geoResult.count ?? 0);
       setLoading(false);
