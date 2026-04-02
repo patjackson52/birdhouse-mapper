@@ -87,6 +87,9 @@ vi.mock('@/lib/supabase/server', () => ({
           })),
         };
       }),
+      update: vi.fn((_payload: any) => ({
+        eq: vi.fn((_col: string, _val: string) => Promise.resolve({ error: null })),
+      })),
       delete: vi.fn(() => ({
         eq: vi.fn((_col: string, _val: string) => {
           if (deleteError) return Promise.resolve({ error: deleteError });
@@ -98,7 +101,7 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
-import { uploadToVault, deleteFromVault } from '../actions';
+import { uploadToVault, deleteFromVault, updateVaultItem } from '../actions';
 
 function makeInput(overrides: Partial<Parameters<typeof uploadToVault>[0]> = {}): Parameters<typeof uploadToVault>[0] {
   return {
@@ -178,6 +181,37 @@ describe('uploadToVault', () => {
     expect((result as { error: string }).error).toContain('Disk full');
     expect(insertedRows).toHaveLength(0);
   });
+
+  it('auth failure returns not authenticated error', async () => {
+    authUser = null;
+    const result = await uploadToVault(makeInput());
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('Not authenticated.');
+    expect(uploadedFiles).toHaveLength(0);
+    expect(insertedRows).toHaveLength(0);
+  });
+
+  it('sets isAiContext and aiPriority on inserted row', async () => {
+    const result = await uploadToVault(makeInput({ isAiContext: true, aiPriority: 5 }));
+
+    expect('success' in result && result.success).toBe(true);
+    expect(insertedRows).toHaveLength(1);
+    expect(insertedRows[0].payload).toMatchObject({
+      is_ai_context: true,
+      ai_priority: 5,
+    });
+  });
+
+  it('returns error on DB insert failure (upload still occurs)', async () => {
+    insertError = new Error('DB constraint violated');
+    const result = await uploadToVault(makeInput());
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toContain('Failed to create vault item');
+    // Upload happens before the insert, so the file was uploaded
+    expect(uploadedFiles).toHaveLength(1);
+  });
 });
 
 describe('deleteFromVault', () => {
@@ -203,5 +237,45 @@ describe('deleteFromVault', () => {
     expect(removedFiles[0].paths).toContain('org-1/item-1/file.pdf');
     expect(deletedRows).toHaveLength(1);
     expect(deletedRows[0].table).toBe('vault_items');
+  });
+
+  it('auth failure returns not authenticated error', async () => {
+    authUser = null;
+    const result = await deleteFromVault('item-abc');
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('Not authenticated.');
+    expect(removedFiles).toHaveLength(0);
+    expect(deletedRows).toHaveLength(0);
+  });
+
+  it('returns error on storage removal failure', async () => {
+    removeError = new Error('Permission denied');
+    const result = await deleteFromVault('item-abc');
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toContain('Failed to delete file');
+    expect((result as { error: string }).error).toContain('Permission denied');
+    expect(deletedRows).toHaveLength(0);
+  });
+});
+
+describe('updateVaultItem', () => {
+  beforeEach(() => {
+    authUser = { id: 'user-123' };
+  });
+
+  it('successfully updates a vault item', async () => {
+    const result = await updateVaultItem('item-abc', { file_name: 'renamed.pdf', is_ai_context: true });
+
+    expect('success' in result && result.success).toBe(true);
+  });
+
+  it('auth failure returns not authenticated error', async () => {
+    authUser = null;
+    const result = await updateVaultItem('item-abc', { file_name: 'renamed.pdf' });
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toBe('Not authenticated.');
   });
 });

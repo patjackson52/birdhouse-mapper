@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mutable flag to simulate signed URL errors
+let signedUrlError: Error | null = null;
 
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
@@ -7,18 +10,21 @@ vi.mock('@/lib/supabase/client', () => ({
         getPublicUrl: vi.fn((path: string) => ({
           data: { publicUrl: `https://storage.example.com/${bucket}/${path}` },
         })),
-        createSignedUrl: vi.fn((path: string, expiresIn: number) =>
-          Promise.resolve({
+        createSignedUrl: vi.fn((path: string, expiresIn: number) => {
+          if (signedUrlError) {
+            return Promise.resolve({ data: null, error: signedUrlError });
+          }
+          return Promise.resolve({
             data: { signedUrl: `https://storage.example.com/${bucket}/${path}?token=signed&expires=${expiresIn}` },
             error: null,
-          })
-        ),
+          });
+        }),
       }),
     },
   }),
 }));
 
-import { getVaultUrl } from '../helpers';
+import { getVaultUrl, formatBytes } from '../helpers';
 import type { VaultItem } from '../types';
 
 function makeItem(overrides: Partial<VaultItem> = {}): VaultItem {
@@ -42,7 +48,33 @@ function makeItem(overrides: Partial<VaultItem> = {}): VaultItem {
   };
 }
 
+describe('formatBytes', () => {
+  it('formats 0 bytes', () => {
+    expect(formatBytes(0)).toBe('0 B');
+  });
+
+  it('formats bytes below 1 KB', () => {
+    expect(formatBytes(512)).toBe('512 B');
+  });
+
+  it('formats kilobytes', () => {
+    expect(formatBytes(1536)).toBe('1.5 KB');
+  });
+
+  it('formats megabytes', () => {
+    expect(formatBytes(1572864)).toBe('1.5 MB');
+  });
+
+  it('formats gigabytes', () => {
+    expect(formatBytes(1610612736)).toBe('1.5 GB');
+  });
+});
+
 describe('getVaultUrl', () => {
+  beforeEach(() => {
+    signedUrlError = null;
+  });
+
   it('returns public URL for public items', () => {
     const item = makeItem({ visibility: 'public', storage_bucket: 'vault-public' });
     const url = getVaultUrl(item);
@@ -58,5 +90,15 @@ describe('getVaultUrl', () => {
     const url = await getVaultUrl(item);
     expect(url).toContain('vault-private');
     expect(url).toContain('token=signed');
+  });
+
+  it('rejects with error message when signed URL creation fails', async () => {
+    signedUrlError = new Error('Unauthorized');
+    const item = makeItem({
+      visibility: 'private',
+      storage_bucket: 'vault-private',
+      storage_path: 'org-1/item-1/doc.pdf',
+    });
+    await expect(getVaultUrl(item)).rejects.toThrow('Failed to create signed URL: Unauthorized');
   });
 });

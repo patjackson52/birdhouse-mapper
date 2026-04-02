@@ -37,4 +37,30 @@ describe('VaultPicker', () => {
     fireEvent.click(screen.getByText('Upload New'));
     expect(screen.getByText(/Drop files here/)).toBeTruthy();
   });
+
+  it('passes categoryFilter to browse tab', () => {
+    render(
+      <VaultPicker
+        orgId="org-1"
+        categoryFilter={['photo']}
+        onSelect={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    // The browse tab should show the "All" pill and the "Photos" pill for the filtered category
+    expect(screen.getByText('All')).toBeTruthy();
+    expect(screen.getByText('Photos')).toBeTruthy();
+    // Other category pills should not be rendered since only 'photo' is in the filter
+    expect(screen.queryByText('Documents')).toBeNull();
+    expect(screen.queryByText('Branding')).toBeNull();
+    expect(screen.queryByText('Geospatial')).toBeNull();
+  });
+
+  it('upload tab renders dropzone text', () => {
+    render(
+      <VaultPicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />
+    );
+    fireEvent.click(screen.getByText('Upload New'));
+    expect(screen.getByText(/Drop files here/)).toBeTruthy();
+  });
 });
