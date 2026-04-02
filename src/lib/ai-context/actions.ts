@@ -15,6 +15,32 @@ import {
   buildOnboardingPreFillPrompt,
 } from './prompts';
 import { buildOrgContextBlock } from './context-provider';
+import { uploadToVault, deleteFromVault } from '@/lib/vault/actions';
+import type { VaultItem } from '@/lib/vault/types';
+
+// ---------------------------------------------------------------------------
+// Helper: map a VaultItem (with metadata) to AiContextItem shape
+// ---------------------------------------------------------------------------
+
+function vaultItemToAiContext(item: VaultItem): AiContextItem {
+  const meta = item.metadata ?? {};
+  return {
+    id: item.id,
+    org_id: item.org_id,
+    uploaded_by: item.uploaded_by,
+    source_type: (meta.source_type as AiContextItem['source_type']) ?? 'file',
+    file_name: item.file_name,
+    mime_type: item.mime_type,
+    file_size: item.file_size,
+    storage_path: item.storage_path,
+    content_summary: (meta.content_summary as string) ?? null,
+    processing_status: (meta.processing_status as AiContextItem['processing_status']) ?? 'pending',
+    processing_error: (meta.processing_error as string) ?? null,
+    batch_id: (meta.batch_id as string) ?? null,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // uploadAiContextItem
@@ -26,69 +52,24 @@ export async function uploadAiContextItem(
   sourceType: 'file' | 'url' | 'text',
   batchId: string | null
 ): Promise<{ success: true; itemId: string } | { error: string }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { error: 'Not authenticated.' };
-  }
-
-  const service = createServiceClient();
-
-  // Insert the DB row first to get an ID
-  const { data: item, error: insertError } = await service
-    .from('ai_context_items')
-    .insert({
-      org_id: orgId,
-      uploaded_by: user.id,
+  const result = await uploadToVault({
+    orgId,
+    file,
+    category: 'document',
+    visibility: 'private',
+    isAiContext: true,
+    metadata: {
       source_type: sourceType,
-      file_name: file.name,
-      mime_type: file.type || null,
-      file_size: file.size,
       processing_status: 'pending',
       batch_id: batchId,
-    })
-    .select('id')
-    .single();
+    },
+  });
 
-  if (insertError || !item) {
-    return { error: `Failed to create context item: ${insertError?.message ?? 'unknown'}` };
+  if ('error' in result) {
+    return { error: result.error };
   }
 
-  const itemId: string = item.id;
-
-  // Derive extension from file name
-  const dotIndex = file.name.lastIndexOf('.');
-  const ext = dotIndex !== -1 ? file.name.slice(dotIndex) : '';
-  const storagePath = `ai-context/${orgId}/${itemId}/original${ext}`;
-
-  // Decode base64 and upload to storage
-  const binaryBuffer = Buffer.from(file.base64, 'base64');
-  const { error: uploadError } = await service.storage
-    .from('ai-context')
-    .upload(storagePath, binaryBuffer, {
-      contentType: file.type || 'application/octet-stream',
-      upsert: false,
-    });
-
-  if (uploadError) {
-    return { error: `Failed to upload file: ${uploadError.message}` };
-  }
-
-  // Update storage_path on the row
-  const { error: updateError } = await service
-    .from('ai_context_items')
-    .update({ storage_path: storagePath })
-    .eq('id', itemId);
-
-  if (updateError) {
-    return { error: `Failed to update storage path: ${updateError.message}` };
-  }
-
-  return { success: true, itemId };
+  return { success: true, itemId: result.item.id };
 }
 
 // ---------------------------------------------------------------------------
@@ -111,9 +92,9 @@ export async function analyzeAiContextItem(
 
   const service = createServiceClient();
 
-  // Get item from DB
+  // Get item from vault_items
   const { data: item, error: itemError } = await service
-    .from('ai_context_items')
+    .from('vault_items')
     .select('*')
     .eq('id', itemId)
     .single();
@@ -122,10 +103,15 @@ export async function analyzeAiContextItem(
     return { error: `Item not found: ${itemError?.message ?? 'unknown'}` };
   }
 
+  const vaultItem = item as VaultItem;
+
   // Mark as processing
   await service
-    .from('ai_context_items')
-    .update({ processing_status: 'processing' })
+    .from('vault_items')
+    .update({
+      metadata: { ...((vaultItem.metadata ?? {}) as Record<string, unknown>), processing_status: 'processing' },
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', itemId);
 
   try {
@@ -133,7 +119,7 @@ export async function analyzeAiContextItem(
     const { data: summaryRow } = await service
       .from('ai_context_summary')
       .select('*')
-      .eq('org_id', item.org_id)
+      .eq('org_id', vaultItem.org_id)
       .single();
 
     const orgContext = buildOrgContextBlock(summaryRow as AiContextSummary | null);
@@ -170,20 +156,24 @@ export async function analyzeAiContextItem(
     }
     const result = JSON.parse(jsonMatch[0]) as FileAnalysisResult;
 
-    // Update item with content_summary and status 'complete'
+    // Update vault item metadata with content_summary and status 'complete'
     await service
-      .from('ai_context_items')
+      .from('vault_items')
       .update({
-        content_summary: result.content_summary,
-        processing_status: 'complete',
-        processing_error: null,
+        metadata: {
+          ...((vaultItem.metadata ?? {}) as Record<string, unknown>),
+          processing_status: 'complete',
+          processing_error: null,
+          content_summary: result.content_summary,
+        },
+        updated_at: new Date().toISOString(),
       })
       .eq('id', itemId);
 
     // Insert geo_features from AI response
     if (result.geo_features && result.geo_features.length > 0) {
       const aiGeoRows = result.geo_features.map((f) => ({
-        org_id: item.org_id,
+        org_id: vaultItem.org_id,
         source_item_id: itemId,
         name: f.name,
         description: f.description,
@@ -217,7 +207,7 @@ export async function analyzeAiContextItem(
               : 'linestring';
 
           return {
-            org_id: item.org_id,
+            org_id: vaultItem.org_id,
             source_item_id: itemId,
             name: (f.properties?.name as string) ?? 'Unnamed feature',
             description: (f.properties?.description as string) ?? null,
@@ -241,17 +231,21 @@ export async function analyzeAiContextItem(
     }
 
     // Auto-create draft geo layer for recognized geo files
-    await tryCreateDraftGeoLayer(item, service);
+    await tryCreateDraftGeoLayer(vaultItem, service);
 
     return { success: true, result };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Analysis failed';
 
     await service
-      .from('ai_context_items')
+      .from('vault_items')
       .update({
-        processing_status: 'error',
-        processing_error: message,
+        metadata: {
+          ...((vaultItem.metadata ?? {}) as Record<string, unknown>),
+          processing_status: 'error',
+          processing_error: message,
+        },
+        updated_at: new Date().toISOString(),
       })
       .eq('id', itemId);
 
@@ -278,28 +272,34 @@ export async function rebuildOrgSummary(
 
   const service = createServiceClient();
 
-  // Get all completed items for the org
+  // Get all completed vault items for the org that are ai_context
   const { data: items, error: itemsError } = await service
-    .from('ai_context_items')
-    .select('id, file_name, content_summary')
+    .from('vault_items')
+    .select('id, file_name, metadata')
     .eq('org_id', orgId)
-    .eq('processing_status', 'complete');
+    .eq('is_ai_context', true);
 
   if (itemsError) {
     return { error: `Failed to fetch items: ${itemsError.message}` };
   }
 
-  if (!items || items.length === 0) {
+  // Filter to only completed items
+  const completedItems = (items ?? []).filter(
+    (it: { id: string; file_name: string; metadata: Record<string, unknown> }) =>
+      (it.metadata as Record<string, unknown>)?.processing_status === 'complete'
+  );
+
+  if (completedItems.length === 0) {
     return { error: 'No completed items to summarize.' };
   }
 
   try {
     const systemPrompt = buildOrgSynthesisPrompt();
 
-    const fileSummaries = items
+    const fileSummaries = completedItems
       .map(
-        (it: { id: string; file_name: string; content_summary: string | null }) =>
-          `item_id: ${it.id}\nfilename: ${it.file_name}\nsummary: ${it.content_summary ?? '(no summary)'}`
+        (it: { id: string; file_name: string; metadata: Record<string, unknown> }) =>
+          `item_id: ${it.id}\nfilename: ${it.file_name}\nsummary: ${(it.metadata?.content_summary as string) ?? '(no summary)'}`
       )
       .join('\n\n---\n\n');
 
@@ -396,12 +396,17 @@ export async function generateOnboardingPreFill(
     .eq('org_id', orgId)
     .single();
 
-  // Get items
-  const { data: items } = await service
-    .from('ai_context_items')
-    .select('id, file_name, content_summary, source_type, mime_type, file_size')
+  // Get completed vault items for the org that are ai_context
+  const { data: rawItems } = await service
+    .from('vault_items')
+    .select('id, file_name, metadata, mime_type, file_size')
     .eq('org_id', orgId)
-    .eq('processing_status', 'complete');
+    .eq('is_ai_context', true);
+
+  const items = (rawItems ?? []).filter(
+    (it: { metadata: Record<string, unknown> }) =>
+      (it.metadata as Record<string, unknown>)?.processing_status === 'complete'
+  );
 
   const orgContext = buildOrgContextBlock(summaryRow as AiContextSummary | null);
 
@@ -412,12 +417,11 @@ export async function generateOnboardingPreFill(
             (it: {
               id: string;
               file_name: string;
-              content_summary: string | null;
-              source_type: string;
+              metadata: Record<string, unknown>;
               mime_type: string | null;
               file_size: number | null;
             }) =>
-              `- ${it.file_name} (${it.source_type}, ${it.mime_type ?? 'unknown type'}): ${it.content_summary ?? '(no summary)'}`
+              `- ${it.file_name} (${(it.metadata?.source_type as string) ?? 'file'}, ${it.mime_type ?? 'unknown type'}): ${(it.metadata?.content_summary as string) ?? '(no summary)'}`
           )
           .join('\n')
       : '(no uploaded files)';
@@ -459,52 +463,7 @@ export async function generateOnboardingPreFill(
 export async function deleteAiContextItem(
   itemId: string
 ): Promise<{ success: true } | { error: string }> {
-  const supabase = createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    return { error: 'Not authenticated.' };
-  }
-
-  const service = createServiceClient();
-
-  // Get item from DB
-  const { data: item, error: itemError } = await service
-    .from('ai_context_items')
-    .select('id, storage_path')
-    .eq('id', itemId)
-    .single();
-
-  if (itemError || !item) {
-    return { error: `Item not found: ${itemError?.message ?? 'unknown'}` };
-  }
-
-  // Delete from storage if path exists
-  if (item.storage_path) {
-    const { error: storageError } = await service.storage
-      .from('ai-context')
-      .remove([item.storage_path]);
-
-    if (storageError) {
-      console.error('Failed to delete from storage:', storageError);
-      // Continue — don't block deletion of DB record
-    }
-  }
-
-  // Delete from DB (cascades to geo_features)
-  const { error: deleteError } = await service
-    .from('ai_context_items')
-    .delete()
-    .eq('id', itemId);
-
-  if (deleteError) {
-    return { error: `Failed to delete item: ${deleteError.message}` };
-  }
-
-  return { success: true };
+  return deleteFromVault(itemId);
 }
 
 // ---------------------------------------------------------------------------
@@ -528,27 +487,8 @@ export async function processUrlContext(
 
   const service = createServiceClient();
 
-  // Insert DB record with source_type 'url'
-  const { data: item, error: insertError } = await service
-    .from('ai_context_items')
-    .insert({
-      org_id: orgId,
-      uploaded_by: user.id,
-      source_type: 'url',
-      file_name: url,
-      mime_type: 'text/html',
-      file_size: null,
-      processing_status: 'pending',
-      batch_id: batchId,
-    })
-    .select('id')
-    .single();
-
-  if (insertError || !item) {
-    return { error: `Failed to create URL item: ${insertError?.message ?? 'unknown'}` };
-  }
-
-  const itemId: string = item.id;
+  // Generate an ID upfront so we can store the snapshot
+  const itemId = crypto.randomUUID();
 
   try {
     // Fetch URL with 15s timeout and custom User-Agent
@@ -577,22 +517,35 @@ export async function processUrlContext(
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Store snapshot.html in storage
-    const storagePath = `ai-context/${orgId}/${itemId}/snapshot.html`;
     const htmlBuffer = Buffer.from(html, 'utf-8');
-    const { error: uploadError } = await service.storage
-      .from('ai-context')
-      .upload(storagePath, htmlBuffer, {
-        contentType: 'text/html',
-        upsert: false,
-      });
+    const htmlBase64 = htmlBuffer.toString('base64');
 
-    if (!uploadError) {
-      await service
-        .from('ai_context_items')
-        .update({ storage_path: storagePath })
-        .eq('id', itemId);
+    // Upload snapshot to vault as the URL item
+    const uploadResult = await uploadToVault({
+      orgId,
+      file: {
+        name: `snapshot_${itemId}.html`,
+        type: 'text/html',
+        size: htmlBuffer.length,
+        base64: htmlBase64,
+      },
+      category: 'document',
+      visibility: 'private',
+      isAiContext: true,
+      metadata: {
+        source_type: 'url',
+        original_url: url,
+        display_name: url,
+        processing_status: 'pending',
+        batch_id: batchId,
+      },
+    });
+
+    if ('error' in uploadResult) {
+      return { error: uploadResult.error };
     }
+
+    const vaultItemId = uploadResult.item.id;
 
     // Analyze with extracted text
     const parsedData: ParsedFileData = {
@@ -604,23 +557,14 @@ export async function processUrlContext(
       url,
     };
 
-    const analysisResult = await analyzeAiContextItem(itemId, parsedData);
+    const analysisResult = await analyzeAiContextItem(vaultItemId, parsedData);
     if ('error' in analysisResult) {
       return { error: analysisResult.error };
     }
 
-    return { success: true, itemId };
+    return { success: true, itemId: vaultItemId };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'URL fetch failed';
-
-    await service
-      .from('ai_context_items')
-      .update({
-        processing_status: 'error',
-        processing_error: message,
-      })
-      .eq('id', itemId);
-
     return { error: message };
   }
 }
@@ -783,7 +727,7 @@ export async function analyzeFilesForOnboarding(
 // ---------------------------------------------------------------------------
 
 async function tryCreateDraftGeoLayer(
-  item: { storage_path: string | null; file_name: string | null; mime_type: string | null; org_id: string; uploaded_by: string },
+  item: VaultItem,
   service: ReturnType<typeof createServiceClient>
 ): Promise<void> {
   const fileName = item.file_name ?? '';
@@ -795,7 +739,7 @@ async function tryCreateDraftGeoLayer(
 
   try {
     const { data: fileData } = await service.storage
-      .from('ai-context')
+      .from(item.storage_bucket)
       .download(item.storage_path);
     if (!fileData) return;
 
@@ -825,3 +769,9 @@ async function tryCreateDraftGeoLayer(
     console.error('Failed to auto-create geo layer:', err);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Re-export vaultItemToAiContext for use in page components
+// ---------------------------------------------------------------------------
+
+export { vaultItemToAiContext };
