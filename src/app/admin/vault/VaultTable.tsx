@@ -25,9 +25,18 @@ interface VaultTableProps {
   onItemClick: (item: VaultItem) => void;
   onDelete: (ids: string[]) => void;
   selectable?: boolean;
+  bulkActionLabel?: string;
+  bulkActionConfirm?: (count: number) => string;
 }
 
-export default function VaultTable({ items, onItemClick, onDelete, selectable = true }: VaultTableProps) {
+export default function VaultTable({
+  items,
+  onItemClick,
+  onDelete,
+  selectable = true,
+  bulkActionLabel = 'Delete',
+  bulkActionConfirm,
+}: VaultTableProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn>('created_at');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -77,7 +86,11 @@ export default function VaultTable({ items, onItemClick, onDelete, selectable = 
   }
 
   function handleBulkDelete() {
-    if (!confirm(`Delete ${selectedIds.size} item${selectedIds.size !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+    const count = selectedIds.size;
+    const message = bulkActionConfirm
+      ? bulkActionConfirm(count)
+      : `Delete ${count} item${count !== 1 ? 's' : ''}? This cannot be undone.`;
+    if (!confirm(message)) return;
     onDelete(Array.from(selectedIds));
     setSelectedIds(new Set());
   }
@@ -102,7 +115,7 @@ export default function VaultTable({ items, onItemClick, onDelete, selectable = 
             onClick={handleBulkDelete}
             className="px-3 py-1 text-sm rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors font-medium"
           >
-            Delete
+            {bulkActionLabel}
           </button>
           <button
             onClick={clearSelection}
