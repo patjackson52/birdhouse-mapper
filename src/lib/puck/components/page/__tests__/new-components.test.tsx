@@ -34,6 +34,18 @@ describe('Card', () => {
     const img = screen.getByRole('img', { name: 'Card' });
     expect(img.getAttribute('src')).toBe('/photo.jpg');
   });
+
+  it('applies prose-sm class by default (no textSize prop)', () => {
+    const { container } = render(<Card title="Card" text="<p>Body</p>" imageUrl="" linkHref="" linkLabel="" />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-sm');
+  });
+
+  it('applies prose-lg class when textSize is large', () => {
+    const { container } = render(<Card title="Card" text="<p>Body</p>" imageUrl="" linkHref="" linkLabel="" textSize="large" />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-lg');
+  });
 });
 
 // Testimonial

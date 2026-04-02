@@ -362,11 +362,13 @@ export const pageConfig: Config<PageComponents> = {
         text: '',
         linkHref: '',
         linkLabel: '',
+        textSize: 'small',
       },
       fields: {
         imageUrl: imagePickerField('Image', fetchLandingAssets),
         title: { type: 'text', label: 'Title' },
         text: { type: 'richtext', label: 'Text' },
+        textSize: textSizeField(),
         linkHref: linkField('Link URL'),
         linkLabel: { type: 'text', label: 'Link Label' },
         icon: iconPickerField('Icon'),

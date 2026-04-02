@@ -89,6 +89,7 @@ export interface CardProps {
   linkHref: string | LinkValue;
   linkLabel: string;
   icon?: IconValue;
+  textSize?: TextSize;
 }
 
 export interface MapPreviewProps {
