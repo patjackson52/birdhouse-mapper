@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getVaultItems } from '@/lib/vault/actions';
 import { getVaultUrl } from '@/lib/vault/helpers';
 import type { VaultItem, VaultCategory } from '@/lib/vault/types';
@@ -84,7 +84,11 @@ export default function VaultBrowseTab({
   multiple = false,
   onSelect,
 }: VaultBrowseTabProps) {
-  const availableCategories = categoryFilter ?? ALL_CATEGORIES;
+  const availableCategories = useMemo(
+    () => categoryFilter ?? ALL_CATEGORIES,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categoryFilter?.join(',')],
+  );
 
   const [activeCategory, setActiveCategory] = useState<VaultCategory | 'all'>('all');
   const [search, setSearch] = useState('');
