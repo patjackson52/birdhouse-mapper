@@ -62,7 +62,7 @@ export default async function RootLayout({
         <link rel="manifest" href="/api/manifest.json" />
         <meta name="theme-color" content="#2563eb" />
         <link rel="icon" type="image/png" sizes="32x32" href="/defaults/logos/favicon-32.png" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body className="min-h-screen flex flex-col">
