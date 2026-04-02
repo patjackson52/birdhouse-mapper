@@ -309,6 +309,10 @@ export const pageConfig: Config<PageComponents> = {
         columnCount: 2,
       },
       fields: {
+        'column-0': { type: 'slot' },
+        'column-1': { type: 'slot' },
+        'column-2': { type: 'slot' },
+        'column-3': { type: 'slot' },
         columnCount: {
           type: 'select',
           label: 'Column Count',
@@ -318,8 +322,8 @@ export const pageConfig: Config<PageComponents> = {
             { label: '4', value: 4 },
           ],
         },
-      },
-      render: Columns,
+      } as any,
+      render: Columns as any,
     },
 
     Section: {
@@ -330,6 +334,7 @@ export const pageConfig: Config<PageComponents> = {
         paddingY: 'medium',
       },
       fields: {
+        content: { type: 'slot' },
         backgroundColor: {
           type: 'select',
           label: 'Background Color',
@@ -345,8 +350,8 @@ export const pageConfig: Config<PageComponents> = {
             { label: 'Large', value: 'large' },
           ],
         },
-      },
-      render: Section,
+      } as any,
+      render: Section as any,
     },
 
     Card: {
