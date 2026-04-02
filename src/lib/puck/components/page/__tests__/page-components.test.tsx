@@ -209,6 +209,22 @@ describe('LinkList', () => {
     expect(link.getAttribute('href')).toBe('https://example.com');
     expect(link.getAttribute('target')).toBe('_blank');
   });
+
+  it('applies text-lg class to link labels when textSize is large', () => {
+    const { container } = render(
+      <LinkList items={[{ label: 'Link', url: '/a', description: '' }]} layout="stacked" textSize="large" />
+    );
+    const label = container.querySelector('span.font-medium') as HTMLElement;
+    expect(label.className).toContain('text-lg');
+  });
+
+  it('applies text-sm class to link labels when textSize is small', () => {
+    const { container } = render(
+      <LinkList items={[{ label: 'Link', url: '/a', description: '' }]} layout="stacked" textSize="small" />
+    );
+    const label = container.querySelector('span.font-medium') as HTMLElement;
+    expect(label.className).toContain('text-sm');
+  });
 });
 
 // Stats

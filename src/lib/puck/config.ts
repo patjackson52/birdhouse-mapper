@@ -196,6 +196,7 @@ export const pageConfig: Config<PageComponents> = {
       defaultProps: {
         items: [],
         layout: 'stacked',
+        textSize: 'medium',
       },
       fields: {
         items: {
@@ -220,6 +221,7 @@ export const pageConfig: Config<PageComponents> = {
             { label: 'Stacked', value: 'stacked' },
           ],
         },
+        textSize: textSizeField(),
       },
       render: LinkList,
     },

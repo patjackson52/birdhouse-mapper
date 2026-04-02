@@ -49,6 +49,7 @@ export interface LinkListProps {
     description: string;
   }>;
   layout: 'inline' | 'stacked';
+  textSize?: TextSize;
 }
 
 export interface StatsProps {
