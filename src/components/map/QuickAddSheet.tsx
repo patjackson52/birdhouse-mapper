@@ -90,7 +90,7 @@ export default function QuickAddSheet({ open, onClose, defaultLocation }: QuickA
       if (photo) {
         const path = `${item.id}/${Date.now()}_0.jpg`;
         const { error: uploadError } = await supabase.storage
-          .from('item-photos')
+          .from('vault-public')
           .upload(path, photo);
         if (!uploadError) {
           await supabase.from('photos').insert({
