@@ -19,7 +19,7 @@ export interface HeroProps {
 }
 
 export interface RichTextProps {
-  content: string;
+  content: string | null;
   alignment: 'left' | 'center';
   columns: 1 | 2;
   textSize?: TextSize;
@@ -87,7 +87,7 @@ export interface SectionProps {
 export interface CardProps {
   imageUrl: string;
   title: string;
-  text: string;
+  text: string | null;
   linkHref: string | LinkValue;
   linkLabel: string;
   icon?: IconValue;
@@ -101,7 +101,7 @@ export interface MapPreviewProps {
 }
 
 export interface TestimonialProps {
-  quote: string;
+  quote: string | null;
   attribution: string;
   photoUrl: string;
   style: 'default' | 'accent';

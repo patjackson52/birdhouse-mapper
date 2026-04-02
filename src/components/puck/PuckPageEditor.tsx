@@ -20,9 +20,10 @@ export function PuckPageEditor({ initialData, pagePath }: PuckPageEditorProps) {
   const [puckData, setPuckData] = useState<Data>(safeInitialData);
 
   const handleChange = useCallback(async (data: Data) => {
-    setPuckData(data);
+    const safeData = sanitizePuckData(data);
+    setPuckData(safeData);
     setIsSaving(true);
-    await savePuckPageDraft(pagePath, data);
+    await savePuckPageDraft(pagePath, safeData);
     setIsSaving(false);
   }, [pagePath]);
 

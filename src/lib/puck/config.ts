@@ -96,7 +96,7 @@ export const pageConfig: Config<PageComponents> = {
     RichText: {
       label: 'Rich Text',
       defaultProps: {
-        content: '',
+        content: null,
         alignment: 'left',
         columns: 1,
         textSize: 'large',
@@ -368,7 +368,7 @@ export const pageConfig: Config<PageComponents> = {
       defaultProps: {
         imageUrl: '',
         title: '',
-        text: '',
+        text: null,
         linkHref: '',
         linkLabel: '',
         textSize: 'small',
@@ -423,7 +423,7 @@ export const pageConfig: Config<PageComponents> = {
     Testimonial: {
       label: 'Testimonial',
       defaultProps: {
-        quote: '',
+        quote: null,
         attribution: '',
         photoUrl: '',
         style: 'default',

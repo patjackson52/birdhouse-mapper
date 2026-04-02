@@ -19,9 +19,10 @@ export function PuckChromeEditor({ initialData }: PuckChromeEditorProps) {
   const [puckData, setPuckData] = useState<Data>(safeInitialData);
 
   const handleChange = useCallback(async (data: Data) => {
-    setPuckData(data);
+    const safeData = sanitizePuckData(data);
+    setPuckData(safeData);
     setIsSaving(true);
-    await savePuckRootDraft(data);
+    await savePuckRootDraft(safeData);
     setIsSaving(false);
   }, []);
 
