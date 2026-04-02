@@ -44,7 +44,7 @@ function ThumbnailImage({ item }: { item: VaultItem }) {
     } else {
       result.then(setUrl).catch(() => setUrl(null));
     }
-  }, [item]);
+  }, [item.id, item.storage_bucket, item.storage_path]);
 
   if (!url) {
     return (
@@ -178,7 +178,7 @@ export default function VaultBrowseTab({
       {/* Thumbnail grid */}
       <div className="min-h-[240px]">
         {loading ? (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -189,7 +189,7 @@ export default function VaultBrowseTab({
             <p className="text-sm">No files found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {items.map((item) => {
               const isSelected = selectedIds.has(item.id);
               return (
