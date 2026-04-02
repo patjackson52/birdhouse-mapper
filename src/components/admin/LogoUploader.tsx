@@ -2,6 +2,9 @@
 
 import { useState, useRef } from 'react';
 import { uploadLogo, uploadDefaultLogo } from '@/app/admin/settings/logo-actions';
+import VaultPicker from '@/components/vault/VaultPicker';
+import type { VaultItem } from '@/lib/vault/types';
+import { getVaultUrl } from '@/lib/vault/helpers';
 
 const DEFAULT_LOGOS = [
   { name: 'fieldmapper', label: 'FieldMapper', src: '/defaults/logos/fieldmapper.png' },
@@ -14,12 +17,14 @@ interface LogoUploaderProps {
   currentLogoUrl: string | null;
   scope: 'org' | 'property';
   propertyId?: string;
+  orgId: string;
   onUploaded: (basePath: string) => void;
 }
 
-export default function LogoUploader({ currentLogoUrl, scope, propertyId, onUploaded }: LogoUploaderProps) {
+export default function LogoUploader({ currentLogoUrl, scope, propertyId, orgId, onUploaded }: LogoUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showVaultPicker, setShowVaultPicker] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -64,6 +69,20 @@ export default function LogoUploader({ currentLogoUrl, scope, propertyId, onUplo
     }
   }
 
+  function handleVaultSelect(items: VaultItem[]) {
+    const item = items[0];
+    if (!item) return;
+    setShowVaultPicker(false);
+    // Use the vault item's storage_path as the basePath (minus the filename)
+    // storage_path is orgId/itemId/filename — we store it as the logo URL directly
+    const url = getVaultUrl(item);
+    if (typeof url === 'string') {
+      onUploaded(url);
+    } else {
+      url.then(onUploaded).catch(() => setError('Failed to get vault item URL.'));
+    }
+  }
+
   return (
     <div className="space-y-4">
       {currentLogoUrl && (
@@ -77,26 +96,38 @@ export default function LogoUploader({ currentLogoUrl, scope, propertyId, onUplo
         </div>
       )}
 
-      <div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
+      <div className="flex flex-wrap gap-3">
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="btn-primary text-sm"
+          >
+            {uploading ? 'Uploading...' : 'Upload Custom Logo'}
+          </button>
+        </div>
+
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => setShowVaultPicker(true)}
           disabled={uploading}
-          className="btn-primary text-sm"
+          className="btn-secondary text-sm"
         >
-          {uploading ? 'Uploading...' : 'Upload Custom Logo'}
+          Select from Vault
         </button>
-        <p className="mt-1 text-xs text-sage">
-          PNG, JPG, or SVG. Max 5MB. Will be resized for PWA icons and favicon.
-        </p>
       </div>
+
+      <p className="text-xs text-sage">
+        PNG, JPG, or SVG. Max 5MB. Will be resized for PWA icons and favicon.
+      </p>
 
       <div>
         <p className="text-sm font-medium text-forest-dark mb-2">Or choose a default:</p>
@@ -118,6 +149,19 @@ export default function LogoUploader({ currentLogoUrl, scope, propertyId, onUplo
 
       {error && (
         <p className="text-sm text-red-600 bg-red-50 rounded px-3 py-2">{error}</p>
+      )}
+
+      {showVaultPicker && (
+        <VaultPicker
+          orgId={orgId}
+          categoryFilter={['branding']}
+          visibilityFilter="public"
+          multiple={false}
+          defaultUploadCategory="branding"
+          defaultUploadVisibility="public"
+          onSelect={handleVaultSelect}
+          onClose={() => setShowVaultPicker(false)}
+        />
       )}
     </div>
   );

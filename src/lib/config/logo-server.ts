@@ -18,5 +18,5 @@ export function getLogoUrlServer(basePath: string | null, variant: LogoVariant):
   if (!basePath) return DEFAULT_ICONS[variant] ?? DEFAULT_ICONS['original.png'];
 
   const supabase = createClient();
-  return supabase.storage.from('branding').getPublicUrl(`${basePath}/${variant}`).data.publicUrl;
+  return supabase.storage.from('vault-public').getPublicUrl(`${basePath}/${variant}`).data.publicUrl;
 }

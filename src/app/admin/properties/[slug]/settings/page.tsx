@@ -45,6 +45,22 @@ export default function SettingsPage() {
     },
   });
 
+  const { data: orgId } = useQuery({
+    queryKey: ['admin', 'orgId'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+      const { data: membership } = await supabase
+        .from('org_memberships')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+      return (membership?.org_id as string) ?? null;
+    },
+  });
+
   const { data: geoLayerData } = useQuery({
     queryKey: ['admin', 'property', slug, 'geo-layers'],
     queryFn: async () => {
@@ -135,6 +151,7 @@ export default function SettingsPage() {
                 currentLogoUrl={config.logoUrl ? getLogoUrl(config.logoUrl, 'original.png') : null}
                 scope="property"
                 propertyId={propertyId}
+                orgId={orgId ?? ''}
                 onUploaded={() => {
                   router.refresh();
                 }}

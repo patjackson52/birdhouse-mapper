@@ -5,6 +5,7 @@ import { getTenantContext } from '@/lib/tenant/server';
 import type { SubscriptionTier, SubscriptionStatus } from '@/lib/types';
 
 export interface OrgSettings {
+  id: string;
   name: string;
   slug: string;
   tagline: string | null;
@@ -23,7 +24,7 @@ export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: st
 
   const { data, error } = await supabase
     .from('orgs')
-    .select('name, slug, tagline, pwa_name, logo_url, favicon_url, theme, subscription_tier, subscription_status')
+    .select('id, name, slug, tagline, pwa_name, logo_url, favicon_url, theme, subscription_tier, subscription_status')
     .eq('id', tenant.orgId)
     .single();
 
@@ -33,6 +34,7 @@ export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: st
 
   return {
     data: {
+      id: data.id,
       name: data.name,
       slug: data.slug,
       tagline: data.tagline,

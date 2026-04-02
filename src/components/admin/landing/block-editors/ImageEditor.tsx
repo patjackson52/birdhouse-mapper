@@ -5,13 +5,14 @@ import type { ImageBlock, LandingAsset } from '@/lib/config/landing-types';
 import AssetPicker from '@/components/admin/landing/AssetPicker';
 
 interface ImageEditorProps {
+  orgId: string;
   block: ImageBlock;
   onChange: (block: ImageBlock) => void;
   assets: LandingAsset[];
   onAssetsChange: (assets: LandingAsset[]) => void;
 }
 
-export default function ImageEditor({ block, onChange, assets, onAssetsChange }: ImageEditorProps) {
+export default function ImageEditor({ orgId, block, onChange, assets, onAssetsChange }: ImageEditorProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -67,6 +68,7 @@ export default function ImageEditor({ block, onChange, assets, onAssetsChange }:
 
       {showPicker && (
         <AssetPicker
+          orgId={orgId}
           assets={assets}
           onSelect={(url) => onChange({ ...block, url })}
           onUpload={(asset) => onAssetsChange([...assets, asset])}
