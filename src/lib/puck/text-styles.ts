@@ -18,10 +18,10 @@ export const heroTitleClasses: Record<TextSize, string> = {
 
 /** Hero subtitle */
 export const heroSubtitleClasses: Record<TextSize, string> = {
-  small: 'text-base',
-  medium: 'text-lg md:text-xl',
-  large: 'text-xl md:text-2xl',
-  xl: 'text-2xl md:text-3xl',
+  small: 'text-sm md:text-base',
+  medium: 'text-base md:text-lg',
+  large: 'text-lg md:text-xl',
+  xl: 'text-xl md:text-2xl',
 };
 
 /** Stats value number */

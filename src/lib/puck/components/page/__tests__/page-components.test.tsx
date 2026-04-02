@@ -61,7 +61,8 @@ describe('Hero', () => {
   it('applies xl subtitle classes when textSize is xl', () => {
     render(<Hero title="Welcome" subtitle="Hello world" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" textSize="xl" />);
     const subtitle = screen.getByText('Hello world');
-    expect(subtitle.className).toContain('text-2xl');
+    expect(subtitle.className).toContain('text-xl');
+    expect(subtitle.className).toContain('md:text-2xl');
   });
 });
 
