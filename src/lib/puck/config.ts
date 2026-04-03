@@ -18,6 +18,7 @@ import type {
   TestimonialProps,
   EmbedProps,
   KnowledgeEmbedProps,
+  KnowledgeListProps,
 } from './types';
 
 import { Hero } from './components/page/Hero';
@@ -35,6 +36,7 @@ import { MapPreview } from './components/page/MapPreview';
 import { Testimonial } from './components/page/Testimonial';
 import { Embed } from './components/page/Embed';
 import { KnowledgeEmbed } from './components/page/KnowledgeEmbed';
+import { KnowledgeList } from './components/page/KnowledgeList';
 
 type PageComponents = {
   Hero: HeroProps;
@@ -52,6 +54,7 @@ type PageComponents = {
   Testimonial: TestimonialProps;
   Embed: EmbedProps;
   KnowledgeEmbed: KnowledgeEmbedProps;
+  KnowledgeList: KnowledgeListProps;
 };
 
 const themeColorOptions = [
@@ -487,6 +490,25 @@ export const pageConfig: Config<PageComponents> = {
         textSize: textSizeField(),
       },
       render: KnowledgeEmbed,
+    },
+
+    KnowledgeList: {
+      label: 'Knowledge List',
+      defaultProps: {
+        tagFilter: [],
+        maxItems: 6,
+        layout: 'grid',
+        columns: 3,
+        textSize: 'medium',
+      },
+      fields: {
+        tagFilter: { type: 'text', label: 'Tag Filter (comma-separated)' },
+        maxItems: { type: 'number', label: 'Max Items' },
+        layout: { type: 'radio', label: 'Layout', options: [{ label: 'Grid', value: 'grid' }, { label: 'List', value: 'list' }] },
+        columns: { type: 'select', label: 'Columns', options: [{ label: '2', value: 2 }, { label: '3', value: 3 }, { label: '4', value: 4 }] },
+        textSize: textSizeField(),
+      },
+      render: KnowledgeList,
     },
   },
 };
