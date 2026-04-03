@@ -124,6 +124,11 @@ const TABLES_WITH_UPDATED_AT = new Set([
   'items', 'properties', 'orgs', 'roles', 'org_memberships', 'entities', 'entity_types',
 ]);
 
+// Tables that have no timestamp column at all — always do a full sync.
+const TABLES_WITHOUT_TIMESTAMPS = new Set([
+  'update_types', 'update_type_fields', 'custom_fields',
+]);
+
 const SYNC_TABLES = [
   'items', 'item_types', 'custom_fields', 'item_updates', 'update_types',
   'update_type_fields', 'photos', 'entities', 'entity_types', 'geo_layers',
@@ -158,9 +163,12 @@ export async function syncPropertyData(
       query = query.eq('id', orgId);
     }
 
-    // Use updated_at for delta sync on tables that have it, created_at otherwise
-    const timestampColumn = TABLES_WITH_UPDATED_AT.has(tableName) ? 'updated_at' : 'created_at';
-    query = query.gte(timestampColumn, lastSynced);
+    // Use updated_at for delta sync on tables that have it, created_at otherwise.
+    // Tables without any timestamp column always do a full sync.
+    if (!TABLES_WITHOUT_TIMESTAMPS.has(tableName)) {
+      const timestampColumn = TABLES_WITH_UPDATED_AT.has(tableName) ? 'updated_at' : 'created_at';
+      query = query.gte(timestampColumn, lastSynced);
+    }
 
     const { data, error } = await query;
 
