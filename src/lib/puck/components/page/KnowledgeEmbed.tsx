@@ -51,7 +51,7 @@ export function KnowledgeEmbed({ knowledgeItemId, showTitle = true, showAttachme
         item={item}
         showTitle={showTitle}
         showAttachments={showAttachments}
-        textSize={textSize}
+        textSize={textSize === 'xl' ? 'large' : textSize}
         attachments={attachments}
       />
     </div>

@@ -80,9 +80,10 @@ describe('KnowledgePicker', () => {
   it('renders tag filter pills from loaded items', async () => {
     render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
     await waitFor(() => {
-      expect(screen.getByText('maintenance')).toBeTruthy();
-      expect(screen.getByText('howto')).toBeTruthy();
-      expect(screen.getByText('plans')).toBeTruthy();
+      // Tag filter pills are rendered as buttons; getAllByText ensures at least one match
+      expect(screen.getAllByText('maintenance').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('howto').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('plans').length).toBeGreaterThan(0);
     });
   });
 
@@ -108,8 +109,8 @@ describe('KnowledgePicker', () => {
     });
     // Click the first item
     fireEvent.click(screen.getByText('How to Clean Birdhouses'));
-    // Click Select button
-    fireEvent.click(screen.getByText(/Select/));
+    // Click Select button (use role to avoid matching "Select Knowledge Article" header)
+    fireEvent.click(screen.getByRole('button', { name: /^Select/ }));
     expect(onSelect).toHaveBeenCalledWith([mockItems[0]]);
   });
 

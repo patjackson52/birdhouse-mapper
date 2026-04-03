@@ -18,7 +18,9 @@ describe('pageConfig', () => {
     expect(componentNames).toContain('MapPreview');
     expect(componentNames).toContain('Testimonial');
     expect(componentNames).toContain('Embed');
-    expect(componentNames.length).toBe(14);
+    expect(componentNames).toContain('KnowledgeEmbed');
+    expect(componentNames).toContain('KnowledgeList');
+    expect(componentNames.length).toBe(16);
   });
 
   it('each component has a render function', () => {

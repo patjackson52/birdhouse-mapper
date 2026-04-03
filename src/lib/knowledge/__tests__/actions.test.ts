@@ -14,14 +14,16 @@ function makeChainable(table: string) {
   self.select = vi.fn(() => self);
   self.insert = vi.fn((payload: any) => {
     if (insertError) {
-      return { select: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: null, error: insertError })) })) };
+      const p: any = Promise.resolve({ data: null, error: insertError });
+      p.select = vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: null, error: insertError })) }));
+      return p;
     }
     insertedRows.push({ table, payload });
-    return {
-      select: vi.fn(() => ({
-        single: vi.fn(() => Promise.resolve({ data: { id: 'new-id', slug: 'test-slug', ...payload }, error: null })),
-      })),
-    };
+    const p: any = Promise.resolve({ data: { id: 'new-id', slug: 'test-slug', ...payload }, error: null });
+    p.select = vi.fn(() => ({
+      single: vi.fn(() => Promise.resolve({ data: { id: 'new-id', slug: 'test-slug', ...payload }, error: null })),
+    }));
+    return p;
   });
   self.update = vi.fn((updates: any) => {
     if (updateError) return { eq: vi.fn(() => Promise.resolve({ error: updateError })) };

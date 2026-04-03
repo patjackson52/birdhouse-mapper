@@ -24,7 +24,7 @@ export function buildOrgContextBlock(
         return `  **${item.title}**${tagsStr}\n  ${item.bodyText}`;
       })
       .join('\n\n');
-    knowledgeSection = `\n\n<knowledge-base>\n${knowledgeEntries}\n</knowledge-base>`;
+    knowledgeSection = `\n\n## Knowledge Base\n\n<knowledge-base>\n${knowledgeEntries}\n</knowledge-base>`;
   }
 
   return `<org-context>\n${summary.org_profile}\n\n<available-context-files>\n${fileEntries}\n</available-context-files>${knowledgeSection}\n</org-context>`;

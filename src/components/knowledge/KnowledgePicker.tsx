@@ -20,7 +20,7 @@ export default function KnowledgePicker({ orgId, onSelect, onClose, multiple = f
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Collect all unique tags from items
-  const allTags = [...new Set(items.flatMap((i) => i.tags))].sort();
+  const allTags = Array.from(new Set(items.flatMap((i) => i.tags))).sort();
 
   useEffect(() => {
     async function load() {

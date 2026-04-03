@@ -14,7 +14,7 @@ export default function KnowledgeListPage() {
   const [visibilityFilter, setVisibilityFilter] = useState<'' | 'org' | 'public'>('');
   const [activeTag, setActiveTag] = useState<string>('');
 
-  const allTags = [...new Set(items.flatMap((i) => i.tags))].sort();
+  const allTags = Array.from(new Set(items.flatMap((i) => i.tags))).sort();
 
   const loadData = useCallback(
     async (currentOrgId: string) => {

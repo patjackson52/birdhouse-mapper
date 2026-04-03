@@ -114,7 +114,7 @@ export default function KnowledgeEditor({ orgId, item, onSaved }: KnowledgeEdito
       // Update existing
       const result = await updateKnowledgeItem(item.id, {
         title: title.trim(),
-        body,
+        body: body ?? undefined,
         bodyHtml,
         excerpt,
         coverImageUrl: coverImageUrl || undefined,
