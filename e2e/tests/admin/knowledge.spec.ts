@@ -1,5 +1,3 @@
-// e2e/tests/admin/knowledge.spec.ts
-
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import { cleanupTestKnowledge } from '../../fixtures/seed-knowledge';
@@ -7,7 +5,7 @@ import { cleanupTestKnowledge } from '../../fixtures/seed-knowledge';
 const ADMIN_AUTH = path.join(__dirname, '..', '..', '.auth', 'admin.json');
 const TEST_TITLE = `E2E Knowledge ${Date.now()}`;
 
-test.describe('Knowledge Admin @smoke', () => {
+test.describe.serial('Knowledge Admin @smoke', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test.afterAll(async () => {
@@ -19,7 +17,7 @@ test.describe('Knowledge Admin @smoke', () => {
     await page.waitForLoadState('networkidle');
 
     // Page header should be visible
-    await expect(page.locator('text=Knowledge')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Knowledge' })).toBeVisible({ timeout: 10000 });
 
     // New Article button should be visible
     await expect(page.locator('a:has-text("New Article")')).toBeVisible();
@@ -30,7 +28,7 @@ test.describe('Knowledge Admin @smoke', () => {
     await page.waitForLoadState('networkidle');
 
     // Verify the editor page loads
-    await expect(page.locator('text=New Article')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'New Article' })).toBeVisible({ timeout: 10000 });
 
     // Fill in the title
     const titleInput = page.locator('input[placeholder="Article title…"]');
@@ -40,7 +38,7 @@ test.describe('Knowledge Admin @smoke', () => {
     // Add a tag
     const tagInput = page.locator('input[placeholder="Add a tag…"]');
     await tagInput.fill('e2e-test');
-    await page.locator('button:has-text("Add")').click();
+    await page.getByRole('button', { name: 'Add', exact: true }).click();
 
     // Verify tag pill appears
     await expect(page.locator('text=e2e-test')).toBeVisible();
@@ -52,7 +50,7 @@ test.describe('Knowledge Admin @smoke', () => {
     await expect(page.locator('.ProseMirror, .tiptap, [contenteditable]').first()).toBeVisible({ timeout: 10000 });
 
     // Click Create Article
-    await page.locator('button:has-text("Create Article")').click();
+    await page.getByRole('button', { name: 'Create Article' }).click();
 
     // Should redirect to edit page — verify we're no longer on /new
     await page.waitForURL(/\/admin\/knowledge\/(?!new)/, { timeout: 15000 });
@@ -81,7 +79,7 @@ test.describe('Knowledge Admin @smoke', () => {
     await page.waitForURL(/\/admin\/knowledge\//, { timeout: 10000 });
 
     // Verify the edit page loads with the title populated
-    await expect(page.locator('text=Edit Article')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Edit Article' })).toBeVisible({ timeout: 10000 });
     const titleInput = page.locator('input[placeholder="Article title…"]');
     await expect(titleInput).toHaveValue(TEST_TITLE);
   });
