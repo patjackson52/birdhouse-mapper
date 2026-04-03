@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let pendingNotifications: Record<string, unknown>[] = [];
 let updatedIds: { id: string; status: string; error: string | null }[] = [];
+let adapterSendResult: { success: boolean; error?: string } = { success: true };
+let getUserByIdResult: { data: { user: { email: string } | null }; error: null } = {
+  data: { user: { email: 'user@example.com' } },
+  error: null,
+};
+let selectFetchError: { message: string } | null = null;
 
 vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: () => ({
@@ -12,8 +18,8 @@ vi.mock('@/lib/supabase/server', () => ({
             eq: vi.fn(() => ({
               neq: vi.fn(() => ({
                 limit: vi.fn(() => Promise.resolve({
-                  data: pendingNotifications,
-                  error: null,
+                  data: selectFetchError ? null : pendingNotifications,
+                  error: selectFetchError,
                 })),
               })),
             })),
@@ -44,10 +50,7 @@ vi.mock('@/lib/supabase/server', () => ({
     },
     auth: {
       admin: {
-        getUserById: vi.fn(() => Promise.resolve({
-          data: { user: { email: 'user@example.com' } },
-          error: null,
-        })),
+        getUserById: vi.fn(() => Promise.resolve(getUserByIdResult)),
       },
     },
   }),
@@ -58,7 +61,7 @@ vi.mock('@/lib/notifications/adapters', () => ({
     if (channel === 'email' || channel === 'sms') {
       return {
         channel,
-        send: vi.fn(() => Promise.resolve({ success: true })),
+        send: vi.fn(() => Promise.resolve(adapterSendResult)),
       };
     }
     return null;
@@ -69,6 +72,9 @@ describe('POST /api/notifications/dispatch', () => {
   beforeEach(() => {
     pendingNotifications = [];
     updatedIds = [];
+    adapterSendResult = { success: true };
+    getUserByIdResult = { data: { user: { email: 'user@example.com' } }, error: null };
+    selectFetchError = null;
     vi.clearAllMocks();
   });
 
@@ -118,5 +124,63 @@ describe('POST /api/notifications/dispatch', () => {
 
     expect(json.processed).toBe(0);
     expect(json.failed).toBe(0);
+  });
+
+  it('marks notification as failed when adapter send fails', async () => {
+    process.env.CRON_SECRET = 'test-secret';
+    adapterSendResult = { success: false, error: 'Provider error' };
+    pendingNotifications = [
+      { id: 'n-fail', user_id: 'u-1', channel: 'email', title: 'Test', body: 'Body' },
+    ];
+
+    const { POST } = await import('@/app/api/notifications/dispatch/route');
+    const req = new Request('http://localhost/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-secret' },
+    });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.failed).toBe(1);
+    expect(json.processed).toBe(0);
+    const failedEntry = updatedIds.find((u) => u.id === 'n-fail');
+    expect(failedEntry?.status).toBe('failed');
+    expect(failedEntry?.error).toBe('Provider error');
+  });
+
+  it('marks notification as failed when no contact info found', async () => {
+    process.env.CRON_SECRET = 'test-secret';
+    getUserByIdResult = { data: { user: null }, error: null };
+    pendingNotifications = [
+      { id: 'n-nocontact', user_id: 'u-ghost', channel: 'email', title: 'Test', body: 'Body' },
+    ];
+
+    const { POST } = await import('@/app/api/notifications/dispatch/route');
+    const req = new Request('http://localhost/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-secret' },
+    });
+    const res = await POST(req);
+    const json = await res.json();
+
+    expect(json.failed).toBe(1);
+    const failedEntry = updatedIds.find((u) => u.id === 'n-nocontact');
+    expect(failedEntry?.status).toBe('failed');
+    expect(failedEntry?.error).toContain('No contact info');
+  });
+
+  it('handles fetch error gracefully and returns 500', async () => {
+    process.env.CRON_SECRET = 'test-secret';
+    selectFetchError = { message: 'DB connection error' };
+
+    const { POST } = await import('@/app/api/notifications/dispatch/route');
+    const req = new Request('http://localhost/api/notifications/dispatch', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-secret' },
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(500);
   });
 });

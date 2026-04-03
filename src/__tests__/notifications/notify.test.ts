@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 let insertedRows: Record<string, unknown>[] = [];
 let selectData: Record<string, unknown>[] = [];
+let prefData: Record<string, unknown>[] = [];
+let insertError: { message: string } | null = null;
 
 vi.mock('@/lib/supabase/server', () => ({
   createServiceClient: () => ({
@@ -22,7 +24,7 @@ vi.mock('@/lib/supabase/server', () => ({
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              eq: vi.fn(() => Promise.resolve({ data: [], error: null })),
+              eq: vi.fn(() => Promise.resolve({ data: prefData, error: null })),
             })),
           })),
         };
@@ -30,8 +32,10 @@ vi.mock('@/lib/supabase/server', () => ({
       if (table === 'notifications') {
         return {
           insert: vi.fn((rows: Record<string, unknown>[]) => {
-            insertedRows.push(...rows);
-            return Promise.resolve({ error: null });
+            if (!insertError) {
+              insertedRows.push(...rows);
+            }
+            return Promise.resolve({ error: insertError });
           }),
         };
       }
@@ -47,6 +51,8 @@ describe('notify', () => {
   beforeEach(() => {
     insertedRows = [];
     selectData = [];
+    prefData = [];
+    insertError = null;
     vi.clearAllMocks();
   });
 
@@ -113,5 +119,65 @@ describe('notify', () => {
     });
 
     expect(insertedRows).toHaveLength(0);
+  });
+
+  it('respects user preferences and skips disabled channels', async () => {
+    prefData = [{ channel: 'email', notification_type: 'task_reminder', enabled: false }];
+
+    const { notify } = await import('@/lib/notifications/notify');
+
+    await notify({
+      orgId: 'org-1',
+      type: 'task_reminder',
+      title: 'Task due soon',
+      referenceType: 'task',
+      referenceId: 'task-1',
+      recipients: { userIds: ['user-1'] },
+    });
+
+    // email is disabled via preference, so only in_app notification should be created
+    expect(insertedRows).toHaveLength(1);
+    expect(insertedRows[0].channel).toBe('in_app');
+  });
+
+  it('includes body in notification when provided', async () => {
+    const { notify } = await import('@/lib/notifications/notify');
+
+    await notify({
+      orgId: 'org-1',
+      type: 'task_assigned',
+      title: 'New task assigned',
+      body: 'Please review the birdhouse at plot 7',
+      referenceType: 'task',
+      referenceId: 'task-2',
+      recipients: { userIds: ['user-1'] },
+    });
+
+    expect(insertedRows.length).toBeGreaterThan(0);
+    for (const row of insertedRows) {
+      expect(row.body).toBe('Please review the birdhouse at plot 7');
+    }
+  });
+
+  it('handles insert error gracefully and calls console.error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    insertError = { message: 'DB write failed' };
+
+    const { notify } = await import('@/lib/notifications/notify');
+
+    // Should not throw
+    await expect(
+      notify({
+        orgId: 'org-1',
+        type: 'task_assigned',
+        title: 'New task',
+        referenceType: 'task',
+        referenceId: 'task-3',
+        recipients: { userIds: ['user-1'] },
+      })
+    ).resolves.toBeUndefined();
+
+    expect(consoleSpy).toHaveBeenCalled();
+    consoleSpy.mockRestore();
   });
 });
