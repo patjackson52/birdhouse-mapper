@@ -13,7 +13,7 @@ import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem } from '@/lib/location/utils';
 import StatusBadge from '@/components/item/StatusBadge';
 import { DynamicFieldRenderer, validateFieldValues } from '@/components/shared/fields';
-import { canPerformUpdateTypeAction } from '@/lib/permissions/resolve';
+import { canPerformUpdateTypeAction, ROLE_LABELS } from '@/lib/permissions/resolve';
 import { usePermissions } from '@/lib/permissions/hooks';
 
 export default function UpdateForm() {
@@ -137,8 +137,7 @@ export default function UpdateForm() {
   function getRoleLabel(updateType: UpdateType): string | null {
     const threshold = updateType.min_role_create;
     if (!threshold) return null;
-    const labels: Record<string, string> = { contributor: 'Contributor', org_staff: 'Staff', org_admin: 'Admin' };
-    return labels[threshold] ?? null;
+    return ROLE_LABELS[threshold] ?? null;
   }
 
   function handleCancel() {

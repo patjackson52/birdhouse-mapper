@@ -57,14 +57,13 @@ describe('DynamicFieldRenderer', () => {
     expect(screen.getByText('*')).toBeInTheDocument();
   });
 
-  it('calls onChange with field id and new value on text input', async () => {
+  it('calls onChange with field id and value on each keystroke', async () => {
     const onChange = vi.fn();
     render(<DynamicFieldRenderer fields={[textField]} values={{}} onChange={onChange} />);
-    await userEvent.type(screen.getByLabelText('Notes'), 'hello');
-    expect(onChange).toHaveBeenCalled();
-    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1];
-    expect(lastCall[0]).toBe('f1');
-    expect(lastCall[1]).toBe('hello');
+    await userEvent.type(screen.getByLabelText('Notes'), 'ab');
+    expect(onChange).toHaveBeenCalledTimes(2);
+    expect(onChange.mock.calls[0]).toEqual(['f1', 'a']);
+    expect(onChange.mock.calls[1]).toEqual(['f1', 'b']);
   });
 
   it('displays existing values', () => {

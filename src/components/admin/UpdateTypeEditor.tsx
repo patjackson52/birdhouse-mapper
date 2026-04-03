@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { FieldDefinitionEditor, type FieldDraft } from '@/components/shared/fields';
+import { MIN_ROLE_OPTIONS } from '@/lib/permissions/resolve';
 import type { UpdateType, UpdateTypeField } from '@/lib/types';
 
 interface UpdateTypeEditorProps {
@@ -150,10 +151,15 @@ export default function UpdateTypeEditor({ itemTypeId }: UpdateTypeEditorProps) 
         }
       }
 
-      // Refresh fields from DB
+      // Refresh fields for the saved type
       const { data: refreshedFields } = await supabase
-        .from('update_type_fields').select('*').order('sort_order', { ascending: true });
-      if (refreshedFields) setUpdateTypeFields(refreshedFields);
+        .from('update_type_fields').select('*').eq('update_type_id', updateTypeId).order('sort_order', { ascending: true });
+      if (refreshedFields) {
+        setUpdateTypeFields((prev) => [
+          ...prev.filter((f) => f.update_type_id !== updateTypeId),
+          ...refreshedFields,
+        ]);
+      }
 
       resetForm();
     } catch (err) {
@@ -266,10 +272,9 @@ export default function UpdateTypeEditor({ itemTypeId }: UpdateTypeEditorProps) 
                 <div key={label}>
                   <label className="label text-xs">{label}</label>
                   <select value={value} onChange={(e) => setter(e.target.value)} className="input-field text-xs">
-                    <option value="">Anyone</option>
-                    <option value="contributor">Contributor</option>
-                    <option value="org_staff">Staff</option>
-                    <option value="org_admin">Admin</option>
+                    {MIN_ROLE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
                   </select>
                 </div>
               ))}

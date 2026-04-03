@@ -81,7 +81,7 @@ export interface UpdateTypeField {
   update_type_id: string;
   org_id: string;
   name: string;
-  field_type: 'text' | 'number' | 'dropdown' | 'date';
+  field_type: 'text' | 'number' | 'dropdown' | 'date' | 'url';
   options: string[] | null;
   required: boolean;
   sort_order: number;

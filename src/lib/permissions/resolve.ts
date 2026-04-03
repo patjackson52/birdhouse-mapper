@@ -122,7 +122,7 @@ export async function resolveUserAccess(
   return null;
 }
 
-const ROLE_LEVELS: Record<string, number> = {
+export const ROLE_LEVELS: Record<string, number> = {
   public: 0,
   viewer: 1,
   contributor: 2,
@@ -130,6 +130,19 @@ const ROLE_LEVELS: Record<string, number> = {
   org_admin: 4,
   platform_admin: 5,
 };
+
+/** Human-readable labels for roles that can be used as min_role thresholds */
+export const MIN_ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Anyone' },
+  { value: 'contributor', label: 'Contributor' },
+  { value: 'org_staff', label: 'Staff' },
+  { value: 'org_admin', label: 'Admin' },
+];
+
+/** Map role key to display label */
+export const ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  MIN_ROLE_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label])
+);
 
 export function canPerformUpdateTypeAction(
   userBaseRole: string,
