@@ -56,7 +56,6 @@ export class OfflineDatabase extends Dexie {
       custom_fields: 'id, item_type_id, org_id',
       item_updates: 'id, item_id, org_id, property_id, update_date',
       update_types: 'id, org_id',
-      update_type_fields: 'id, update_type_id, org_id',
       photos: 'id, item_id, update_id, org_id, property_id',
       entities: 'id, entity_type_id, org_id',
       entity_types: 'id, org_id',
@@ -72,6 +71,10 @@ export class OfflineDatabase extends Dexie {
       photo_blobs: 'id, mutation_id, item_id',
       sync_metadata: 'id, property_id, table_name',
       tile_cache_metadata: 'id, property_id, zoom',
+    });
+
+    this.version(2).stores({
+      update_type_fields: 'id, update_type_id, org_id',
     });
   }
 }

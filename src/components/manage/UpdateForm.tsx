@@ -67,7 +67,7 @@ export default function UpdateForm() {
         offlineStore.getUpdateTypes(resolvedOrgId),
         offlineStore.getItemTypes(resolvedOrgId),
         offlineStore.getEntityTypes(resolvedOrgId),
-        offlineStore.getUpdateTypeFields(resolvedOrgId),
+        offlineStore.getUpdateTypeFields(resolvedOrgId).catch(() => [] as Awaited<ReturnType<typeof offlineStore.getUpdateTypeFields>>),
       ]);
 
       // Sort items by name for the dropdown
