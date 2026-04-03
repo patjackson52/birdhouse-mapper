@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { EntityType, EntityTypeField, EntityFieldType, EntityLinkTarget } from '@/lib/types';
+import type { EntityType, EntityTypeField, EntityLinkTarget } from '@/lib/types';
+import { FieldDefinitionEditor, type FieldDraft } from '@/components/shared/fields';
 
 interface EntityTypeWithFields extends EntityType {
   entity_type_fields?: EntityTypeField[];
@@ -13,14 +14,6 @@ interface EntityTypeFormProps {
   orgId: string;
   onSaved: (entityType: EntityType) => void;
   onCancel: () => void;
-}
-
-interface FieldDraft {
-  id?: string; // existing field ID, undefined for new
-  name: string;
-  field_type: EntityFieldType;
-  options: string[];
-  required: boolean;
 }
 
 export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }: EntityTypeFormProps) {
@@ -36,7 +29,9 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
         .map((f) => ({
           id: f.id,
           name: f.name,
-          field_type: f.field_type,
+          // 'url' is a valid EntityFieldType but not yet supported by FieldDefinitionEditor;
+          // fall back to 'text' so existing url fields don't lose their data silently.
+          field_type: (f.field_type === 'url' ? 'text' : f.field_type) as FieldDraft['field_type'],
           options: f.options || [],
           required: f.required,
         }));
@@ -55,26 +50,6 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
     } else {
       setLinkTo([...linkTo, target]);
     }
-  }
-
-  function addField() {
-    setFields([...fields, { name: '', field_type: 'text', options: [], required: false }]);
-  }
-
-  function removeField(index: number) {
-    setFields(fields.filter((_, i) => i !== index));
-  }
-
-  function updateField(index: number, updates: Partial<FieldDraft>) {
-    setFields(fields.map((f, i) => i === index ? { ...f, ...updates } : f));
-  }
-
-  function moveField(index: number, direction: -1 | 1) {
-    const target = index + direction;
-    if (target < 0 || target >= fields.length) return;
-    const updated = [...fields];
-    [updated[index], updated[target]] = [updated[target], updated[index]];
-    setFields(updated);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -208,73 +183,11 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
       </div>
 
       {/* Custom Fields Editor */}
-      <div className="space-y-3 pt-2 border-t border-sage-light">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-sage uppercase tracking-wide">Custom Fields</p>
-          <button type="button" onClick={addField} className="text-xs text-forest hover:text-forest-dark font-medium">
-            + Add Field
-          </button>
-        </div>
-
-        {fields.map((field, i) => (
-          <div key={i} className="flex gap-2 items-start p-3 rounded-lg bg-sage-light/30 border border-sage-light">
-            <div className="flex-1 space-y-2">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={field.name}
-                  onChange={(e) => updateField(i, { name: e.target.value })}
-                  className="input-field flex-1"
-                  placeholder="Field name"
-                />
-                <select
-                  value={field.field_type}
-                  onChange={(e) => updateField(i, { field_type: e.target.value as EntityFieldType })}
-                  className="input-field w-auto"
-                >
-                  <option value="text">Text</option>
-                  <option value="number">Number</option>
-                  <option value="dropdown">Dropdown</option>
-                  <option value="date">Date</option>
-                  <option value="url">URL</option>
-                </select>
-              </div>
-              {field.field_type === 'dropdown' && (
-                <input
-                  type="text"
-                  value={field.options.join(', ')}
-                  onChange={(e) => updateField(i, { options: e.target.value.split(',').map((o) => o.trim()).filter(Boolean) })}
-                  className="input-field text-xs"
-                  placeholder="Options (comma-separated)"
-                />
-              )}
-              <label className="flex items-center gap-2 text-xs text-sage">
-                <input
-                  type="checkbox"
-                  checked={field.required}
-                  onChange={(e) => updateField(i, { required: e.target.checked })}
-                  className="rounded border-sage"
-                />
-                Required
-              </label>
-            </div>
-            <div className="flex flex-col gap-1">
-              <button type="button" onClick={() => moveField(i, -1)} disabled={i === 0} className="text-xs text-sage hover:text-forest-dark disabled:opacity-30">
-                ↑
-              </button>
-              <button type="button" onClick={() => moveField(i, 1)} disabled={i === fields.length - 1} className="text-xs text-sage hover:text-forest-dark disabled:opacity-30">
-                ↓
-              </button>
-              <button type="button" onClick={() => removeField(i)} className="text-xs text-red-600 hover:text-red-800">
-                ✕
-              </button>
-            </div>
-          </div>
-        ))}
-
-        {fields.length === 0 && (
-          <p className="text-xs text-sage italic">No custom fields. Every entity already has name, description, photo, and external link.</p>
-        )}
+      <div className="pt-2 border-t border-sage-light">
+          <FieldDefinitionEditor
+            fields={fields}
+            onChange={setFields}
+          />
       </div>
 
       <div className="flex gap-2">
