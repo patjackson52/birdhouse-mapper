@@ -17,6 +17,7 @@ import type {
   MapPreviewProps,
   TestimonialProps,
   EmbedProps,
+  KnowledgeEmbedProps,
 } from './types';
 
 import { Hero } from './components/page/Hero';
@@ -33,6 +34,7 @@ import { Card } from './components/page/Card';
 import { MapPreview } from './components/page/MapPreview';
 import { Testimonial } from './components/page/Testimonial';
 import { Embed } from './components/page/Embed';
+import { KnowledgeEmbed } from './components/page/KnowledgeEmbed';
 
 type PageComponents = {
   Hero: HeroProps;
@@ -49,6 +51,7 @@ type PageComponents = {
   MapPreview: MapPreviewProps;
   Testimonial: TestimonialProps;
   Embed: EmbedProps;
+  KnowledgeEmbed: KnowledgeEmbedProps;
 };
 
 const themeColorOptions = [
@@ -464,6 +467,26 @@ export const pageConfig: Config<PageComponents> = {
         },
       },
       render: Embed,
+    },
+
+    KnowledgeEmbed: {
+      label: 'Knowledge Embed',
+      defaultProps: {
+        knowledgeItemId: '',
+        showTitle: true,
+        showAttachments: true,
+        textSize: 'medium',
+      },
+      fields: {
+        knowledgeItemId: {
+          type: 'text',
+          label: 'Knowledge Item ID (paste from admin)',
+        },
+        showTitle: { type: 'radio', label: 'Show Title', options: [{ label: 'Yes', value: true }, { label: 'No', value: false }] },
+        showAttachments: { type: 'radio', label: 'Show Attachments', options: [{ label: 'Yes', value: true }, { label: 'No', value: false }] },
+        textSize: textSizeField(),
+      },
+      render: KnowledgeEmbed,
     },
   },
 };

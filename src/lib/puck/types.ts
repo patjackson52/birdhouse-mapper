@@ -114,6 +114,21 @@ export interface EmbedProps {
   title: string;
 }
 
+export interface KnowledgeEmbedProps {
+  knowledgeItemId: string;
+  showTitle: boolean;
+  showAttachments: boolean;
+  textSize?: TextSize;
+}
+
+export interface KnowledgeListProps {
+  tagFilter: string[];
+  maxItems: number;
+  layout: 'grid' | 'list';
+  columns: 2 | 3 | 4;
+  textSize?: TextSize;
+}
+
 // ---- Chrome component prop types ----
 
 export interface HeaderBarProps {
