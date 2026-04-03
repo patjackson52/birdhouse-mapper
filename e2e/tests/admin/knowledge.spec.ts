@@ -63,8 +63,8 @@ test.describe.serial('Knowledge Admin @smoke', () => {
     // The article we just created should appear in the list
     await expect(page.locator(`text=${TEST_TITLE}`)).toBeVisible({ timeout: 10000 });
 
-    // Tag should be visible
-    await expect(page.locator('text=e2e-test')).toBeVisible();
+    // Tag should be visible (appears in both filter pills and table row)
+    await expect(page.locator('text=e2e-test').first()).toBeVisible();
 
     // Public visibility badge should be visible
     await expect(page.locator('text=public').first()).toBeVisible();
