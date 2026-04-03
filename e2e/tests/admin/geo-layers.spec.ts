@@ -13,7 +13,7 @@ test.describe('Admin Geo Layers', () => {
 
     // Section header exists
     const sidebar = page.locator('nav');
-    await expect(sidebar.getByText('Data')).toBeVisible({ timeout: 10000 });
+    await expect(sidebar.getByText('Data', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // Geo Layers link exists and navigates
     const geoLink = sidebar.getByText('Geo Layers');

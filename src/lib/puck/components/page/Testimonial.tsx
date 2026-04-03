@@ -1,10 +1,16 @@
 import type { TestimonialProps } from '../../types';
+import { proseSizeClasses } from '../../text-styles';
 
-export function Testimonial({ quote, attribution, photoUrl, style }: TestimonialProps) {
-  const borderColor = style === 'accent' ? 'border-[var(--color-accent)]' : 'border-[var(--color-primary)]';
+const borderClasses = {
+  default: 'border-[var(--color-primary)]',
+  accent: 'border-[var(--color-accent)]',
+};
+
+export function Testimonial({ quote, attribution, photoUrl, style, textSize = 'large' }: TestimonialProps) {
+  const proseSize = proseSizeClasses[textSize];
   return (
-    <blockquote className={`mx-auto max-w-2xl border-l-4 ${borderColor} px-4 py-8 pl-6`}>
-      <div className="text-lg italic text-gray-700 prose prose-lg max-w-none">
+    <blockquote className={`mx-auto max-w-2xl border-l-4 ${borderClasses[style]} px-4 py-8 pl-6`}>
+      <div className={`italic text-gray-700 prose ${proseSize} max-w-none`}>
         &ldquo;{typeof quote === 'string'
           ? <span dangerouslySetInnerHTML={{ __html: quote }} />
           : <span>{quote}</span>

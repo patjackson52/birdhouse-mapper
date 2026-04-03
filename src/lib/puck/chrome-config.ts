@@ -128,7 +128,7 @@ export const chromeConfig: Config<ChromeComponents> = {
           label: 'Header Links',
           arrayFields: {
             label: { type: 'text', label: 'Label' },
-            href: { type: 'text', label: 'URL' },
+            href: linkField('URL'),
           },
           defaultItemProps: {
             label: 'Link',

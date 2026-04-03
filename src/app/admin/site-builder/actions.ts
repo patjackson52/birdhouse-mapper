@@ -88,6 +88,7 @@ export async function savePuckPageDraft(path: string, data: unknown) {
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
+  invalidateConfig();
   return { success: true as const };
 }
 
@@ -107,6 +108,7 @@ export async function savePuckRootDraft(data: unknown) {
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
+  invalidateConfig();
   return { success: true as const };
 }
 
