@@ -54,13 +54,13 @@ describe('getAdapter', () => {
   it('returns email adapter for email channel', async () => {
     const { getAdapter } = await import('@/lib/notifications/adapters');
     const adapter = getAdapter('email');
-    expect(adapter.channel).toBe('email');
+    expect(adapter!.channel).toBe('email');
   });
 
   it('returns sms adapter for sms channel', async () => {
     const { getAdapter } = await import('@/lib/notifications/adapters');
     const adapter = getAdapter('sms');
-    expect(adapter.channel).toBe('sms');
+    expect(adapter!.channel).toBe('sms');
   });
 
   it('returns null for in_app channel', async () => {

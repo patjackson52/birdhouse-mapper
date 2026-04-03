@@ -94,7 +94,7 @@ describe('notify', () => {
     // user-1 appears in both userIds and role resolution — should be deduplicated
     // 2 unique users × 2 channels (in_app + email) = 4 rows
     expect(insertedRows).toHaveLength(4);
-    const userIds = [...new Set(insertedRows.map((r) => r.user_id))];
+    const userIds = Array.from(new Set(insertedRows.map((r) => r.user_id)));
     expect(userIds).toHaveLength(2);
     expect(userIds).toContain('user-1');
     expect(userIds).toContain('user-2');

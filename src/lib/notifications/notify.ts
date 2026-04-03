@@ -26,7 +26,7 @@ export async function notify(params: NotifyParams): Promise<void> {
     }
   }
 
-  const userIds = [...userIdSet];
+  const userIds = Array.from(userIdSet);
   if (userIds.length === 0) return;
 
   // Step 2: For each user, resolve channel preferences and create notifications
