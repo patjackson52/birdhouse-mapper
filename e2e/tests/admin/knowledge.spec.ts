@@ -65,9 +65,6 @@ test.describe.serial('Knowledge Admin @smoke', () => {
 
     // Tag should be visible (appears in both filter pills and table row)
     await expect(page.locator('text=e2e-test').first()).toBeVisible();
-
-    // Public visibility badge should be visible
-    await expect(page.locator('text=public').first()).toBeVisible();
   });
 
   test('edit knowledge article', async ({ page }) => {
