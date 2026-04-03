@@ -199,3 +199,121 @@ create policy unp_delete on user_notification_preferences
 -- ---------------------------------------------------------------------------
 
 alter table users add column if not exists phone text;
+
+-- ---------------------------------------------------------------------------
+-- 8. process_task_reminders() — pg_cron function
+-- ---------------------------------------------------------------------------
+
+create or replace function process_task_reminders()
+returns void as $$
+declare
+  r record;
+  recipient_id uuid;
+  pref record;
+  ch text;
+  ch_enabled boolean;
+  channels text[] := array['in_app', 'email', 'sms'];
+  default_enabled boolean;
+begin
+  -- Find all due reminders that haven't been sent
+  for r in
+    select tr.id as reminder_id, tr.task_id, t.org_id, t.title as task_title,
+           t.assigned_to, t.description as task_description
+    from task_reminders tr
+    join tasks t on t.id = tr.task_id
+    where t.status = 'pending'
+      and t.due_date - tr.remind_before <= now()
+      and tr.sent_at is null
+  loop
+    -- Collect all unique recipient user IDs for this task
+    for recipient_id in
+      -- Assigned user
+      select r.assigned_to where r.assigned_to is not null
+      union
+      -- Direct watchers
+      select tw.user_id from task_watchers tw
+        where tw.task_id = r.task_id and tw.user_id is not null
+      union
+      -- Role-based watchers: resolve role → users via org_memberships
+      select om.user_id from task_watchers tw
+        join org_memberships om on om.role_id = tw.role_id and om.org_id = r.org_id
+        where tw.task_id = r.task_id and tw.role_id is not null
+          and om.status = 'active' and om.user_id is not null
+    loop
+      -- For each channel, check preferences
+      foreach ch in array channels
+      loop
+        -- Default: in_app=true, email=true, sms=false
+        if ch = 'sms' then default_enabled := false;
+        else default_enabled := true;
+        end if;
+
+        -- Check for specific type preference
+        select enabled into ch_enabled
+        from user_notification_preferences
+        where user_id = recipient_id
+          and org_id = r.org_id
+          and channel = ch
+          and notification_type = 'task_reminder';
+
+        if not found then
+          -- Check wildcard preference
+          select enabled into ch_enabled
+          from user_notification_preferences
+          where user_id = recipient_id
+            and org_id = r.org_id
+            and channel = ch
+            and notification_type = '*';
+
+          if not found then
+            ch_enabled := default_enabled;
+          end if;
+        end if;
+
+        if ch_enabled then
+          insert into notifications (
+            org_id, user_id, type, title, body,
+            reference_type, reference_id, channel, status
+          ) values (
+            r.org_id,
+            recipient_id,
+            'task_reminder',
+            'Reminder: ' || r.task_title,
+            r.task_description,
+            'task',
+            r.task_id,
+            ch,
+            case when ch = 'in_app' then 'sent' else 'pending' end
+          );
+        end if;
+      end loop;
+    end loop;
+
+    -- Mark reminder as sent
+    update task_reminders set sent_at = now() where id = r.reminder_id;
+  end loop;
+
+  -- Trigger external dispatch via pg_net (fire-and-forget)
+  -- Only if there are pending external notifications
+  if exists (select 1 from notifications where status = 'pending' and channel != 'in_app' limit 1) then
+    perform net.http_post(
+      url := current_setting('app.settings.base_url', true) || '/api/notifications/dispatch',
+      headers := jsonb_build_object(
+        'Authorization', 'Bearer ' || current_setting('app.settings.cron_secret', true),
+        'Content-Type', 'application/json'
+      ),
+      body := '{}'::jsonb
+    );
+  end if;
+end;
+$$ language plpgsql security definer;
+
+-- ---------------------------------------------------------------------------
+-- 9. Schedule the cron job (every 15 minutes)
+-- ---------------------------------------------------------------------------
+
+select cron.schedule(
+  'process-task-reminders',
+  '*/15 * * * *',
+  $$select process_task_reminders()$$
+);
