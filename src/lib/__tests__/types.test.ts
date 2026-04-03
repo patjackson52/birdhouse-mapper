@@ -93,6 +93,9 @@ describe('UpdateType structure', () => {
       item_type_id: null,
       sort_order: 0,
       org_id: 'org-1',
+      min_role_create: null,
+      min_role_edit: null,
+      min_role_delete: null,
     };
     expect(ut.is_global).toBe(true);
     expect(ut.item_type_id).toBeNull();
@@ -107,6 +110,9 @@ describe('UpdateType structure', () => {
       item_type_id: 'type-1',
       sort_order: 4,
       org_id: 'org-1',
+      min_role_create: null,
+      min_role_edit: null,
+      min_role_delete: null,
     };
     expect(ut.is_global).toBe(false);
     expect(ut.item_type_id).toBe('type-1');
@@ -123,6 +129,7 @@ describe('ItemWithDetails composite type', () => {
     const updateType: UpdateType = {
       id: 'ut-1', name: 'Observation', icon: '👀',
       is_global: true, item_type_id: null, sort_order: 0, org_id: 'org-1',
+      min_role_create: null, min_role_edit: null, min_role_delete: null,
     };
 
     const detailed: ItemWithDetails = {
@@ -151,6 +158,7 @@ describe('ItemWithDetails composite type', () => {
           created_by: null,
           org_id: 'org-1',
           property_id: 'prop-1',
+          custom_field_values: {},
           update_type: updateType,
           photos: [],
           entities: [],
@@ -320,6 +328,7 @@ describe('ItemWithDetails with entities', () => {
     const updateType: UpdateType = {
       id: 'ut-1', name: 'Observation', icon: '👀',
       is_global: true, item_type_id: null, sort_order: 0, org_id: 'org-1',
+      min_role_create: null, min_role_edit: null, min_role_delete: null,
     };
 
     const detailed: ItemWithDetails = {
@@ -334,6 +343,7 @@ describe('ItemWithDetails with entities', () => {
         content: 'Saw a bird', update_date: '2025-04-01',
         created_at: '2025-04-01T00:00:00Z', created_by: null,
         org_id: 'org-1', property_id: 'prop-1',
+        custom_field_values: {},
         update_type: updateType, photos: [], entities: [entity],
       }],
       photos: [],
