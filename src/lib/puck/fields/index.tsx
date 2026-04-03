@@ -2,6 +2,7 @@ import { ImagePickerField } from './ImagePickerField';
 import { IconPickerField } from './IconPickerField';
 import { LinkField } from './LinkField';
 import { ColorPickerField } from './ColorPickerField';
+import { KnowledgePickerField } from './KnowledgePickerField';
 
 export type { LinkValue, IconValue } from './link-utils';
 export { resolveLink } from './link-utils';
@@ -10,6 +11,7 @@ export { IconPickerField } from './IconPickerField';
 export { LinkField } from './LinkField';
 export { ColorPickerField } from './ColorPickerField';
 export { PuckSuggestionsProvider, useLinkSuggestions } from './PuckSuggestionsProvider';
+export { KnowledgePickerField } from './KnowledgePickerField';
 
 /**
  * Creates a Puck custom field config for an image picker.
@@ -59,6 +61,19 @@ export function colorPickerField(label: string) {
     label,
     render: ({ value, onChange }: { value: any; onChange: (val: any) => void }) => (
       <ColorPickerField value={value} onChange={onChange} label={label} />
+    ),
+  };
+}
+
+/**
+ * Creates a Puck custom field config for a knowledge article picker.
+ */
+export function knowledgePickerField(label: string, orgId: string) {
+  return {
+    type: 'custom' as const,
+    label,
+    render: ({ value, onChange }: { value: any; onChange: (val: any) => void }) => (
+      <KnowledgePickerField value={value || ''} onChange={onChange} orgId={orgId} />
     ),
   };
 }
