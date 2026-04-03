@@ -111,16 +111,16 @@ for each row execute function update_vault_quota_on_delete();
 alter table vault_items enable row level security;
 
 create policy vault_items_select on vault_items
-  for select using (org_id in (select unnest(user_active_org_ids())));
+  for select using (org_id in (select user_active_org_ids()));
 
 create policy vault_items_insert on vault_items
-  for insert with check (org_id in (select unnest(user_active_org_ids())));
+  for insert with check (org_id in (select user_active_org_ids()));
 
 create policy vault_items_update on vault_items
-  for update using (org_id in (select unnest(user_org_admin_org_ids())));
+  for update using (org_id in (select user_org_admin_org_ids()));
 
 create policy vault_items_delete on vault_items
-  for delete using (org_id in (select unnest(user_org_admin_org_ids())));
+  for delete using (org_id in (select user_org_admin_org_ids()));
 
 -- ---------------------------------------------------------------------------
 -- 5. RLS Policies — vault_item_property_exclusions
@@ -130,17 +130,17 @@ alter table vault_item_property_exclusions enable row level security;
 
 create policy vault_excl_select on vault_item_property_exclusions
   for select using (
-    vault_item_id in (select id from vault_items where org_id in (select unnest(user_active_org_ids())))
+    vault_item_id in (select id from vault_items where org_id in (select user_active_org_ids()))
   );
 
 create policy vault_excl_insert on vault_item_property_exclusions
   for insert with check (
-    vault_item_id in (select id from vault_items where org_id in (select unnest(user_org_admin_org_ids())))
+    vault_item_id in (select id from vault_items where org_id in (select user_org_admin_org_ids()))
   );
 
 create policy vault_excl_delete on vault_item_property_exclusions
   for delete using (
-    vault_item_id in (select id from vault_items where org_id in (select unnest(user_org_admin_org_ids())))
+    vault_item_id in (select id from vault_items where org_id in (select user_org_admin_org_ids()))
   );
 
 -- ---------------------------------------------------------------------------
@@ -150,7 +150,7 @@ create policy vault_excl_delete on vault_item_property_exclusions
 alter table vault_quotas enable row level security;
 
 create policy vault_quotas_select on vault_quotas
-  for select using (org_id in (select unnest(user_active_org_ids())));
+  for select using (org_id in (select user_active_org_ids()));
 
 -- ---------------------------------------------------------------------------
 -- 7. Storage Bucket RLS Policies
@@ -163,7 +163,7 @@ create policy vault_public_insert on storage.objects
   for insert with check (
     bucket_id = 'vault-public'
     and (storage.foldername(name))[1] in (
-      select id::text from orgs where id in (select unnest(user_active_org_ids()))
+      select id::text from orgs where id in (select user_active_org_ids())
     )
   );
 
@@ -171,7 +171,7 @@ create policy vault_public_delete on storage.objects
   for delete using (
     bucket_id = 'vault-public'
     and (storage.foldername(name))[1] in (
-      select id::text from orgs where id in (select unnest(user_org_admin_org_ids()))
+      select id::text from orgs where id in (select user_org_admin_org_ids())
     )
   );
 
@@ -179,7 +179,7 @@ create policy vault_private_select on storage.objects
   for select using (
     bucket_id = 'vault-private'
     and (storage.foldername(name))[1] in (
-      select id::text from orgs where id in (select unnest(user_active_org_ids()))
+      select id::text from orgs where id in (select user_active_org_ids())
     )
   );
 
@@ -187,7 +187,7 @@ create policy vault_private_insert on storage.objects
   for insert with check (
     bucket_id = 'vault-private'
     and (storage.foldername(name))[1] in (
-      select id::text from orgs where id in (select unnest(user_active_org_ids()))
+      select id::text from orgs where id in (select user_active_org_ids())
     )
   );
 
@@ -195,7 +195,7 @@ create policy vault_private_delete on storage.objects
   for delete using (
     bucket_id = 'vault-private'
     and (storage.foldername(name))[1] in (
-      select id::text from orgs where id in (select unnest(user_org_admin_org_ids()))
+      select id::text from orgs where id in (select user_org_admin_org_ids())
     )
   );
 
