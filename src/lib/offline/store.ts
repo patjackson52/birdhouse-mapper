@@ -1,5 +1,5 @@
 import type { OfflineDatabase } from './db';
-import type { Item, ItemType, CustomField, ItemUpdate, UpdateType, Photo, Entity, EntityType } from '@/lib/types';
+import type { Item, ItemType, CustomField, ItemUpdate, UpdateType, UpdateTypeField, Photo, Entity, EntityType } from '@/lib/types';
 import type { CachedRecord } from './types';
 import { enqueueMutation } from './mutations';
 
@@ -35,6 +35,11 @@ export async function getItemUpdates(db: OfflineDatabase, itemId: string): Promi
 
 export async function getUpdateTypes(db: OfflineDatabase, orgId: string): Promise<Cached<UpdateType>[]> {
   const all = await db.update_types.where('org_id').equals(orgId).toArray();
+  return all.sort((a, b) => a.sort_order - b.sort_order);
+}
+
+export async function getUpdateTypeFields(db: OfflineDatabase, orgId: string): Promise<Cached<UpdateTypeField>[]> {
+  const all = await db.update_type_fields.where('org_id').equals(orgId).toArray();
   return all.sort((a, b) => a.sort_order - b.sort_order);
 }
 
@@ -135,6 +140,7 @@ export interface InsertItemUpdateParams {
   update_date: string;
   org_id: string;
   property_id: string;
+  custom_field_values?: Record<string, unknown>;
 }
 
 export async function insertItemUpdate(
@@ -146,6 +152,7 @@ export async function insertItemUpdate(
   const update: Cached<ItemUpdate> = {
     id,
     ...params,
+    custom_field_values: params.custom_field_values ?? {},
     created_at: now,
     created_by: null,
     _synced_at: '',
