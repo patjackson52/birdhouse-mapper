@@ -107,49 +107,59 @@ export default function KnowledgeEditor({ orgId, item, onSaved }: KnowledgeEdito
     setSaving(true);
     setError(null);
 
-    const bodyHtml = body ? generateHTML(body, getEditorExtensions()) : '';
-    const excerpt = bodyHtml ? generateExcerpt(bodyHtml) : '';
-
-    if (item) {
-      // Update existing
-      const result = await updateKnowledgeItem(item.id, {
-        title: title.trim(),
-        body: body ?? undefined,
-        bodyHtml,
-        excerpt,
-        coverImageUrl: coverImageUrl || undefined,
-        tags,
-        visibility,
-        isAiContext,
-      });
-
-      if ('error' in result) {
-        setError(result.error);
-      } else if (onSaved) {
-        onSaved({ ...item, title: title.trim(), body, body_html: bodyHtml, excerpt, cover_image_url: coverImageUrl, tags, visibility, is_ai_context: isAiContext });
+    try {
+      let bodyHtml = '';
+      let excerpt = '';
+      try {
+        bodyHtml = body ? generateHTML(body, getEditorExtensions()) : '';
+        excerpt = bodyHtml ? generateExcerpt(bodyHtml) : '';
+      } catch {
+        // generateHTML can fail if body shape doesn't match extensions; proceed with empty HTML
       }
-    } else {
-      // Create new
-      const result = await createKnowledgeItem({
-        orgId,
-        title: title.trim(),
-        body: body ?? undefined,
-        bodyHtml,
-        excerpt,
-        coverImageUrl: coverImageUrl || undefined,
-        tags,
-        visibility,
-        isAiContext,
-      });
 
-      if ('error' in result) {
-        setError(result.error);
-      } else if (onSaved) {
-        onSaved(result.item);
+      if (item) {
+        // Update existing
+        const result = await updateKnowledgeItem(item.id, {
+          title: title.trim(),
+          body: body ?? undefined,
+          bodyHtml,
+          excerpt,
+          coverImageUrl: coverImageUrl || undefined,
+          tags,
+          visibility,
+          isAiContext,
+        });
+
+        if ('error' in result) {
+          setError(result.error);
+        } else if (onSaved) {
+          onSaved({ ...item, title: title.trim(), body, body_html: bodyHtml, excerpt, cover_image_url: coverImageUrl, tags, visibility, is_ai_context: isAiContext });
+        }
+      } else {
+        // Create new
+        const result = await createKnowledgeItem({
+          orgId,
+          title: title.trim(),
+          body: body ?? undefined,
+          bodyHtml,
+          excerpt,
+          coverImageUrl: coverImageUrl || undefined,
+          tags,
+          visibility,
+          isAiContext,
+        });
+
+        if ('error' in result) {
+          setError(result.error);
+        } else if (onSaved) {
+          onSaved(result.item);
+        }
       }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred.');
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   }
 
   return (
