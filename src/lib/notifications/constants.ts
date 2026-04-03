@@ -13,10 +13,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   '*': 'All notifications',
 };
 
-export const DEFAULT_CHANNEL_ENABLED: Record<string, boolean> = {
+export const CHANNELS = ['in_app', 'email', 'sms'] as const;
+
+export const DEFAULT_CHANNEL_ENABLED: Record<(typeof CHANNELS)[number], boolean> = {
   in_app: true,
   email: true,
   sms: false,
 };
-
-export const CHANNELS = ['in_app', 'email', 'sms'] as const;

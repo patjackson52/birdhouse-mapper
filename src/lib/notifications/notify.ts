@@ -8,10 +8,8 @@ export async function notify(params: NotifyParams): Promise<void> {
   const { orgId, type, title, body, referenceType, referenceId, recipients } = params;
   const supabase = createServiceClient();
 
-  // Step 1: Collect all user IDs
   const userIdSet = new Set<string>(recipients.userIds ?? []);
 
-  // Resolve role IDs → user IDs
   if (recipients.roleIds && recipients.roleIds.length > 0) {
     const { data: memberships } = await supabase
       .from('org_memberships')
@@ -29,17 +27,34 @@ export async function notify(params: NotifyParams): Promise<void> {
   const userIds = Array.from(userIdSet);
   if (userIds.length === 0) return;
 
-  // Step 2: For each user, resolve channel preferences and create notifications
-  const rows: Record<string, unknown>[] = [];
+  // Batch-fetch all preferences for resolved users in one query
+  const { data: allPrefs } = await supabase
+    .from('user_notification_preferences')
+    .select('user_id, channel, notification_type, enabled')
+    .eq('org_id', orgId)
+    .in('user_id', userIds);
+
+  const prefsByUser = new Map<string, typeof allPrefs>();
+  for (const pref of allPrefs ?? []) {
+    const existing = prefsByUser.get(pref.user_id) ?? [];
+    existing.push(pref);
+    prefsByUser.set(pref.user_id, existing);
+  }
+
+  const rows: {
+    org_id: string;
+    user_id: string;
+    type: string;
+    title: string;
+    body: string | null;
+    reference_type: string;
+    reference_id: string;
+    channel: NotificationChannel;
+    status: 'sent' | 'pending';
+  }[] = [];
 
   for (const userId of userIds) {
-    const { data: prefs } = await supabase
-      .from('user_notification_preferences')
-      .select('channel, notification_type, enabled')
-      .eq('user_id', userId)
-      .eq('org_id', orgId);
-
-    const channels = resolveChannelsForUser(prefs ?? [], type);
+    const channels = resolveChannelsForUser(prefsByUser.get(userId) ?? [], type);
 
     for (const [channel, enabled] of Object.entries(channels)) {
       if (!enabled) continue;
@@ -60,14 +75,13 @@ export async function notify(params: NotifyParams): Promise<void> {
 
   if (rows.length === 0) return;
 
-  // Step 3: Bulk insert
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) {
     console.error('Failed to insert notifications:', error);
     return;
   }
 
-  // Step 4: Trigger dispatch for external channels (fire-and-forget)
+  // Fire-and-forget dispatch for external channels
   const hasPending = rows.some((r) => r.status === 'pending');
   if (hasPending) {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';

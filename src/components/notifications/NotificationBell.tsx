@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import NotificationItem from './NotificationItem';
@@ -10,7 +10,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -53,7 +53,8 @@ export default function NotificationBell() {
 
   const markAllRead = useMutation({
     mutationFn: async () => {
-      const unreadIds = notifications.filter((n) => !n.read_at).map((n) => n.id);
+      const current = queryClient.getQueryData<Notification[]>(['notifications', 'in_app']) ?? [];
+      const unreadIds = current.filter((n) => !n.read_at).map((n) => n.id);
       if (unreadIds.length === 0) return;
       await supabase
         .from('notifications')

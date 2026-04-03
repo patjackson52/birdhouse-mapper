@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-describe('ConsoleEmailAdapter', () => {
+describe('ConsoleAdapter (email)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it('logs the email payload and returns success', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const { ConsoleEmailAdapter } = await import('@/lib/notifications/adapters');
-    const adapter = new ConsoleEmailAdapter();
+    const { getAdapter } = await import('@/lib/notifications/adapters');
+    const adapter = getAdapter('email')!;
 
     const result = await adapter.send({
       to: 'user@example.com',
@@ -25,15 +25,15 @@ describe('ConsoleEmailAdapter', () => {
   });
 });
 
-describe('ConsoleSmsAdapter', () => {
+describe('ConsoleAdapter (sms)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
   it('logs the SMS payload and returns success', async () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const { ConsoleSmsAdapter } = await import('@/lib/notifications/adapters');
-    const adapter = new ConsoleSmsAdapter();
+    const { getAdapter } = await import('@/lib/notifications/adapters');
+    const adapter = getAdapter('sms')!;
 
     const result = await adapter.send({
       to: '+15551234567',

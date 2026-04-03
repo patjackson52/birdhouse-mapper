@@ -24,7 +24,7 @@ vi.mock('@/lib/supabase/server', () => ({
         return {
           select: vi.fn(() => ({
             eq: vi.fn(() => ({
-              eq: vi.fn(() => Promise.resolve({ data: prefData, error: null })),
+              in: vi.fn(() => Promise.resolve({ data: prefData, error: null })),
             })),
           })),
         };
@@ -122,7 +122,7 @@ describe('notify', () => {
   });
 
   it('respects user preferences and skips disabled channels', async () => {
-    prefData = [{ channel: 'email', notification_type: 'task_reminder', enabled: false }];
+    prefData = [{ user_id: 'user-1', channel: 'email', notification_type: 'task_reminder', enabled: false }];
 
     const { notify } = await import('@/lib/notifications/notify');
 

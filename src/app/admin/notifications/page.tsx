@@ -3,20 +3,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getNotificationPreferences, updateNotificationPreference } from './actions';
-import { NOTIFICATION_TYPE_LABELS, CHANNELS, DEFAULT_CHANNEL_ENABLED } from '@/lib/notifications/constants';
-import type { UserNotificationPreference } from '@/lib/notifications/types';
-
-function resolveEnabled(
-  prefs: UserNotificationPreference[],
-  channel: string,
-  type: string
-): boolean {
-  const specific = prefs.find(
-    (p) => p.channel === channel && p.notification_type === type
-  );
-  if (specific) return specific.enabled;
-  return DEFAULT_CHANNEL_ENABLED[channel] ?? false;
-}
+import { NOTIFICATION_TYPE_LABELS, CHANNELS } from '@/lib/notifications/constants';
+import { resolveChannelsForUser } from '@/lib/notifications/preferences';
 
 export default function NotificationPreferencesPage() {
   const queryClient = useQueryClient();
@@ -102,7 +90,7 @@ export default function NotificationPreferencesPage() {
                 <tr key={type} className="border-b border-sage-light/50">
                   <td className="py-3 px-2 text-sm text-forest-dark">{label}</td>
                   {CHANNELS.map((ch) => {
-                    const enabled = resolveEnabled(prefs, ch, type);
+                    const enabled = resolveChannelsForUser(prefs, type)[ch];
                     const key = `${ch}-${type}`;
                     const isSms = ch === 'sms';
                     return (

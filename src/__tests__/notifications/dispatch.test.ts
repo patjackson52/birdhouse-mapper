@@ -3,10 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 let pendingNotifications: Record<string, unknown>[] = [];
 let updatedIds: { id: string; status: string; error: string | null }[] = [];
 let adapterSendResult: { success: boolean; error?: string } = { success: true };
-let getUserByIdResult: { data: { user: { email: string } | null }; error: null } = {
-  data: { user: { email: 'user@example.com' } },
-  error: null,
-};
+let getUserByIdResult: (id: string) => { data: { user: { id: string; email: string } | null }; error: null } =
+  (id) => ({ data: { user: { id, email: 'user@example.com' } }, error: null });
+let phoneProfiles: { id: string; phone: string }[] = [{ id: 'u-1', phone: '+15551234567' }];
 let selectFetchError: { message: string } | null = null;
 
 vi.mock('@/lib/supabase/server', () => ({
@@ -39,8 +38,8 @@ vi.mock('@/lib/supabase/server', () => ({
       if (table === 'users') {
         return {
           select: vi.fn(() => ({
-            eq: vi.fn(() => Promise.resolve({
-              data: { phone: '+15551234567' },
+            in: vi.fn(() => Promise.resolve({
+              data: phoneProfiles,
               error: null,
             })),
           })),
@@ -50,7 +49,7 @@ vi.mock('@/lib/supabase/server', () => ({
     },
     auth: {
       admin: {
-        getUserById: vi.fn(() => Promise.resolve(getUserByIdResult)),
+        getUserById: vi.fn((id: string) => Promise.resolve(getUserByIdResult(id))),
       },
     },
   }),
@@ -73,7 +72,8 @@ describe('POST /api/notifications/dispatch', () => {
     pendingNotifications = [];
     updatedIds = [];
     adapterSendResult = { success: true };
-    getUserByIdResult = { data: { user: { email: 'user@example.com' } }, error: null };
+    getUserByIdResult = (id) => ({ data: { user: { id, email: 'user@example.com' } }, error: null });
+    phoneProfiles = [{ id: 'u-1', phone: '+15551234567' }];
     selectFetchError = null;
     vi.clearAllMocks();
   });
@@ -151,7 +151,7 @@ describe('POST /api/notifications/dispatch', () => {
 
   it('marks notification as failed when no contact info found', async () => {
     process.env.CRON_SECRET = 'test-secret';
-    getUserByIdResult = { data: { user: null }, error: null };
+    getUserByIdResult = () => ({ data: { user: null }, error: null });
     pendingNotifications = [
       { id: 'n-nocontact', user_id: 'u-ghost', channel: 'email', title: 'Test', body: 'Body' },
     ];

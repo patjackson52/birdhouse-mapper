@@ -10,7 +10,6 @@ export async function POST(request: Request) {
 
   const supabase = createServiceClient();
 
-  // Fetch pending external notifications
   const { data: pending, error: fetchError } = await supabase
     .from('notifications')
     .select('id, user_id, channel, title, body')
@@ -27,6 +26,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ processed: 0, failed: 0 });
   }
 
+  // Batch-fetch contact info for all unique users
+  const uniqueUserIds = Array.from(new Set(pending.map((n) => n.user_id)));
+  const emailMap = new Map<string, string>();
+  const phoneMap = new Map<string, string>();
+
+  const hasEmail = pending.some((n) => n.channel === 'email');
+  const hasSms = pending.some((n) => n.channel === 'sms');
+
+  if (hasEmail) {
+    const results = await Promise.all(
+      uniqueUserIds.map((id) => supabase.auth.admin.getUserById(id))
+    );
+    for (const { data } of results) {
+      if (data?.user?.email) emailMap.set(data.user.id, data.user.email);
+    }
+  }
+
+  if (hasSms) {
+    const { data: profiles } = await supabase
+      .from('users')
+      .select('id, phone')
+      .in('id', uniqueUserIds);
+    for (const p of profiles ?? []) {
+      if (p.phone) phoneMap.set(p.id, p.phone);
+    }
+  }
+
   let processed = 0;
   let failed = 0;
 
@@ -41,18 +67,9 @@ export async function POST(request: Request) {
       continue;
     }
 
-    // Look up contact info
-    let to = '';
-    if (notification.channel === 'email') {
-      const { data: authData } = await supabase.auth.admin.getUserById(notification.user_id);
-      to = authData?.user?.email ?? '';
-    } else if (notification.channel === 'sms') {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('phone')
-        .eq('id', notification.user_id);
-      to = (profile as { phone: string } | null)?.phone ?? '';
-    }
+    const to = notification.channel === 'email'
+      ? emailMap.get(notification.user_id) ?? ''
+      : phoneMap.get(notification.user_id) ?? '';
 
     if (!to) {
       await supabase
