@@ -542,3 +542,6 @@ export interface Database {
     };
   };
 }
+
+// Re-export notification types for convenience
+export type { Task, TaskWatcher, TaskReminder, Notification, UserNotificationPreference } from '@/lib/notifications/types';
