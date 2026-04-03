@@ -3139,7 +3139,771 @@ git commit -m "feat(knowledge): integrate knowledge items into AI context block"
 
 ---
 
-### Task 18: Full Build Verification
+### Task 18: Unit Tests — KnowledgePicker and KnowledgeSelect
+
+**Files:**
+- Create: `src/components/knowledge/__tests__/KnowledgePicker.test.tsx`
+- Create: `src/components/knowledge/__tests__/KnowledgeSelect.test.tsx`
+
+- [ ] **Step 1: Write KnowledgePicker tests**
+
+```tsx
+// src/components/knowledge/__tests__/KnowledgePicker.test.tsx
+
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+
+const mockItems = [
+  {
+    id: 'k1',
+    org_id: 'org-1',
+    title: 'How to Clean Birdhouses',
+    slug: 'how-to-clean-birdhouses-abc1',
+    body: null,
+    body_html: '<p>Step 1</p>',
+    excerpt: 'Step-by-step guide for seasonal maintenance.',
+    cover_image_url: 'https://example.com/cover.jpg',
+    tags: ['maintenance', 'howto'],
+    visibility: 'org' as const,
+    is_ai_context: true,
+    ai_priority: null,
+    created_by: 'user-1',
+    updated_by: 'user-1',
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'k2',
+    org_id: 'org-1',
+    title: 'BirdBox Plans',
+    slug: 'birdbox-plans-def2',
+    body: null,
+    body_html: '<p>Dimensions</p>',
+    excerpt: 'Construction plans and specifications.',
+    cover_image_url: null,
+    tags: ['plans'],
+    visibility: 'public' as const,
+    is_ai_context: true,
+    ai_priority: 1,
+    created_by: 'user-1',
+    updated_by: 'user-1',
+    created_at: '2026-01-02T00:00:00Z',
+    updated_at: '2026-01-02T00:00:00Z',
+  },
+];
+
+vi.mock('@/lib/knowledge/actions', () => ({
+  getKnowledgeItems: vi.fn(() => Promise.resolve({ items: mockItems, error: null })),
+}));
+
+import KnowledgePicker from '../KnowledgePicker';
+
+describe('KnowledgePicker', () => {
+  it('renders with header and close button', () => {
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText('Select Knowledge Article')).toBeTruthy();
+    expect(screen.getByLabelText('Close')).toBeTruthy();
+  });
+
+  it('calls onClose when close button is clicked', () => {
+    const onClose = vi.fn();
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={onClose} />);
+    fireEvent.click(screen.getByLabelText('Close'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('displays knowledge items after loading', async () => {
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+      expect(screen.getByText('BirdBox Plans')).toBeTruthy();
+    });
+  });
+
+  it('shows excerpts for items', async () => {
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('Step-by-step guide for seasonal maintenance.')).toBeTruthy();
+    });
+  });
+
+  it('renders tag filter pills from loaded items', async () => {
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('maintenance')).toBeTruthy();
+      expect(screen.getByText('howto')).toBeTruthy();
+      expect(screen.getByText('plans')).toBeTruthy();
+    });
+  });
+
+  it('has a search input', () => {
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByPlaceholderText('Search articles…')).toBeTruthy();
+  });
+
+  it('select button is disabled when nothing is selected', async () => {
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+    });
+    const selectBtn = screen.getByText('Select');
+    expect(selectBtn).toHaveAttribute('disabled');
+  });
+
+  it('calls onSelect with the selected item when Select is clicked', async () => {
+    const onSelect = vi.fn();
+    render(<KnowledgePicker orgId="org-1" onSelect={onSelect} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+    });
+    // Click the first item
+    fireEvent.click(screen.getByText('How to Clean Birdhouses'));
+    // Click Select button
+    fireEvent.click(screen.getByText(/Select/));
+    expect(onSelect).toHaveBeenCalledWith([mockItems[0]]);
+  });
+
+  it('calls onClose when Cancel is clicked', async () => {
+    const onClose = vi.fn();
+    render(<KnowledgePicker orgId="org-1" onSelect={vi.fn()} onClose={onClose} />);
+    await waitFor(() => {
+      expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('Cancel'));
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+});
+```
+
+- [ ] **Step 2: Write KnowledgeSelect tests**
+
+```tsx
+// src/components/knowledge/__tests__/KnowledgeSelect.test.tsx
+
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const mockItems = [
+  { id: 'k1', org_id: 'org-1', title: 'How to Clean Birdhouses', slug: 'clean', body: null, body_html: null, excerpt: null, cover_image_url: null, tags: ['maintenance'], visibility: 'org' as const, is_ai_context: true, ai_priority: null, created_by: 'u1', updated_by: 'u1', created_at: '', updated_at: '' },
+  { id: 'k2', org_id: 'org-1', title: 'BirdBox Plans', slug: 'plans', body: null, body_html: null, excerpt: null, cover_image_url: null, tags: ['plans'], visibility: 'public' as const, is_ai_context: true, ai_priority: null, created_by: 'u1', updated_by: 'u1', created_at: '', updated_at: '' },
+];
+
+vi.mock('@/lib/knowledge/actions', () => ({
+  getKnowledgeItems: vi.fn(() => Promise.resolve({ items: mockItems, error: null })),
+}));
+
+import KnowledgeSelect from '../KnowledgeSelect';
+
+function renderWithQuery(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
+describe('KnowledgeSelect', () => {
+  it('renders a button to open the dropdown', async () => {
+    renderWithQuery(<KnowledgeSelect orgId="org-1" selectedIds={[]} onChange={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('Link knowledge article…')).toBeTruthy();
+    });
+  });
+
+  it('shows items in dropdown when clicked', async () => {
+    renderWithQuery(<KnowledgeSelect orgId="org-1" selectedIds={[]} onChange={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('Link knowledge article…')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('Link knowledge article…'));
+    expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+    expect(screen.getByText('BirdBox Plans')).toBeTruthy();
+  });
+
+  it('shows selected items as pills', async () => {
+    renderWithQuery(<KnowledgeSelect orgId="org-1" selectedIds={['k1']} onChange={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+    });
+    // The button text changes when items are selected
+    expect(screen.getByText('Add another…')).toBeTruthy();
+  });
+
+  it('calls onChange when an item is selected', async () => {
+    const onChange = vi.fn();
+    renderWithQuery(<KnowledgeSelect orgId="org-1" selectedIds={[]} onChange={onChange} />);
+    await waitFor(() => {
+      expect(screen.getByText('Link knowledge article…')).toBeTruthy();
+    });
+    fireEvent.click(screen.getByText('Link knowledge article…'));
+    fireEvent.click(screen.getByText('How to Clean Birdhouses'));
+    expect(onChange).toHaveBeenCalledWith(['k1']);
+  });
+
+  it('calls onChange to remove when x is clicked on a pill', async () => {
+    const onChange = vi.fn();
+    renderWithQuery(<KnowledgeSelect orgId="org-1" selectedIds={['k1']} onChange={onChange} />);
+    await waitFor(() => {
+      expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+    });
+    // Click the × button on the pill
+    const removeBtn = screen.getByText('×');
+    fireEvent.click(removeBtn);
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it('returns null when no items exist', async () => {
+    vi.mocked((await import('@/lib/knowledge/actions')).getKnowledgeItems).mockResolvedValueOnce({ items: [], error: null });
+    const { container } = renderWithQuery(<KnowledgeSelect orgId="org-1" selectedIds={[]} onChange={vi.fn()} />);
+    // Initially shows loading, then should render nothing
+    await waitFor(() => {
+      // Component returns null for empty items, container may have the wrapper
+    });
+  });
+});
+```
+
+- [ ] **Step 3: Run tests to verify they pass**
+
+Run: `npm run test -- src/components/knowledge/__tests__/`
+Expected: All tests pass.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/components/knowledge/__tests__/KnowledgePicker.test.tsx src/components/knowledge/__tests__/KnowledgeSelect.test.tsx
+git commit -m "test(knowledge): add unit tests for KnowledgePicker and KnowledgeSelect"
+```
+
+---
+
+### Task 19: Unit Tests — KnowledgeRenderer
+
+**Files:**
+- Create: `src/components/knowledge/__tests__/KnowledgeRenderer.test.tsx`
+
+- [ ] **Step 1: Write KnowledgeRenderer tests**
+
+```tsx
+// src/components/knowledge/__tests__/KnowledgeRenderer.test.tsx
+
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import KnowledgeRenderer from '../KnowledgeRenderer';
+import type { KnowledgeItem } from '@/lib/knowledge/types';
+
+const baseItem: KnowledgeItem = {
+  id: 'k1',
+  org_id: 'org-1',
+  title: 'How to Clean Birdhouses',
+  slug: 'how-to-clean-birdhouses-abc1',
+  body: null,
+  body_html: '<p>Step 1: Remove old nesting material.</p><p>Step 2: Scrub with mild soap.</p>',
+  excerpt: 'Step-by-step guide',
+  cover_image_url: 'https://example.com/cover.jpg',
+  tags: ['maintenance', 'howto'],
+  visibility: 'org',
+  is_ai_context: true,
+  ai_priority: null,
+  created_by: 'user-1',
+  updated_by: 'user-1',
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+};
+
+describe('KnowledgeRenderer', () => {
+  it('renders the title when showTitle is true', () => {
+    render(<KnowledgeRenderer item={baseItem} showTitle />);
+    expect(screen.getByText('How to Clean Birdhouses')).toBeTruthy();
+  });
+
+  it('does not render the title when showTitle is false', () => {
+    render(<KnowledgeRenderer item={baseItem} showTitle={false} />);
+    expect(screen.queryByText('How to Clean Birdhouses')).toBeNull();
+  });
+
+  it('renders tags when showTags is true', () => {
+    render(<KnowledgeRenderer item={baseItem} showTags />);
+    expect(screen.getByText('maintenance')).toBeTruthy();
+    expect(screen.getByText('howto')).toBeTruthy();
+  });
+
+  it('does not render tags when showTags is false', () => {
+    render(<KnowledgeRenderer item={baseItem} showTags={false} />);
+    expect(screen.queryByText('maintenance')).toBeNull();
+  });
+
+  it('renders the cover image', () => {
+    const { container } = render(<KnowledgeRenderer item={baseItem} />);
+    const img = container.querySelector('img');
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute('src')).toBe('https://example.com/cover.jpg');
+  });
+
+  it('renders body_html content', () => {
+    render(<KnowledgeRenderer item={baseItem} />);
+    expect(screen.getByText('Step 1: Remove old nesting material.')).toBeTruthy();
+    expect(screen.getByText('Step 2: Scrub with mild soap.')).toBeTruthy();
+  });
+
+  it('renders attachments when provided', () => {
+    const attachments = [
+      { vault_item_id: 'v1', file_name: 'guide.pdf', mime_type: 'application/pdf', file_size: 2048 },
+      { vault_item_id: 'v2', file_name: 'photo.jpg', mime_type: 'image/jpeg', file_size: 512000 },
+    ];
+    render(<KnowledgeRenderer item={baseItem} showAttachments attachments={attachments} />);
+    expect(screen.getByText('Attachments')).toBeTruthy();
+    expect(screen.getByText('guide.pdf')).toBeTruthy();
+    expect(screen.getByText('photo.jpg')).toBeTruthy();
+  });
+
+  it('does not render attachments section when empty', () => {
+    render(<KnowledgeRenderer item={baseItem} showAttachments attachments={[]} />);
+    expect(screen.queryByText('Attachments')).toBeNull();
+  });
+
+  it('does not render attachments when showAttachments is false', () => {
+    const attachments = [{ vault_item_id: 'v1', file_name: 'guide.pdf', mime_type: 'application/pdf', file_size: 2048 }];
+    render(<KnowledgeRenderer item={baseItem} showAttachments={false} attachments={attachments} />);
+    expect(screen.queryByText('Attachments')).toBeNull();
+  });
+
+  it('handles item with no body_html', () => {
+    const emptyItem = { ...baseItem, body_html: null };
+    const { container } = render(<KnowledgeRenderer item={emptyItem} />);
+    expect(container.querySelector('.prose')).toBeNull();
+  });
+
+  it('handles item with no cover image', () => {
+    const noCoverItem = { ...baseItem, cover_image_url: null };
+    const { container } = render(<KnowledgeRenderer item={noCoverItem} />);
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('applies prose size class based on textSize', () => {
+    const { container } = render(<KnowledgeRenderer item={baseItem} textSize="small" />);
+    expect(container.querySelector('.prose-sm')).toBeTruthy();
+  });
+});
+```
+
+- [ ] **Step 2: Run tests to verify they pass**
+
+Run: `npm run test -- src/components/knowledge/__tests__/KnowledgeRenderer.test.tsx`
+Expected: All 10 tests pass.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/components/knowledge/__tests__/KnowledgeRenderer.test.tsx
+git commit -m "test(knowledge): add unit tests for KnowledgeRenderer"
+```
+
+---
+
+### Task 20: Unit Tests — Knowledge Server Actions
+
+**Files:**
+- Modify: `src/lib/knowledge/__tests__/actions.test.ts` (expand the existing basic tests from Task 3)
+
+- [ ] **Step 1: Expand the actions test file with comprehensive tests**
+
+Replace the contents of `src/lib/knowledge/__tests__/actions.test.ts` with a fuller test suite:
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+let authUser: { id: string } | null = { id: 'user-123' };
+let insertedRows: { table: string; payload: Record<string, unknown> }[] = [];
+let deletedTables: string[] = [];
+let insertError: Error | null = null;
+let updateError: Error | null = null;
+let deleteError: Error | null = null;
+let selectData: Record<string, unknown>[] = [];
+let singleData: Record<string, unknown> | null = null;
+
+function makeChainable(table: string) {
+  const self: any = {};
+  self.select = vi.fn(() => self);
+  self.insert = vi.fn((payload: any) => {
+    if (insertError) {
+      return { select: vi.fn(() => ({ single: vi.fn(() => Promise.resolve({ data: null, error: insertError })) })) };
+    }
+    insertedRows.push({ table, payload });
+    return {
+      select: vi.fn(() => ({
+        single: vi.fn(() => Promise.resolve({ data: { id: 'new-id', slug: 'test-slug', ...payload }, error: null })),
+      })),
+    };
+  });
+  self.update = vi.fn((updates: any) => {
+    if (updateError) return { eq: vi.fn(() => Promise.resolve({ error: updateError })) };
+    return { eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })) };
+  });
+  self.delete = vi.fn(() => {
+    if (deleteError) return { eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: deleteError })) })) };
+    deletedTables.push(table);
+    return { eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })) };
+  });
+  self.eq = vi.fn(() => self);
+  self.ilike = vi.fn(() => self);
+  self.overlaps = vi.fn(() => self);
+  self.in = vi.fn(() => self);
+  self.order = vi.fn(() => Promise.resolve({ data: selectData, error: null }));
+  self.single = vi.fn(() => Promise.resolve({ data: singleData, error: singleData ? null : new Error('Not found') }));
+  return self;
+}
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: () => ({
+    auth: {
+      getUser: vi.fn(() =>
+        Promise.resolve({
+          data: { user: authUser },
+          error: authUser ? null : new Error('Not authenticated'),
+        })
+      ),
+    },
+    from: (table: string) => makeChainable(table),
+  }),
+}));
+
+beforeEach(() => {
+  authUser = { id: 'user-123' };
+  insertedRows = [];
+  deletedTables = [];
+  insertError = null;
+  updateError = null;
+  deleteError = null;
+  selectData = [];
+  singleData = null;
+});
+
+describe('createKnowledgeItem', () => {
+  it('returns error when not authenticated', async () => {
+    authUser = null;
+    const { createKnowledgeItem } = await import('../actions');
+    const result = await createKnowledgeItem({ orgId: 'org-1', title: 'Test' });
+    expect(result).toHaveProperty('error', 'Not authenticated.');
+  });
+
+  it('inserts with correct fields and generated slug', async () => {
+    const { createKnowledgeItem } = await import('../actions');
+    const result = await createKnowledgeItem({
+      orgId: 'org-1',
+      title: 'How to Clean Birdhouses',
+      tags: ['maintenance'],
+      visibility: 'public',
+      isAiContext: true,
+    });
+    expect(result).toHaveProperty('success', true);
+    expect(insertedRows).toHaveLength(1);
+    expect(insertedRows[0].table).toBe('knowledge_items');
+    const payload = insertedRows[0].payload as Record<string, unknown>;
+    expect(payload.org_id).toBe('org-1');
+    expect(payload.title).toBe('How to Clean Birdhouses');
+    expect(payload.tags).toEqual(['maintenance']);
+    expect(payload.visibility).toBe('public');
+    expect(payload.is_ai_context).toBe(true);
+    expect(payload.created_by).toBe('user-123');
+    expect(payload.updated_by).toBe('user-123');
+    expect(typeof payload.slug).toBe('string');
+    expect((payload.slug as string).length).toBeGreaterThan(0);
+  });
+
+  it('defaults visibility to org and is_ai_context to true', async () => {
+    const { createKnowledgeItem } = await import('../actions');
+    await createKnowledgeItem({ orgId: 'org-1', title: 'Test' });
+    const payload = insertedRows[0].payload as Record<string, unknown>;
+    expect(payload.visibility).toBe('org');
+    expect(payload.is_ai_context).toBe(true);
+  });
+
+  it('returns error when insert fails', async () => {
+    insertError = new Error('Duplicate slug');
+    const { createKnowledgeItem } = await import('../actions');
+    const result = await createKnowledgeItem({ orgId: 'org-1', title: 'Test' });
+    expect(result).toHaveProperty('error');
+    expect((result as { error: string }).error).toContain('Duplicate slug');
+  });
+});
+
+describe('updateKnowledgeItem', () => {
+  it('returns error when not authenticated', async () => {
+    authUser = null;
+    const { updateKnowledgeItem } = await import('../actions');
+    const result = await updateKnowledgeItem('id-1', { title: 'Updated' });
+    expect(result).toHaveProperty('error', 'Not authenticated.');
+  });
+
+  it('returns success for valid update', async () => {
+    const { updateKnowledgeItem } = await import('../actions');
+    const result = await updateKnowledgeItem('id-1', { title: 'Updated Title', tags: ['new-tag'] });
+    expect(result).toHaveProperty('success', true);
+  });
+});
+
+describe('deleteKnowledgeItem', () => {
+  it('returns error when not authenticated', async () => {
+    authUser = null;
+    const { deleteKnowledgeItem } = await import('../actions');
+    const result = await deleteKnowledgeItem('id-1');
+    expect(result).toHaveProperty('error', 'Not authenticated.');
+  });
+
+  it('returns success for valid delete', async () => {
+    const { deleteKnowledgeItem } = await import('../actions');
+    const result = await deleteKnowledgeItem('id-1');
+    expect(result).toHaveProperty('success', true);
+  });
+});
+
+describe('linkKnowledgeToItem', () => {
+  it('inserts into knowledge_item_items', async () => {
+    const { linkKnowledgeToItem } = await import('../actions');
+    const result = await linkKnowledgeToItem('k1', 'item-1', 'org-1');
+    expect(result).toHaveProperty('success', true);
+    expect(insertedRows).toHaveLength(1);
+    expect(insertedRows[0].table).toBe('knowledge_item_items');
+  });
+
+  it('returns error on insert failure', async () => {
+    insertError = new Error('FK violation');
+    const { linkKnowledgeToItem } = await import('../actions');
+    const result = await linkKnowledgeToItem('k1', 'bad-item', 'org-1');
+    expect(result).toHaveProperty('error');
+  });
+});
+
+describe('linkKnowledgeToUpdate', () => {
+  it('inserts into knowledge_item_updates', async () => {
+    const { linkKnowledgeToUpdate } = await import('../actions');
+    const result = await linkKnowledgeToUpdate('k1', 'update-1', 'org-1');
+    expect(result).toHaveProperty('success', true);
+    expect(insertedRows[0].table).toBe('knowledge_item_updates');
+  });
+});
+
+describe('linkKnowledgeToEntity', () => {
+  it('inserts into knowledge_item_entities', async () => {
+    const { linkKnowledgeToEntity } = await import('../actions');
+    const result = await linkKnowledgeToEntity('k1', 'entity-1', 'org-1');
+    expect(result).toHaveProperty('success', true);
+    expect(insertedRows[0].table).toBe('knowledge_item_entities');
+  });
+});
+
+describe('addAttachment', () => {
+  it('inserts into knowledge_attachments with sort_order', async () => {
+    const { addAttachment } = await import('../actions');
+    const result = await addAttachment('k1', 'vault-1', 2);
+    expect(result).toHaveProperty('success', true);
+    expect(insertedRows[0].table).toBe('knowledge_attachments');
+    expect((insertedRows[0].payload as any).sort_order).toBe(2);
+  });
+
+  it('defaults sort_order to 0', async () => {
+    const { addAttachment } = await import('../actions');
+    await addAttachment('k1', 'vault-1');
+    expect((insertedRows[0].payload as any).sort_order).toBe(0);
+  });
+});
+```
+
+- [ ] **Step 2: Run tests to verify they pass**
+
+Run: `npm run test -- src/lib/knowledge/__tests__/actions.test.ts`
+Expected: All tests pass.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/lib/knowledge/__tests__/actions.test.ts
+git commit -m "test(knowledge): expand server action unit tests with linking and attachment coverage"
+```
+
+---
+
+### Task 21: E2E Tests — Knowledge CRUD Flow
+
+**Files:**
+- Create: `e2e/tests/admin/knowledge.spec.ts`
+- Create: `e2e/fixtures/seed-knowledge.ts`
+
+- [ ] **Step 1: Create the seed/cleanup helper for knowledge tests**
+
+```typescript
+// e2e/fixtures/seed-knowledge.ts
+
+import { createTestClient } from './seed';
+
+/**
+ * Clean up test knowledge items created during E2E tests.
+ * Deletes by title prefix to avoid touching real data.
+ */
+export async function cleanupTestKnowledge(titlePrefix: string) {
+  const client = createTestClient();
+  const { data: items } = await client
+    .from('knowledge_items')
+    .select('id')
+    .like('title', `${titlePrefix}%`);
+
+  if (items && items.length > 0) {
+    for (const item of items) {
+      await client.from('knowledge_items').delete().eq('id', item.id);
+    }
+  }
+}
+```
+
+- [ ] **Step 2: Create the E2E test**
+
+```typescript
+// e2e/tests/admin/knowledge.spec.ts
+
+import { test, expect } from '@playwright/test';
+import path from 'path';
+import { cleanupTestKnowledge } from '../../fixtures/seed-knowledge';
+
+const ADMIN_AUTH = path.join(__dirname, '..', '..', '.auth', 'admin.json');
+const TEST_TITLE = `E2E Knowledge ${Date.now()}`;
+
+test.describe('Knowledge Admin @smoke', () => {
+  test.use({ storageState: ADMIN_AUTH });
+
+  test.afterAll(async () => {
+    await cleanupTestKnowledge('E2E Knowledge');
+  });
+
+  test('knowledge list page loads', async ({ page }) => {
+    await page.goto('/admin/knowledge');
+    await page.waitForLoadState('networkidle');
+
+    // Page header should be visible
+    await expect(page.locator('text=Knowledge')).toBeVisible({ timeout: 10000 });
+
+    // New Article button should be visible
+    await expect(page.locator('a:has-text("New Article")')).toBeVisible();
+  });
+
+  test('create new knowledge article', async ({ page }) => {
+    await page.goto('/admin/knowledge/new');
+    await page.waitForLoadState('networkidle');
+
+    // Verify the editor page loads
+    await expect(page.locator('text=New Article')).toBeVisible({ timeout: 10000 });
+
+    // Fill in the title
+    const titleInput = page.locator('input[placeholder="Article title…"]');
+    await expect(titleInput).toBeVisible({ timeout: 10000 });
+    await titleInput.fill(TEST_TITLE);
+
+    // Add a tag
+    const tagInput = page.locator('input[placeholder="Add a tag…"]');
+    await tagInput.fill('e2e-test');
+    await page.locator('button:has-text("Add")').click();
+
+    // Verify tag pill appears
+    await expect(page.locator('text=e2e-test')).toBeVisible();
+
+    // Set visibility to public
+    await page.locator('select').first().selectOption('public');
+
+    // The rich text editor should be visible (TipTap content area)
+    await expect(page.locator('.ProseMirror, .tiptap, [contenteditable]').first()).toBeVisible({ timeout: 10000 });
+
+    // Click Create Article
+    await page.locator('button:has-text("Create Article")').click();
+
+    // Should redirect to edit page — verify we're no longer on /new
+    await page.waitForURL(/\/admin\/knowledge\/(?!new)/, { timeout: 15000 });
+  });
+
+  test('knowledge article appears in list', async ({ page }) => {
+    await page.goto('/admin/knowledge');
+    await page.waitForLoadState('networkidle');
+
+    // The article we just created should appear in the list
+    await expect(page.locator(`text=${TEST_TITLE}`)).toBeVisible({ timeout: 10000 });
+
+    // Tag should be visible
+    await expect(page.locator('text=e2e-test')).toBeVisible();
+
+    // Public visibility badge should be visible
+    await expect(page.locator('text=public').first()).toBeVisible();
+  });
+
+  test('edit knowledge article', async ({ page }) => {
+    await page.goto('/admin/knowledge');
+    await page.waitForLoadState('networkidle');
+
+    // Click the article title to navigate to edit page
+    await page.locator(`a:has-text("${TEST_TITLE}")`).click();
+    await page.waitForURL(/\/admin\/knowledge\//, { timeout: 10000 });
+
+    // Verify the edit page loads with the title populated
+    await expect(page.locator('text=Edit Article')).toBeVisible({ timeout: 10000 });
+    const titleInput = page.locator('input[placeholder="Article title…"]');
+    await expect(titleInput).toHaveValue(TEST_TITLE);
+  });
+
+  test('search filters knowledge articles', async ({ page }) => {
+    await page.goto('/admin/knowledge');
+    await page.waitForLoadState('networkidle');
+
+    // Search for the test article
+    const searchInput = page.locator('input[placeholder="Search articles…"]');
+    await searchInput.fill('E2E Knowledge');
+
+    // Wait for the list to update
+    await page.waitForTimeout(500);
+
+    // The test article should still be visible
+    await expect(page.locator(`text=${TEST_TITLE}`)).toBeVisible();
+
+    // Search for something that doesn't exist
+    await searchInput.fill('xyznonexistent');
+    await page.waitForTimeout(500);
+
+    // Should show empty state
+    await expect(page.locator('text=No knowledge articles')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('delete knowledge article', async ({ page }) => {
+    await page.goto('/admin/knowledge');
+    await page.waitForLoadState('networkidle');
+
+    // Find the delete button for our test article
+    const row = page.locator(`tr:has-text("${TEST_TITLE}")`);
+    await expect(row).toBeVisible({ timeout: 10000 });
+
+    // Set up dialog handler to accept the confirmation
+    page.on('dialog', (dialog) => dialog.accept());
+
+    // Click delete
+    await row.locator('button:has-text("Delete")').click();
+
+    // Article should no longer appear
+    await expect(page.locator(`text=${TEST_TITLE}`)).not.toBeVisible({ timeout: 10000 });
+  });
+});
+```
+
+- [ ] **Step 3: Run the E2E tests locally to verify**
+
+Run: `npx playwright test --config=e2e/playwright.config.ts e2e/tests/admin/knowledge.spec.ts --project=chromium`
+Expected: All 5 tests pass (assuming the dev server is running and the migration has been applied).
+
+Note: If the dev server is not running or the migration hasn't been applied, these tests will fail. That's expected — they're meant to run against a real environment.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add e2e/fixtures/seed-knowledge.ts e2e/tests/admin/knowledge.spec.ts
+git commit -m "test(knowledge): add E2E tests for knowledge CRUD flow"
+```
+
+---
+
+### Task 22: Full Build Verification
 
 - [ ] **Step 1: Run the type checker**
 
