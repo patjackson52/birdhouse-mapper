@@ -23,6 +23,7 @@ FieldMapper is a multi-tenant field mapping platform for conservation teams. Bui
 - **Database:** Supabase PostgreSQL with RLS policies
 - **Server actions:** `'use server'` files for mutations, `createClient()` from `@/lib/supabase/server` (synchronous)
 - **Client queries:** `createClient()` from `@/lib/supabase/client` (synchronous)
+- **Notifications:** Multi-channel (in-app, email, SMS) via `notify()` helper in `src/lib/notifications/notify.ts`. pg_cron processes task deadline reminders every 15 minutes. Provider-agnostic adapters in `src/lib/notifications/adapters.ts` (console adapters for dev, swap in real providers later). Preferences per user/org in `user_notification_preferences` table.
 
 ## Conventions
 

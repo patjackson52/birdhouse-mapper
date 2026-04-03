@@ -14,6 +14,7 @@ A generic, open-source point-of-interest mapper template. Fork it, run the setup
 - **Admin settings UI** — edit all site config from the browser, no code changes needed
 - **Role-based access** — public viewing, editor access for adding items, admin for full control
 - **Mobile-friendly** — responsive design with bottom tab bar and swipe-to-dismiss panels
+- **Notifications** — multi-channel (in-app, email, SMS) notification system with configurable per-task deadline reminders, role-based recipients, and user-managed channel preferences
 
 ## Tech Stack
 
@@ -85,10 +86,12 @@ src/
     item/           ItemCard, DetailPanel, StatusBadge, UpdateTimeline
     manage/         ItemForm, UpdateForm, LocationPicker, OverlayEditor
     layout/         Navigation, Footer, Header
+    notifications/  NotificationBell, NotificationItem
     ui/             BottomSheet, LoadingSpinner
   lib/
     config/         SiteConfig types, defaults, server fetcher, themes, map styles
     supabase/       Browser client, server client, middleware
+    notifications/  Notification types, adapters, preferences, notify() helper
     types.ts        Database types
     utils.ts        Formatting helpers
 supabase/
@@ -110,6 +113,7 @@ supabase/
 | `/manage/update` | Add update/observation to an item | Editor+ |
 | `/admin` | User and data management | Admin |
 | `/admin/settings` | Site settings (General, Appearance, Custom Map, About, Footer) | Admin |
+| `/admin/notifications` | Notification channel preferences (in-app, email, SMS toggles) | Auth |
 
 ## Configuration
 
