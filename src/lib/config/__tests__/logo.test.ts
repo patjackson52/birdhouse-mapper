@@ -26,21 +26,21 @@ describe('getLogoUrl', () => {
 
   it('builds storage URL for org logo with variant', () => {
     const url = getLogoUrl('org-123', 'icon-192.png');
-    expect(url).toBe('https://storage.test/branding/org-123/icon-192.png');
+    expect(url).toBe('https://storage.test/vault-public/org-123/icon-192.png');
   });
 
   it('builds storage URL for property logo with variant', () => {
     const url = getLogoUrl('org-123/prop-456', 'icon-512.png');
-    expect(url).toBe('https://storage.test/branding/org-123/prop-456/icon-512.png');
+    expect(url).toBe('https://storage.test/vault-public/org-123/prop-456/icon-512.png');
   });
 
   it('builds storage URL for original variant', () => {
     const url = getLogoUrl('org-123', 'original.png');
-    expect(url).toBe('https://storage.test/branding/org-123/original.png');
+    expect(url).toBe('https://storage.test/vault-public/org-123/original.png');
   });
 
   it('builds storage URL for maskable variant', () => {
     const url = getLogoUrl('org-123', 'icon-512-maskable.png');
-    expect(url).toBe('https://storage.test/branding/org-123/icon-512-maskable.png');
+    expect(url).toBe('https://storage.test/vault-public/org-123/icon-512-maskable.png');
   });
 });

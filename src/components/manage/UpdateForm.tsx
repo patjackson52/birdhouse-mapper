@@ -299,7 +299,7 @@ export default function UpdateForm() {
 
       <div>
         <label className="label">Photos</label>
-        <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} />
+        <PhotoUploader onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])} orgId={orgId ?? undefined} />
       </div>
 
       {entityTypes.map((et) => (

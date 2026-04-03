@@ -19,6 +19,7 @@ const ORG_NAV_ITEMS: SidebarItem[] = [
   { label: 'Members', href: '/admin/members' },
   { label: 'Roles', href: '/admin/roles' },
   { type: 'section', label: 'Data' },
+  { label: 'Data Vault', href: '/admin/vault' },
   { label: 'AI Context', href: '/admin/ai-context' },
   { label: 'Geo Layers', href: '/admin/geo-layers' },
   { type: 'section', label: 'Settings' },

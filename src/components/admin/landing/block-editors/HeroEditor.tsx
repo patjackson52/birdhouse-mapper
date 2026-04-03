@@ -5,13 +5,14 @@ import type { HeroBlock, LandingAsset } from '@/lib/config/landing-types';
 import AssetPicker from '@/components/admin/landing/AssetPicker';
 
 interface HeroEditorProps {
+  orgId: string;
   block: HeroBlock;
   onChange: (block: HeroBlock) => void;
   assets: LandingAsset[];
   onAssetsChange: (assets: LandingAsset[]) => void;
 }
 
-export default function HeroEditor({ block, onChange, assets, onAssetsChange }: HeroEditorProps) {
+export default function HeroEditor({ orgId, block, onChange, assets, onAssetsChange }: HeroEditorProps) {
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -64,6 +65,7 @@ export default function HeroEditor({ block, onChange, assets, onAssetsChange }: 
 
       {showPicker && (
         <AssetPicker
+          orgId={orgId}
           assets={assets}
           onSelect={(url) => onChange({ ...block, backgroundImageUrl: url })}
           onUpload={(asset) => onAssetsChange([...assets, asset])}

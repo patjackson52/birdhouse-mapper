@@ -45,6 +45,25 @@ describe('Hero', () => {
     render(<Hero title="Hello" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" icon={{ set: 'lucide', name: 'Bird' }} />);
     expect(screen.getByRole('heading', { name: 'Hello' })).toBeDefined();
   });
+
+  it('applies large title classes by default (no textSize prop)', () => {
+    render(<Hero title="Welcome" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" />);
+    const h1 = screen.getByRole('heading', { name: 'Welcome' });
+    expect(h1.className).toContain('text-4xl');
+  });
+
+  it('applies small title classes when textSize is small', () => {
+    render(<Hero title="Welcome" subtitle="" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" textSize="small" />);
+    const h1 = screen.getByRole('heading', { name: 'Welcome' });
+    expect(h1.className).toContain('text-2xl');
+  });
+
+  it('applies xl subtitle classes when textSize is xl', () => {
+    render(<Hero title="Welcome" subtitle="Hello world" backgroundImageUrl="" overlay="none" ctaLabel="" ctaHref="" textSize="xl" />);
+    const subtitle = screen.getByText('Hello world');
+    expect(subtitle.className).toContain('text-xl');
+    expect(subtitle.className).toContain('md:text-2xl');
+  });
 });
 
 // RichText
@@ -64,6 +83,24 @@ describe('RichText', () => {
     const { container } = render(<RichText content="Hello" alignment="left" columns={1} />);
     const wrapper = container.firstChild as HTMLElement;
     expect(wrapper.className).toContain('text-left');
+  });
+
+  it('applies prose-lg class by default (no textSize prop)', () => {
+    const { container } = render(<RichText content="Hello" alignment="left" columns={1} />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-lg');
+  });
+
+  it('applies prose-sm class when textSize is small', () => {
+    const { container } = render(<RichText content="Hello" alignment="left" columns={1} textSize="small" />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-sm');
+  });
+
+  it('applies prose-xl class when textSize is xl', () => {
+    const { container } = render(<RichText content="Hello" alignment="left" columns={1} textSize="xl" />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('prose-xl');
   });
 });
 
@@ -173,6 +210,22 @@ describe('LinkList', () => {
     expect(link.getAttribute('href')).toBe('https://example.com');
     expect(link.getAttribute('target')).toBe('_blank');
   });
+
+  it('applies text-lg class to link labels when textSize is large', () => {
+    const { container } = render(
+      <LinkList items={[{ label: 'Link', url: '/a', description: '' }]} layout="stacked" textSize="large" />
+    );
+    const label = container.querySelector('span.font-medium') as HTMLElement;
+    expect(label.className).toContain('text-lg');
+  });
+
+  it('applies text-sm class to link labels when textSize is small', () => {
+    const { container } = render(
+      <LinkList items={[{ label: 'Link', url: '/a', description: '' }]} layout="stacked" textSize="small" />
+    );
+    const label = container.querySelector('span.font-medium') as HTMLElement;
+    expect(label.className).toContain('text-sm');
+  });
 });
 
 // Stats
@@ -196,6 +249,33 @@ describe('Stats', () => {
   it('renders nothing when items is empty', () => {
     const { container } = render(<Stats source="manual" items={[]} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('applies text-3xl to stat values by default (no textSize prop)', () => {
+    const { container } = render(
+      <Stats source="manual" items={[{ value: '42', label: 'Species' }]} />
+    );
+    const valueEl = container.querySelector('.text-3xl') as HTMLElement;
+    expect(valueEl).not.toBeNull();
+    expect(valueEl.textContent).toBe('42');
+  });
+
+  it('applies text-xl to stat values when textSize is small', () => {
+    const { container } = render(
+      <Stats source="manual" items={[{ value: '42', label: 'Species' }]} textSize="small" />
+    );
+    const valueEl = container.querySelector('.text-xl') as HTMLElement;
+    expect(valueEl).not.toBeNull();
+    expect(valueEl.textContent).toBe('42');
+  });
+
+  it('applies text-4xl to stat values when textSize is xl', () => {
+    const { container } = render(
+      <Stats source="manual" items={[{ value: '42', label: 'Species' }]} textSize="xl" />
+    );
+    const valueEl = container.querySelector('.text-4xl') as HTMLElement;
+    expect(valueEl).not.toBeNull();
+    expect(valueEl.textContent).toBe('42');
   });
 });
 

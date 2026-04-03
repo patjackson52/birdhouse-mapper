@@ -1,5 +1,6 @@
 import type { Data, Config } from '@puckeditor/core';
 import type { LinkValue, IconValue } from './fields/link-utils';
+import type { TextSize } from './text-styles';
 
 // Re-export field value types for component use
 export type { LinkValue, IconValue } from './fields/link-utils';
@@ -14,12 +15,14 @@ export interface HeroProps {
   ctaLabel: string;
   ctaHref: string | LinkValue;
   icon?: IconValue;
+  textSize?: TextSize;
 }
 
 export interface RichTextProps {
   content: string;
   alignment: 'left' | 'center';
   columns: 1 | 2;
+  textSize?: TextSize;
 }
 
 export interface ImageBlockProps {
@@ -46,6 +49,7 @@ export interface LinkListProps {
     description: string;
   }>;
   layout: 'inline' | 'stacked';
+  textSize?: TextSize;
 }
 
 export interface StatsProps {
@@ -54,6 +58,7 @@ export interface StatsProps {
     label: string;
     value: string;
   }>;
+  textSize?: TextSize;
 }
 
 export interface GalleryProps {
@@ -86,6 +91,7 @@ export interface CardProps {
   linkHref: string | LinkValue;
   linkLabel: string;
   icon?: IconValue;
+  textSize?: TextSize;
 }
 
 export interface MapPreviewProps {
@@ -99,6 +105,7 @@ export interface TestimonialProps {
   attribution: string;
   photoUrl: string;
   style: 'default' | 'accent';
+  textSize?: TextSize;
 }
 
 export interface EmbedProps {
@@ -123,7 +130,7 @@ export interface HeaderBarProps {
   taglineSize?: 'small' | 'medium' | 'large' | 'xl';
   taglineWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
   taglineColor?: string;
-  links?: Array<{ label: string; href: string }>;
+  links?: Array<{ label: string; href: string | LinkValue }>;
   linkColor?: string;
 }
 

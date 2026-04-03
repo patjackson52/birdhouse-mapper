@@ -134,7 +134,7 @@ export default function EditItemForm({
   // Get public URL for an existing photo
   function getPhotoUrl(storagePath: string) {
     const supabase = createClient();
-    return supabase.storage.from('item-photos').getPublicUrl(storagePath).data.publicUrl;
+    return supabase.storage.from('vault-public').getPublicUrl(storagePath).data.publicUrl;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -510,6 +510,7 @@ export default function EditItemForm({
         <PhotoUploader
           onPhotosSelected={(files) => setPhotos((prev) => [...prev, ...files])}
           maxFiles={5 - remainingPhotosForDisplay.length}
+          orgId={orgId ?? undefined}
         />
       </div>
 

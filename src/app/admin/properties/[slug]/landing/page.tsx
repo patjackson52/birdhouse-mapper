@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { LandingPageConfig, LandingBlock, LandingAsset } from '@/lib/config/landing-types';
-import { getLandingPageConfig, saveLandingPageConfig, generateLandingPage } from '@/app/admin/landing/actions';
+import { getLandingPageConfig, saveLandingPageConfig, generateLandingPage, getOrgId } from '@/app/admin/landing/actions';
 import HomepageToggle from '@/components/admin/landing/HomepageToggle';
 import AssetManager from '@/components/admin/landing/AssetManager';
 import GenerateSection from '@/components/admin/landing/GenerateSection';
@@ -24,11 +24,13 @@ export default function AdminLandingPage() {
   const [activeView, setActiveView] = useState<'editor' | 'preview'>('editor');
   const [isLoading, setIsLoading] = useState(true);
   const [assetsOpen, setAssetsOpen] = useState(false);
+  const [orgId, setOrgId] = useState<string>('');
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await getLandingPageConfig();
+        const [data, id] = await Promise.all([getLandingPageConfig(), getOrgId()]);
+        if (id) setOrgId(id);
         if (data) {
           setConfig(data);
           setEnabled(data.enabled);
@@ -135,6 +137,7 @@ export default function AdminLandingPage() {
         {assetsOpen && (
           <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-3">
             <AssetManager
+              orgId={orgId}
               assets={assets}
               onAssetsChange={setAssets}
               referenceLinks={referenceLinks}
@@ -163,6 +166,7 @@ export default function AdminLandingPage() {
       )}
 
       <BlockList
+        orgId={orgId}
         blocks={blocks}
         onBlocksChange={setBlocks}
         assets={assets}

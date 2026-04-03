@@ -11,20 +11,21 @@ import GalleryEditor from '@/components/admin/landing/block-editors/GalleryEdito
 import SpacerEditor from '@/components/admin/landing/block-editors/SpacerEditor';
 
 interface BlockEditorProps {
+  orgId: string;
   block: LandingBlock;
   onChange: (block: LandingBlock) => void;
   assets: LandingAsset[];
   onAssetsChange: (assets: LandingAsset[]) => void;
 }
 
-export default function BlockEditor({ block, onChange, assets, onAssetsChange }: BlockEditorProps) {
+export default function BlockEditor({ orgId, block, onChange, assets, onAssetsChange }: BlockEditorProps) {
   switch (block.type) {
     case 'hero':
-      return <HeroEditor block={block} onChange={onChange} assets={assets} onAssetsChange={onAssetsChange} />;
+      return <HeroEditor orgId={orgId} block={block} onChange={onChange} assets={assets} onAssetsChange={onAssetsChange} />;
     case 'text':
       return <TextEditor block={block} onChange={onChange} />;
     case 'image':
-      return <ImageEditor block={block} onChange={onChange} assets={assets} onAssetsChange={onAssetsChange} />;
+      return <ImageEditor orgId={orgId} block={block} onChange={onChange} assets={assets} onAssetsChange={onAssetsChange} />;
     case 'button':
       return <ButtonEditor block={block} onChange={onChange} />;
     case 'links':
@@ -32,7 +33,7 @@ export default function BlockEditor({ block, onChange, assets, onAssetsChange }:
     case 'stats':
       return <StatsEditor block={block} onChange={onChange} />;
     case 'gallery':
-      return <GalleryEditor block={block} onChange={onChange} assets={assets} onAssetsChange={onAssetsChange} />;
+      return <GalleryEditor orgId={orgId} block={block} onChange={onChange} assets={assets} onAssetsChange={onAssetsChange} />;
     case 'spacer':
       return <SpacerEditor block={block} onChange={onChange} />;
     default:

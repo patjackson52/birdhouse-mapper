@@ -1,4 +1,4 @@
-import { DropZone } from '@puckeditor/core';
+import type { SlotComponent } from '@puckeditor/core';
 import type { SectionProps } from '../../types';
 
 const bgClasses = {
@@ -11,13 +11,13 @@ const bgClasses = {
 
 const paddingClasses = { small: 'py-4', medium: 'py-8', large: 'py-16' };
 
-export function Section({ backgroundColor, backgroundImageUrl, paddingY }: SectionProps) {
+export function Section({ backgroundColor, backgroundImageUrl, paddingY, content }: SectionProps & { content: SlotComponent }) {
   return (
     <section
       className={`w-full ${bgClasses[backgroundColor]} ${paddingClasses[paddingY]}`}
       style={backgroundImageUrl ? { backgroundImage: `url(${backgroundImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
-      <DropZone zone="content" />
+      {content()}
     </section>
   );
 }

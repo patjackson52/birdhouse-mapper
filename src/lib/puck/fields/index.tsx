@@ -9,6 +9,7 @@ export { ImagePickerField } from './ImagePickerField';
 export { IconPickerField } from './IconPickerField';
 export { LinkField } from './LinkField';
 export { ColorPickerField } from './ColorPickerField';
+export { PuckSuggestionsProvider, useLinkSuggestions } from './PuckSuggestionsProvider';
 
 /**
  * Creates a Puck custom field config for an image picker.

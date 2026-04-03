@@ -59,7 +59,7 @@ async function executeMutation(
   for (const photoBlob of photoBlobs) {
     const storagePath = `${photoBlob.item_id}/${Date.now()}_${photoBlob.filename}`;
     const { error: uploadError } = await supabase.storage
-      .from('item-photos')
+      .from('vault-public')
       .upload(storagePath, photoBlob.blob);
 
     if (uploadError) {

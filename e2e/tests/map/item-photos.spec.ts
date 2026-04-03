@@ -22,7 +22,7 @@ test.describe('Item Photos in Detail Panel', () => {
         await client.from('photos').delete().eq('item_id', testItemId);
         const paths = photos.map((p) => p.storage_path).filter(Boolean);
         if (paths.length > 0) {
-          await client.storage.from('item-photos').remove(paths);
+          await client.storage.from('vault-public').remove(paths);
         }
       }
     }
@@ -75,7 +75,7 @@ test.describe('Item Photos in Detail Panel', () => {
     const storagePath = `${item!.id}/test-photo.png`;
 
     const { error: uploadError } = await client.storage
-      .from('item-photos')
+      .from('vault-public')
       .upload(storagePath, redPixelPng, { contentType: 'image/png' });
     expect(uploadError).toBeNull();
 
@@ -108,7 +108,7 @@ test.describe('Item Photos in Detail Panel', () => {
     // Verify the img src contains the storage URL pattern
     const src = await photoImg.getAttribute('src');
     expect(src).toBeTruthy();
-    expect(src).toContain('item-photos');
+    expect(src).toContain('vault-public');
 
     // Verify the image loaded successfully (no error state)
     const photoUnavailable = page.locator('text=Photo unavailable');
