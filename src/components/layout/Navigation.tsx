@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useConfig } from '@/lib/config/client';
 import { createClient } from '@/lib/supabase/client';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 export default function Navigation({
   isAuthenticated: initialAuth = false,
@@ -97,6 +98,7 @@ export default function Navigation({
                   >
                     Manage
                   </Link>
+                  <NotificationBell />
                   <Link
                     href="/admin/settings"
                     className={`p-2 rounded-lg transition-colors ${
