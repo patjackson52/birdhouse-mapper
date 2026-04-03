@@ -115,7 +115,7 @@ interface UpdateTypeField {
   org_id: string;
   name: string;
   field_type: 'text' | 'number' | 'dropdown' | 'date';
-  options: Record<string, unknown> | null;
+  options: string[] | null;
   required: boolean;
   sort_order: number;
 }
