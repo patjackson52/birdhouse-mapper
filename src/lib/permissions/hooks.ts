@@ -53,8 +53,9 @@ function getCachedPermissions(): UserPermissions | null {
  * Returns empty permissions if not authenticated.
  * Falls back to cached permissions from IndexedDB when offline.
  */
-export function usePermissions(): { permissions: UserPermissions; loading: boolean } {
+export function usePermissions(): { permissions: UserPermissions; userBaseRole: string; loading: boolean } {
   const [permissions, setPermissions] = useState<UserPermissions>(EMPTY_PERMISSIONS);
+  const [userBaseRole, setUserBaseRole] = useState<string>('viewer');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -77,6 +78,7 @@ export function usePermissions(): { permissions: UserPermissions; loading: boole
         if (profile?.is_platform_admin) {
           setPermissions(ADMIN_PERMISSIONS);
           cachePermissions(ADMIN_PERMISSIONS);
+          setUserBaseRole('platform_admin');
           setLoading(false);
           return;
         }
@@ -104,6 +106,7 @@ export function usePermissions(): { permissions: UserPermissions; loading: boole
         if (role.base_role === 'org_admin') {
           setPermissions(ADMIN_PERMISSIONS);
           cachePermissions(ADMIN_PERMISSIONS);
+          setUserBaseRole('org_admin');
           setLoading(false);
           return;
         }
@@ -133,6 +136,7 @@ export function usePermissions(): { permissions: UserPermissions; loading: boole
         };
         setPermissions(resolved);
         cachePermissions(resolved);
+        setUserBaseRole(role.base_role);
         setLoading(false);
       } catch {
         // Offline or network error — fall back to cached permissions
@@ -147,5 +151,5 @@ export function usePermissions(): { permissions: UserPermissions; loading: boole
     fetchPermissions();
   }, []);
 
-  return { permissions, loading };
+  return { permissions, userBaseRole, loading };
 }
