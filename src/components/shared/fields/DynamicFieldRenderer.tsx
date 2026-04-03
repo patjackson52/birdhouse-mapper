@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 interface FieldDefinition {
   id: string;
   name: string;
-  field_type: 'text' | 'number' | 'dropdown' | 'date';
+  field_type: 'text' | 'number' | 'dropdown' | 'date' | 'url';
   options: string[] | null;
   required: boolean;
   sort_order: number;
@@ -96,6 +96,20 @@ function FieldInput({
         value={internalValue}
         onChange={(e) => handleChange(e.target.value)}
         required={field.required}
+      />
+    );
+  }
+
+  if (field.field_type === 'url') {
+    return (
+      <input
+        id={labelId}
+        type="url"
+        className="input-field"
+        value={internalValue}
+        onChange={(e) => handleChange(e.target.value)}
+        required={field.required}
+        placeholder="https://"
       />
     );
   }

@@ -29,9 +29,7 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
         .map((f) => ({
           id: f.id,
           name: f.name,
-          // 'url' is a valid EntityFieldType but not yet supported by FieldDefinitionEditor;
-          // fall back to 'text' so existing url fields don't lose their data silently.
-          field_type: (f.field_type === 'url' ? 'text' : f.field_type) as FieldDraft['field_type'],
+          field_type: f.field_type as FieldDraft['field_type'],
           options: f.options || [],
           required: f.required,
         }));

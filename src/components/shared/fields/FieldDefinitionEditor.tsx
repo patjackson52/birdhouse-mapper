@@ -3,7 +3,7 @@
 export interface FieldDraft {
   id?: string;
   name: string;
-  field_type: 'text' | 'number' | 'dropdown' | 'date';
+  field_type: 'text' | 'number' | 'dropdown' | 'date' | 'url';
   options: string[];
   required: boolean;
 }
@@ -64,6 +64,7 @@ export default function FieldDefinitionEditor({ fields, onChange }: FieldDefinit
               <option value="number">Number</option>
               <option value="dropdown">Dropdown</option>
               <option value="date">Date</option>
+              <option value="url">URL</option>
             </select>
           </div>
 
