@@ -1,11 +1,16 @@
-import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo, Entity, EntityType } from '@/lib/types';
+import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo, Entity, EntityType, UpdateTypeField } from '@/lib/types';
 import { formatShortDate } from '@/lib/utils';
 
 interface UpdateTimelineProps {
-  updates: (ItemUpdate & { update_type?: UpdateTypeRecord; photos?: Photo[]; entities?: (Entity & { entity_type: EntityType })[] })[];
+  updates: (ItemUpdate & {
+    update_type?: { id: string; name: string; icon: string };
+    photos?: Photo[];
+    entities?: (Entity & { entity_type: EntityType })[];
+  })[];
+  updateTypeFields?: UpdateTypeField[];
 }
 
-export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
+export default function UpdateTimeline({ updates, updateTypeFields = [] }: UpdateTimelineProps) {
   if (updates.length === 0) {
     return (
       <p className="text-sm text-sage italic">No updates yet.</p>
@@ -61,6 +66,28 @@ export default function UpdateTimeline({ updates }: UpdateTimelineProps) {
                 </div>
               ));
             })()}
+              {update.custom_field_values && Object.keys(update.custom_field_values).length > 0 && (() => {
+                const fields = updateTypeFields.filter((f) => f.update_type_id === update.update_type_id);
+                const entries = Object.entries(update.custom_field_values);
+                if (entries.length === 0) return null;
+                return (
+                  <div className="mt-1.5 space-y-0.5">
+                    {entries.map(([fieldId, value]) => {
+                      const fieldDef = fields.find((f) => f.id === fieldId);
+                      const label = fieldDef?.name ?? fieldId;
+                      let displayValue = String(value ?? '');
+                      if (fieldDef?.field_type === 'date' && displayValue) {
+                        displayValue = new Date(displayValue).toLocaleDateString();
+                      }
+                      return (
+                        <div key={fieldId} className="text-[10px] text-sage">
+                          <span className="font-medium">{label}:</span> {displayValue}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
           </div>
         </div>
       ))}

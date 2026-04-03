@@ -126,8 +126,8 @@ const TABLES_WITH_UPDATED_AT = new Set([
 
 const SYNC_TABLES = [
   'items', 'item_types', 'custom_fields', 'item_updates', 'update_types',
-  'photos', 'entities', 'entity_types', 'geo_layers', 'properties', 'orgs',
-  'roles', 'org_memberships',
+  'update_type_fields', 'photos', 'entities', 'entity_types', 'geo_layers',
+  'properties', 'orgs', 'roles', 'org_memberships',
 ] as const;
 
 export async function syncPropertyData(
@@ -146,7 +146,7 @@ export async function syncPropertyData(
     let query = supabase.from(tableName).select('*');
 
     const propertyScoped = ['items', 'item_updates', 'photos', 'geo_layers'];
-    const orgScoped = ['item_types', 'custom_fields', 'update_types', 'entities', 'entity_types', 'roles', 'org_memberships'];
+    const orgScoped = ['item_types', 'custom_fields', 'update_types', 'update_type_fields', 'entities', 'entity_types', 'roles', 'org_memberships'];
 
     if (propertyScoped.includes(tableName)) {
       query = query.eq('property_id', propertyId);

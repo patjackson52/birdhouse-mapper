@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import UpdateForm from '@/components/manage/UpdateForm';
 
 // ── Hoisted mock data (available before vi.mock factories run) ────────────────
-const { mockItems, mockItemTypes, mockUpdateTypes } = vi.hoisted(() => {
+const { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields } = vi.hoisted(() => {
   const mockItems = [
     {
       id: 'item-1',
@@ -43,10 +43,13 @@ const { mockItems, mockItemTypes, mockUpdateTypes } = vi.hoisted(() => {
   ];
 
   const mockUpdateTypes = [
-    { id: 'ut-1', name: 'Inspection', icon: '🔍', is_global: true, item_type_id: null, sort_order: 1, org_id: 'org-1' },
+    { id: 'ut-1', name: 'Inspection', icon: '🔍', is_global: true, item_type_id: null, sort_order: 1, org_id: 'org-1', min_role_create: null, min_role_edit: null, min_role_delete: null },
+    { id: 'ut-2', name: 'Schedule Maintenance', icon: '🔧', is_global: true, item_type_id: null, sort_order: 2, org_id: 'org-1', min_role_create: 'org_staff', min_role_edit: null, min_role_delete: null },
   ];
 
-  return { mockItems, mockItemTypes, mockUpdateTypes };
+  const mockUpdateTypeFields: never[] = [];
+
+  return { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields };
 });
 
 // ── Navigation mocks ────────────────────────────────────────────────────────
@@ -80,6 +83,10 @@ vi.mock('@/lib/location/utils', () => ({
   getDistanceToItem: () => null,
 }));
 
+vi.mock('@/lib/permissions/hooks', () => ({
+  usePermissions: () => ({ permissions: { updates: { create: true, view: true, edit_own: true, edit_any: false, delete: false } }, userBaseRole: 'contributor', loading: false }),
+}));
+
 // ── Child component stubs ────────────────────────────────────────────────────
 vi.mock('@/components/manage/PhotoUploader', () => ({
   default: () => <div data-testid="photo-uploader" />,
@@ -102,6 +109,7 @@ vi.mock('@/lib/offline/provider', () => ({
     getItemTypes: vi.fn().mockResolvedValue(mockItemTypes),
     getUpdateTypes: vi.fn().mockResolvedValue(mockUpdateTypes),
     getEntityTypes: vi.fn().mockResolvedValue([]),
+    getUpdateTypeFields: vi.fn().mockResolvedValue(mockUpdateTypeFields),
     getCustomFields: vi.fn().mockResolvedValue([]),
     getEntities: vi.fn().mockResolvedValue([]),
     getItem: vi.fn().mockResolvedValue(undefined),
@@ -189,6 +197,15 @@ describe('UpdateForm — standalone (no ?item= param)', () => {
     await userEvent.click(cancel);
     expect(mockBack).toHaveBeenCalledOnce();
     expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('shows role-restricted update types as disabled with label', async () => {
+    render(<UpdateForm />);
+    await screen.findByLabelText(/update type/i);
+    const options = screen.getAllByRole('option');
+    const scheduleMaint = options.find((o) => o.textContent?.includes('Schedule Maintenance'));
+    expect(scheduleMaint).toHaveAttribute('disabled');
+    expect(scheduleMaint?.textContent).toContain('Staff');
   });
 });
 

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { UpdateType } from '@/lib/types';
+import { FieldDefinitionEditor, type FieldDraft } from '@/components/shared/fields';
+import { MIN_ROLE_OPTIONS } from '@/lib/permissions/resolve';
+import type { UpdateType, UpdateTypeField } from '@/lib/types';
 
 interface UpdateTypeEditorProps {
   itemTypeId: string;
@@ -20,20 +22,29 @@ export default function UpdateTypeEditor({ itemTypeId }: UpdateTypeEditorProps) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [fieldDrafts, setFieldDrafts] = useState<Record<string, FieldDraft[]>>({});
+  const [updateTypeFields, setUpdateTypeFields] = useState<UpdateTypeField[]>([]);
+  const [formMinRoleCreate, setFormMinRoleCreate] = useState<string>('');
+  const [formMinRoleEdit, setFormMinRoleEdit] = useState<string>('');
+  const [formMinRoleDelete, setFormMinRoleDelete] = useState<string>('');
+
   useEffect(() => {
     fetchTypes();
   }, [itemTypeId]);
 
   async function fetchTypes() {
     const supabase = createClient();
-    const { data } = await supabase
-      .from('update_types')
-      .select('*')
-      .order('sort_order', { ascending: true });
+    const [{ data: typeData }, { data: fieldData }] = await Promise.all([
+      supabase.from('update_types').select('*').order('sort_order', { ascending: true }),
+      supabase.from('update_type_fields').select('*').order('sort_order', { ascending: true }),
+    ]);
 
-    if (data) {
-      setGlobalTypes(data.filter((t) => t.is_global));
-      setTypeSpecific(data.filter((t) => !t.is_global && t.item_type_id === itemTypeId));
+    if (typeData) {
+      setGlobalTypes(typeData.filter((t: UpdateType) => t.is_global));
+      setTypeSpecific(typeData.filter((t: UpdateType) => !t.is_global && t.item_type_id === itemTypeId));
+    }
+    if (fieldData) {
+      setUpdateTypeFields(fieldData);
     }
     setLoading(false);
   }
@@ -44,12 +55,30 @@ export default function UpdateTypeEditor({ itemTypeId }: UpdateTypeEditorProps) 
     setEditingId(null);
     setShowAdd(false);
     setError('');
+    setFormMinRoleCreate('');
+    setFormMinRoleEdit('');
+    setFormMinRoleDelete('');
   }
 
   function startEdit(ut: UpdateType) {
     setFormName(ut.name);
     setFormIcon(ut.icon);
     setEditingId(ut.id);
+    setFormMinRoleCreate(ut.min_role_create ?? '');
+    setFormMinRoleEdit(ut.min_role_edit ?? '');
+    setFormMinRoleDelete(ut.min_role_delete ?? '');
+
+    const existingFields = updateTypeFields
+      .filter((f) => f.update_type_id === ut.id)
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map((f) => ({
+        id: f.id,
+        name: f.name,
+        field_type: f.field_type as FieldDraft['field_type'],
+        options: Array.isArray(f.options) ? f.options : [],
+        required: f.required,
+      }));
+    setFieldDrafts((prev) => ({ ...prev, [ut.id]: existingFields }));
     setShowAdd(false);
   }
 
@@ -60,30 +89,78 @@ export default function UpdateTypeEditor({ itemTypeId }: UpdateTypeEditorProps) 
 
     try {
       const supabase = createClient();
+      const rolePayload = {
+        min_role_create: formMinRoleCreate || null,
+        min_role_edit: formMinRoleEdit || null,
+        min_role_delete: formMinRoleDelete || null,
+      };
+
+      let updateTypeId: string;
 
       if (editingId) {
         const { error: err } = await supabase
           .from('update_types')
-          .update({ name: formName.trim(), icon: formIcon })
+          .update({ name: formName.trim(), icon: formIcon, ...rolePayload })
           .eq('id', editingId);
         if (err) throw err;
-        setTypeSpecific((prev) => prev.map((t) => (t.id === editingId ? { ...t, name: formName.trim(), icon: formIcon } : t)));
+        updateTypeId = editingId;
+        setTypeSpecific((prev) =>
+          prev.map((t) => (t.id === editingId ? { ...t, name: formName.trim(), icon: formIcon, ...rolePayload } : t))
+        );
       } else {
-        const maxSort = typeSpecific.length > 0 ? Math.max(...typeSpecific.map((t) => t.sort_order)) : (globalTypes.length > 0 ? Math.max(...globalTypes.map((t) => t.sort_order)) : -1);
+        const maxSort = typeSpecific.length > 0
+          ? Math.max(...typeSpecific.map((t) => t.sort_order))
+          : (globalTypes.length > 0 ? Math.max(...globalTypes.map((t) => t.sort_order)) : -1);
         const { data, error: err } = await supabase
           .from('update_types')
           .insert({
-            name: formName.trim(),
-            icon: formIcon,
-            is_global: false,
-            item_type_id: itemTypeId,
-            sort_order: maxSort + 1,
+            name: formName.trim(), icon: formIcon, is_global: false,
+            item_type_id: itemTypeId, sort_order: maxSort + 1, ...rolePayload,
           })
           .select()
           .single();
         if (err) throw err;
+        updateTypeId = data.id;
         setTypeSpecific((prev) => [...prev, data]);
       }
+
+      // Sync custom fields
+      const drafts = fieldDrafts[updateTypeId] ?? [];
+      const keepIds = drafts.filter((f) => f.id).map((f) => f.id!);
+      const existingIds = updateTypeFields.filter((f) => f.update_type_id === updateTypeId).map((f) => f.id);
+      const toDelete = existingIds.filter((id) => !keepIds.includes(id));
+
+      if (toDelete.length > 0) {
+        await supabase.from('update_type_fields').delete().in('id', toDelete);
+      }
+
+      for (let i = 0; i < drafts.length; i++) {
+        const draft = drafts[i];
+        const fieldPayload = {
+          update_type_id: updateTypeId,
+          name: draft.name.trim(),
+          field_type: draft.field_type,
+          options: draft.field_type === 'dropdown' && draft.options.length > 0 ? draft.options : null,
+          required: draft.required,
+          sort_order: i,
+        };
+        if (draft.id) {
+          await supabase.from('update_type_fields').update(fieldPayload).eq('id', draft.id);
+        } else {
+          await supabase.from('update_type_fields').insert(fieldPayload);
+        }
+      }
+
+      // Refresh fields for the saved type
+      const { data: refreshedFields } = await supabase
+        .from('update_type_fields').select('*').eq('update_type_id', updateTypeId).order('sort_order', { ascending: true });
+      if (refreshedFields) {
+        setUpdateTypeFields((prev) => [
+          ...prev.filter((f) => f.update_type_id !== updateTypeId),
+          ...refreshedFields,
+        ]);
+      }
+
       resetForm();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save.');
@@ -174,6 +251,36 @@ export default function UpdateTypeEditor({ itemTypeId }: UpdateTypeEditorProps) 
               <input type="text" value={formIcon} onChange={(e) => setFormIcon(e.target.value)} className="input-field text-sm" />
             </div>
           </div>
+
+          {/* Custom fields editor */}
+          <FieldDefinitionEditor
+            fields={editingId ? (fieldDrafts[editingId] ?? []) : (fieldDrafts['new'] ?? [])}
+            onChange={(newFields) =>
+              setFieldDrafts((prev) => ({ ...prev, [editingId ?? 'new']: newFields }))
+            }
+          />
+
+          {/* Role thresholds */}
+          <div className="space-y-2">
+            <span className="text-xs font-medium text-sage">Role Restrictions</span>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Create', value: formMinRoleCreate, setter: setFormMinRoleCreate },
+                { label: 'Edit', value: formMinRoleEdit, setter: setFormMinRoleEdit },
+                { label: 'Delete', value: formMinRoleDelete, setter: setFormMinRoleDelete },
+              ].map(({ label, value, setter }) => (
+                <div key={label}>
+                  <label className="label text-xs">{label}</label>
+                  <select value={value} onChange={(e) => setter(e.target.value)} className="input-field text-xs">
+                    {MIN_ROLE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={saving} className="btn-primary text-xs">
               {saving ? 'Saving...' : editingId ? 'Update' : 'Add'}

@@ -25,6 +25,7 @@ interface OfflineContextValue {
   getCustomFields: (orgId: string) => ReturnType<typeof store.getCustomFields>;
   getItemUpdates: (itemId: string) => ReturnType<typeof store.getItemUpdates>;
   getUpdateTypes: (orgId: string) => ReturnType<typeof store.getUpdateTypes>;
+  getUpdateTypeFields: (orgId: string) => ReturnType<typeof store.getUpdateTypeFields>;
   getPhotos: (itemId: string) => ReturnType<typeof store.getPhotos>;
   getEntities: (orgId: string) => ReturnType<typeof store.getEntities>;
   getEntityTypes: (orgId: string) => ReturnType<typeof store.getEntityTypes>;
@@ -133,6 +134,7 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     getCustomFields: (orgId) => store.getCustomFields(db, orgId),
     getItemUpdates: (itemId) => store.getItemUpdates(db, itemId),
     getUpdateTypes: (orgId) => store.getUpdateTypes(db, orgId),
+    getUpdateTypeFields: (orgId) => store.getUpdateTypeFields(db, orgId),
     getPhotos: (itemId) => store.getPhotos(db, itemId),
     getEntities: (orgId) => store.getEntities(db, orgId),
     getEntityTypes: (orgId) => store.getEntityTypes(db, orgId),

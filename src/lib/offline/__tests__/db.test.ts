@@ -33,6 +33,7 @@ describe('OfflineDatabase', () => {
       'sync_metadata',
       'tile_cache_metadata',
       'update_entities',
+      'update_type_fields',
       'update_types',
     ]);
   });

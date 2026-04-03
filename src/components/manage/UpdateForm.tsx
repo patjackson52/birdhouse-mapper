@@ -6,18 +6,23 @@ import { useOfflineStore } from '@/lib/offline/provider';
 import { useConfig } from '@/lib/config/client';
 import { storePhotoBlob } from '@/lib/offline/photo-store';
 import { enqueueMutation } from '@/lib/offline/mutations';
-import type { Item, ItemType, UpdateType, EntityType } from '@/lib/types';
+import type { Item, ItemType, UpdateType, EntityType, UpdateTypeField } from '@/lib/types';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem } from '@/lib/location/utils';
 import StatusBadge from '@/components/item/StatusBadge';
+import { DynamicFieldRenderer, validateFieldValues } from '@/components/shared/fields';
+import { canPerformUpdateTypeAction, ROLE_LABELS } from '@/lib/permissions/resolve';
+import { usePermissions } from '@/lib/permissions/hooks';
 
 export default function UpdateForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedItemId = searchParams.get('item') ?? null;
   const isLocked = preselectedItemId !== null;
+
+  const { userBaseRole } = usePermissions();
 
   const config = useConfig();
   const propertyId = config.propertyId;
@@ -44,6 +49,8 @@ export default function UpdateForm() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [entityTypes, setEntityTypes] = useState<EntityType[]>([]);
   const [selectedEntityIds, setSelectedEntityIds] = useState<Record<string, string[]>>({});
+  const [updateTypeFields, setUpdateTypeFields] = useState<UpdateTypeField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     async function fetchData() {
@@ -55,11 +62,12 @@ export default function UpdateForm() {
       if (!resolvedOrgId) return;
       setOrgId(resolvedOrgId);
 
-      const [itemData, typeData, itData, allEntityTypes] = await Promise.all([
+      const [itemData, typeData, itData, allEntityTypes, allUpdateTypeFields] = await Promise.all([
         offlineStore.getItems(propertyId),
         offlineStore.getUpdateTypes(resolvedOrgId),
         offlineStore.getItemTypes(resolvedOrgId),
         offlineStore.getEntityTypes(resolvedOrgId),
+        offlineStore.getUpdateTypeFields(resolvedOrgId),
       ]);
 
       // Sort items by name for the dropdown
@@ -74,6 +82,8 @@ export default function UpdateForm() {
       }
 
       if (itData) setItemTypes(itData);
+
+      if (allUpdateTypeFields) setUpdateTypeFields(allUpdateTypeFields);
 
       // Filter entity types that link to updates
       const updateEntityTypes = allEntityTypes.filter(
@@ -120,6 +130,16 @@ export default function UpdateForm() {
     (t) => t.is_global || (selectedItem && t.item_type_id === selectedItem.item_type_id)
   );
 
+  const selectedUpdateTypeFields = updateTypeFields.filter(
+    (f) => f.update_type_id === updateTypeId
+  );
+
+  function getRoleLabel(updateType: UpdateType): string | null {
+    const threshold = updateType.min_role_create;
+    if (!threshold) return null;
+    return ROLE_LABELS[threshold] ?? null;
+  }
+
   function handleCancel() {
     if (isLocked && preselectedItemId) {
       router.push(`/?item=${preselectedItemId}`);
@@ -143,6 +163,13 @@ export default function UpdateForm() {
       return;
     }
 
+    // Validate custom fields
+    const fieldErrors = validateFieldValues(selectedUpdateTypeFields, customFieldValues);
+    if (fieldErrors.length > 0) {
+      setError(fieldErrors.map((e) => e.message).join(', '));
+      return;
+    }
+
     setError('');
     setSaving(true);
 
@@ -154,6 +181,7 @@ export default function UpdateForm() {
         update_date: updateDate,
         org_id: orgId,
         property_id: propertyId,
+        custom_field_values: customFieldValues,
       });
 
       // Store photos as blobs for offline sync
@@ -256,16 +284,21 @@ export default function UpdateForm() {
           <select
             id="type"
             value={updateTypeId}
-            onChange={(e) => setUpdateTypeId(e.target.value)}
+            onChange={(e) => { setUpdateTypeId(e.target.value); setCustomFieldValues({}); }}
             className="input-field"
             required
           >
             <option value="">Select type...</option>
-            {availableUpdateTypes.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.icon} {t.name}
-              </option>
-            ))}
+            {availableUpdateTypes.map((t) => {
+              const roleLabel = getRoleLabel(t);
+              const canCreate = canPerformUpdateTypeAction(userBaseRole, t, 'create');
+              const isDisabled = canCreate === false;
+              return (
+                <option key={t.id} value={t.id} disabled={isDisabled}>
+                  {t.icon} {t.name}{isDisabled ? ` (${roleLabel} only)` : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -296,6 +329,16 @@ export default function UpdateForm() {
           enterKeyHint="done"
         />
       </div>
+
+      {selectedUpdateTypeFields.length > 0 && (
+        <DynamicFieldRenderer
+          fields={selectedUpdateTypeFields}
+          values={customFieldValues}
+          onChange={(fieldId, value) =>
+            setCustomFieldValues((prev) => ({ ...prev, [fieldId]: value }))
+          }
+        />
+      )}
 
       <div>
         <label className="label">Photos</label>

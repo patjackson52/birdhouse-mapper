@@ -71,6 +71,20 @@ export interface UpdateType {
   item_type_id: string | null;
   sort_order: number;
   org_id: string;
+  min_role_create: string | null;
+  min_role_edit: string | null;
+  min_role_delete: string | null;
+}
+
+export interface UpdateTypeField {
+  id: string;
+  update_type_id: string;
+  org_id: string;
+  name: string;
+  field_type: 'text' | 'number' | 'dropdown' | 'date' | 'url';
+  options: string[] | null;
+  required: boolean;
+  sort_order: number;
 }
 
 export interface ItemUpdate {
@@ -83,6 +97,7 @@ export interface ItemUpdate {
   created_by: string | null;
   org_id: string;
   property_id: string;
+  custom_field_values: Record<string, unknown>;
 }
 
 export interface Photo {

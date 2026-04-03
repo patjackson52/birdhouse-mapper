@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Role, RolePermissions } from '../types';
+import type { Role, RolePermissions, UpdateType } from '../types';
 
 export interface ResolvedAccess {
   role: Role;
@@ -120,6 +120,45 @@ export async function resolveUserAccess(
   }
 
   return null;
+}
+
+export const ROLE_LEVELS: Record<string, number> = {
+  public: 0,
+  viewer: 1,
+  contributor: 2,
+  org_staff: 3,
+  org_admin: 4,
+  platform_admin: 5,
+};
+
+/** Human-readable labels for roles that can be used as min_role thresholds */
+export const MIN_ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: 'Anyone' },
+  { value: 'contributor', label: 'Contributor' },
+  { value: 'org_staff', label: 'Staff' },
+  { value: 'org_admin', label: 'Admin' },
+];
+
+/** Map role key to display label */
+export const ROLE_LABELS: Record<string, string> = Object.fromEntries(
+  MIN_ROLE_OPTIONS.filter((o) => o.value).map((o) => [o.value, o.label])
+);
+
+export function canPerformUpdateTypeAction(
+  userBaseRole: string,
+  updateType: UpdateType,
+  action: 'create' | 'edit' | 'delete'
+): boolean | null {
+  if (userBaseRole === 'platform_admin') return true;
+
+  const thresholdKey = `min_role_${action}` as const;
+  const threshold = updateType[thresholdKey];
+
+  if (threshold === null || threshold === undefined) return null;
+
+  const userLevel = ROLE_LEVELS[userBaseRole] ?? 0;
+  const thresholdLevel = ROLE_LEVELS[threshold] ?? 0;
+  return userLevel >= thresholdLevel;
 }
 
 /** Helper to get the org_admin role for a property's org */
