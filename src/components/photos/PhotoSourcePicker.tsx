@@ -9,7 +9,6 @@ interface PhotoSourcePickerProps {
   accept: string;
   maxFiles?: number;
   maxWidth?: number;
-  capture?: string;
   onFilesSelected: (files: File[]) => void;
   multiple?: boolean;
 }
@@ -20,7 +19,6 @@ export default function PhotoSourcePicker({
   accept,
   maxFiles = 5,
   maxWidth,
-  capture,
   onFilesSelected,
   multiple = true,
 }: PhotoSourcePickerProps) {
@@ -32,7 +30,6 @@ export default function PhotoSourcePicker({
       <DeviceSource
         accept={accept}
         maxFiles={maxFiles}
-        capture={capture}
         multiple={multiple}
         onFilesSelected={onFilesSelected}
       />
@@ -70,7 +67,6 @@ export default function PhotoSourcePicker({
         <DeviceSource
           accept={accept}
           maxFiles={maxFiles}
-          capture={capture}
           multiple={multiple}
           onFilesSelected={onFilesSelected}
         />

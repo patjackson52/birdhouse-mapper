@@ -117,7 +117,6 @@ export default function PhotoUploader({
             accept="image/*"
             maxFiles={maxFiles - previews.length}
             maxWidth={1200}
-            capture="environment"
             onFilesSelected={handleFilesSelected}
           />
         </div>

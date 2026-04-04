@@ -6,7 +6,6 @@ import { useDropzone } from 'react-dropzone';
 interface DeviceSourceProps {
   accept: string;
   maxFiles: number;
-  capture?: string;
   multiple: boolean;
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
@@ -24,7 +23,6 @@ function parseAccept(accept: string): Record<string, string[]> {
 export default function DeviceSource({
   accept,
   maxFiles,
-  capture,
   multiple,
   onFilesSelected,
   disabled = false,
@@ -57,7 +55,7 @@ export default function DeviceSource({
             : 'border-gray-300 hover:border-gray-400'
       }`}
     >
-      <input {...getInputProps()} capture={capture as 'user' | 'environment' | boolean | undefined} />
+      <input {...getInputProps()} />
       <p className="text-gray-600 mb-1">
         {isDragActive ? 'Drop files here' : 'Drop files here or tap to browse'}
       </p>
