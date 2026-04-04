@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { PickerResult } from '@/lib/google/picker';
+import { type PickerResult, getGooglePhotosPickerUrl } from '@/lib/google/picker';
 import { resizeImage } from '@/lib/utils';
 import { useConfig } from '@/lib/config/client';
 
@@ -12,17 +12,6 @@ interface GooglePhotosSourceProps {
 }
 
 type Status = 'idle' | 'authenticating' | 'downloading' | 'error';
-
-/** Build the picker popup URL on the platform domain */
-function getPickerUrl(maxFiles: number, platformDomain: string | null): string {
-  if (platformDomain && platformDomain !== 'localhost') {
-    // Use platform domain so OAuth origin always matches Google's authorized JS origins
-    const protocol = platformDomain.includes('localhost') ? 'http' : 'https';
-    return `${protocol}://${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
-  }
-  // Local dev or same-origin — use relative path
-  return `/google-photos-picker?maxFiles=${maxFiles}`;
-}
 
 const POLL_INTERVAL = 500; // ms — check if popup was closed
 
@@ -115,7 +104,7 @@ export default function GooglePhotosSource({
     setStatus('authenticating');
     setErrorMessage('');
 
-    const url = getPickerUrl(maxFiles, config.platformDomain);
+    const url = getGooglePhotosPickerUrl(maxFiles, config.platformDomain);
     const popup = window.open(url, 'google-photos-picker', 'width=900,height=600,scrollbars=yes');
 
     if (!popup) {

@@ -6,6 +6,31 @@ export function isGooglePhotosConfigured(): boolean {
   );
 }
 
+/**
+ * Build the Google Photos picker popup URL.
+ *
+ * On custom domains, the popup opens on the platform domain so only one
+ * JavaScript origin needs to be registered in Google Cloud Console.
+ * On localhost, Vercel previews, or when already on the platform domain,
+ * use a relative path to avoid cross-origin issues.
+ */
+export function getGooglePhotosPickerUrl(maxFiles: number, platformDomain: string | null): string {
+  if (typeof window === 'undefined') return `/google-photos-picker?maxFiles=${maxFiles}`;
+
+  const currentHost = window.location.hostname;
+  const isLocalhost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+  const isVercelPreview = currentHost.endsWith('.vercel.app') && currentHost !== platformDomain;
+  const isOnPlatformDomain = platformDomain && currentHost === platformDomain;
+
+  if (isLocalhost || isVercelPreview || isOnPlatformDomain || !platformDomain) {
+    return `/google-photos-picker?maxFiles=${maxFiles}`;
+  }
+
+  // Custom domain — open popup on the platform domain
+  const protocol = platformDomain.includes('localhost') ? 'http' : 'https';
+  return `${protocol}://${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
+}
+
 const PICKER_API_URL = 'https://apis.google.com/js/api.js';
 const GIS_URL = 'https://accounts.google.com/gsi/client';
 const PHOTOS_SCOPE = 'https://www.googleapis.com/auth/photoslibrary.readonly';

@@ -7,9 +7,10 @@ vi.mock('@/lib/utils', () => ({
   resizeImage: vi.fn((file: File) => Promise.resolve(new Blob(['resized'], { type: 'image/jpeg' }))),
 }));
 
-// Mock picker module (only used by the popup page, not this component directly)
+// Mock picker module
 vi.mock('@/lib/google/picker', () => ({
   isGooglePhotosConfigured: () => true,
+  getGooglePhotosPickerUrl: (maxFiles: number) => `/google-photos-picker?maxFiles=${maxFiles}`,
 }));
 
 describe('GooglePhotosSource', () => {
