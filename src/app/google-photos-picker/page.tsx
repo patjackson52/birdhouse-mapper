@@ -1,22 +1,24 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { openGooglePhotosPicker, getAccessToken, type PickerResult } from '@/lib/google/picker';
+import { requestAccessToken, createSession } from '@/lib/google/picker';
 
 /**
  * Standalone Google Photos Picker page — opened in a popup window.
  *
  * This page always runs on the platform domain (e.g., birdhouse-mapper.vercel.app),
  * which is registered as an authorized JavaScript origin in Google Cloud Console.
- * Custom tenant domains (e.g., fairbankseagle.org) open this page in a popup,
- * avoiding the need to register every custom domain with Google.
+ * Custom tenant domains open this page in a popup so the OAuth origin always matches.
  *
- * Flow:
- * 1. Parent window opens this page as a popup with ?maxFiles=N
- * 2. This page runs OAuth + Google Picker
- * 3. User selects photos
- * 4. This page sends results back via postMessage
- * 5. This page closes itself
+ * New flow (Google Photos Picker API, post-March-2025):
+ * 1. Parent opens this page as a popup with ?maxFiles=N
+ * 2. This page gets an OAuth token via Google Identity Services
+ * 3. This page creates a Picker session via the Photos Picker API
+ * 4. This page sends session info (sessionId, token) back to parent via postMessage
+ * 5. This page redirects to Google's pickerUri (with /autoclose)
+ * 6. User selects photos in Google's UI
+ * 7. Google auto-closes this popup window
+ * 8. Parent polls the session and fetches selected media items
  */
 export default function GooglePhotosPickerPage() {
   const [status, setStatus] = useState<'loading' | 'error'>('loading');
@@ -27,26 +29,31 @@ export default function GooglePhotosPickerPage() {
     const maxFiles = parseInt(params.get('maxFiles') || '5', 10);
 
     try {
-      const results = await openGooglePhotosPicker(maxFiles);
-      const token = getAccessToken();
+      // Step 1: Get OAuth token
+      const token = await requestAccessToken();
 
-      // Attach the OAuth token to each result so the parent can proxy downloads
-      const resultsWithToken = results.map((r) => ({ ...r, token }));
+      // Step 2: Create a picker session
+      const session = await createSession(token, maxFiles);
 
-      // Send results back to the parent window
+      // Step 3: Send session info to parent so it can poll
       if (window.opener) {
         window.opener.postMessage(
-          { type: 'google-photos-picked', results: resultsWithToken },
+          {
+            type: 'google-photos-session',
+            sessionId: session.id,
+            token,
+            pollingConfig: session.pollingConfig,
+          },
           '*' // Parent validates origin on its end
         );
       }
 
-      window.close();
+      // Step 4: Redirect to Google's picker UI (auto-closes when done)
+      window.location.href = session.pickerUri + '/autoclose';
     } catch (err) {
       setStatus('error');
-      const baseMsg = err instanceof Error ? err.message : "Couldn't connect to Google Photos";
       setErrorMessage(
-        `${baseMsg}\n\nIf you see "redirect_uri_mismatch", register ${window.location.origin} as an authorized JavaScript origin in Google Cloud Console.`
+        err instanceof Error ? err.message : "Couldn't connect to Google Photos"
       );
     }
   }, []);

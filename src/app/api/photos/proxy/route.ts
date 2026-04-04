@@ -7,6 +7,8 @@ const ALLOWED_HOSTS = [
   'lh6.googleusercontent.com',
   'photos.google.com',
   'video.google.com',
+  'lh3.google.com',
+  'video.googleusercontent.com',
 ];
 
 export async function POST(request: NextRequest) {
