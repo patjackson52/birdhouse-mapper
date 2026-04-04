@@ -191,7 +191,6 @@ export default function QuickAddSheet({ open, onClose, defaultLocation }: QuickA
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 onChange={handlePhotoChange}
                 className="hidden"
               />
