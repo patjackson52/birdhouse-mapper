@@ -18,9 +18,10 @@ interface DetailPanelProps {
   isAuthenticated?: boolean;
   canEditItem?: boolean;
   canAddUpdate?: boolean;
+  onSheetStateChange?: (state: SheetState | null) => void;
 }
 
-export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate }: DetailPanelProps) {
+export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate, onSheetStateChange }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [sheetState, setSheetState] = useState<SheetState>('peek');
 
@@ -32,8 +33,13 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   }, []);
 
   useEffect(() => {
-    if (item) setSheetState('peek');
-  }, [item?.id]);
+    if (item) {
+      setSheetState('peek');
+      onSheetStateChange?.('peek');
+    } else {
+      onSheetStateChange?.(null);
+    }
+  }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { position } = useUserLocation();
 
@@ -208,7 +214,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   // Mobile: bottom sheet
   if (isMobile) {
     return (
-      <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={setSheetState} initialState="peek">
+      <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={(s) => { setSheetState(s); onSheetStateChange?.(s); }} initialState="peek">
         {content}
       </MultiSnapBottomSheet>
     );
