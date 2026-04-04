@@ -1,5 +1,5 @@
 import type { Config } from '@puckeditor/core';
-import { imagePickerField, iconPickerField, linkField, knowledgePickerField } from './fields';
+import { imagePickerField, iconPickerField, linkField, knowledgePickerField, knowledgeTagPickerField } from './fields';
 import { textSizeField } from './text-styles';
 import { fetchLandingAssets } from './fields/fetch-assets';
 import type {
@@ -499,7 +499,7 @@ export const pageConfig: Config<PageComponents> = {
         textSize: 'medium',
       },
       fields: {
-        tagFilter: { type: 'text', label: 'Tag Filter (comma-separated)' },
+        tagFilter: knowledgeTagPickerField('Tag Filter'),
         maxItems: { type: 'number', label: 'Max Items' },
         layout: { type: 'radio', label: 'Layout', options: [{ label: 'Grid', value: 'grid' }, { label: 'List', value: 'list' }] },
         columns: { type: 'select', label: 'Columns', options: [{ label: '2', value: 2 }, { label: '3', value: 3 }, { label: '4', value: 4 }] },
