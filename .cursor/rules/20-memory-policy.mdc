@@ -1,0 +1,32 @@
+---
+description: Memory policy for durable project knowledge
+globs:
+alwaysApply: true
+---
+
+# Memory Policy
+
+Durable knowledge must be stored in repo files, not in tool-specific memory.
+
+## Where to Store Memory
+
+| Kind | Location |
+|------|----------|
+| Technical decisions | `docs/adr/NNN-title.md` |
+| Project decisions | `memory/decisions/project-decisions.md` |
+| Org decisions | `memory/decisions/org-decisions.md` |
+| Coding patterns | `memory/patterns/coding-patterns.md` |
+| Architecture patterns | `memory/patterns/architecture-patterns.md` |
+| Release process | `memory/procedures/release-process.md` |
+| Product context | `memory/context/product-context.md` |
+| Quick notes | `memory/inbox/` |
+
+## Rules
+1. When you learn something worth remembering, write it to the appropriate file.
+2. Always state which file you updated.
+3. Significant technical decisions require an ADR in `docs/adr/`.
+4. Use `scripts/remember.sh` for quick entries.
+5. Periodically promote inbox items to proper locations.
+
+## Full Policy
+See AGENTS.md for complete memory policy details.
