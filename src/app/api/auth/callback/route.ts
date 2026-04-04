@@ -51,8 +51,14 @@ export async function GET(request: Request) {
           const org = (membership?.orgs as any);
           if (org?.slug) {
             const requestHost = new URL(request.url).hostname;
-            // On localhost, stay on the same origin — subdomain URLs don't work
-            if (requestHost === 'localhost') {
+            // On localhost or Vercel preview, stay on the same origin —
+            // subdomain/custom domain URLs won't point to the preview deployment
+            const isPreviewOrLocal =
+              requestHost === 'localhost' ||
+              process.env.VERCEL_ENV === 'preview' ||
+              process.env.VERCEL_ENV === 'development' ||
+              (requestHost.endsWith('.vercel.app') && requestHost !== process.env.PLATFORM_DOMAIN);
+            if (isPreviewOrLocal) {
               return NextResponse.redirect(new URL('/manage', origin));
             }
             // Prefer primary custom domain, fall back to platform subdomain
