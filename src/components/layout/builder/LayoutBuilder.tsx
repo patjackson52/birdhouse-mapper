@@ -194,8 +194,6 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
           return { ...node, children: remaining };
         }
         return node;
-      }).filter(() => {
-        return true;
       }),
     }));
   }, []);

@@ -36,6 +36,15 @@ export default function RowEditor({
   onRemoveFromRow,
 }: Props) {
   const [showRowConfig, setShowRowConfig] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddPicker, setShowAddPicker] = useState(false);
+
+  const ADD_TYPES: { type: BlockType; label: string }[] = [
+    { type: 'field_display', label: 'Field' },
+    { type: 'status_badge', label: 'Status' },
+    { type: 'text_label', label: 'Text' },
+    { type: 'divider', label: 'Divider' },
+  ];
 
   return (
     <div className="border-2 border-dashed border-sage rounded-lg p-2 space-y-2">
@@ -48,13 +57,24 @@ export default function RowEditor({
           {showRowConfig ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
           Row ({row.children.length} columns, {typeof row.distribution === 'string' ? row.distribution : 'custom'})
         </button>
-        <button
-          onClick={() => onDeleteBlock(row.id)}
-          className="p-2 text-sage hover:text-red-500"
-          aria-label="Delete row"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {showDeleteConfirm ? (
+          <div className="flex items-center gap-1 pr-2">
+            <button onClick={() => onDeleteBlock(row.id)} className="text-xs text-red-600 font-medium px-2 py-1">
+              Delete
+            </button>
+            <button onClick={() => setShowDeleteConfirm(false)} className="text-xs text-sage px-2 py-1">
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-2 text-sage hover:text-red-500"
+            aria-label="Delete row"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Row config */}
@@ -116,12 +136,32 @@ export default function RowEditor({
           />
         ))}
         {row.children.length < 4 && (
-          <button
-            onClick={() => onAddToRow(row.id, 'field_display')}
-            className="w-full py-2 border-2 border-dashed border-sage-light rounded-lg text-xs text-sage font-medium hover:border-forest hover:text-forest transition-colors min-h-[44px]"
-          >
-            + Add to row
-          </button>
+          showAddPicker ? (
+            <div className="flex gap-1 flex-wrap">
+              {ADD_TYPES.map((t) => (
+                <button
+                  key={t.type}
+                  onClick={() => { onAddToRow(row.id, t.type); setShowAddPicker(false); }}
+                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-white border border-sage-light hover:bg-sage-light/50 transition-colors"
+                >
+                  {t.label}
+                </button>
+              ))}
+              <button
+                onClick={() => setShowAddPicker(false)}
+                className="px-3 py-1.5 rounded-md text-xs text-sage"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddPicker(true)}
+              className="w-full py-2 border-2 border-dashed border-sage-light rounded-lg text-xs text-sage font-medium hover:border-forest hover:text-forest transition-colors min-h-[44px]"
+            >
+              + Add to row
+            </button>
+          )
         )}
       </div>
     </div>
