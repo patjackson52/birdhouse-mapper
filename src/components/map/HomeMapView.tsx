@@ -71,77 +71,81 @@ function HomeMapViewContent() {
     async function fetchData() {
       if (!propertyId) { setLoading(false); return; }
 
-      // Resolve orgId from the properties table in IndexedDB
-      const property = await offlineStore.db.properties.get(propertyId);
-      const orgId = property?.org_id;
+      try {
+        // Resolve orgId from the properties table in IndexedDB
+        const property = await offlineStore.db.properties.get(propertyId);
+        const orgId = property?.org_id;
 
-      // If no property in IndexedDB yet and we're online, sync first to bootstrap
-      if (!property && offlineStore.isOnline) {
+        // If no property in IndexedDB yet and we're online, sync first to bootstrap
+        if (!property && offlineStore.isOnline) {
+          try {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            // Get the property from Supabase to find orgId
+            const { data: propData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
+            if (propData) {
+              await offlineStore.db.properties.put({ ...propData, _synced_at: new Date().toISOString() });
+              await offlineStore.syncProperty(propertyId, propData.org_id);
+              // Re-read property after sync
+              const freshProp = await offlineStore.db.properties.get(propertyId);
+              if (freshProp) {
+                const [itemData, typeData, fieldData] = await Promise.all([
+                  offlineStore.getItems(propertyId),
+                  offlineStore.getItemTypes(freshProp.org_id),
+                  offlineStore.getCustomFields(freshProp.org_id),
+                ]);
+                setItems(itemData);
+                setItemTypes(typeData);
+                setCustomFields(fieldData);
+              }
+            }
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsAuthenticated(!!user);
+          } catch {
+            setIsAuthenticated(false);
+          }
+          setLoading(false);
+          return;
+        }
+
+        // Read from IndexedDB (cached data available)
+        const [itemData, typeData, fieldData] = await Promise.all([
+          offlineStore.getItems(propertyId),
+          orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
+          orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
+        ]);
+
+        setItems(itemData);
+        setItemTypes(typeData);
+        setCustomFields(fieldData);
+
+        // Check authentication via cached session
         try {
           const { createClient } = await import("@/lib/supabase/client");
           const supabase = createClient();
-          // Get the property from Supabase to find orgId
-          const { data: propData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
-          if (propData) {
-            await offlineStore.db.properties.put({ ...propData, _synced_at: new Date().toISOString() });
-            await offlineStore.syncProperty(propertyId, propData.org_id);
-            // Re-read property after sync
-            const freshProp = await offlineStore.db.properties.get(propertyId);
-            if (freshProp) {
-              const [itemData, typeData, fieldData] = await Promise.all([
-                offlineStore.getItems(propertyId),
-                offlineStore.getItemTypes(freshProp.org_id),
-                offlineStore.getCustomFields(freshProp.org_id),
-              ]);
-              setItems(itemData);
-              setItemTypes(typeData);
-              setCustomFields(fieldData);
-            }
-          }
           const { data: { user } } = await supabase.auth.getUser();
           setIsAuthenticated(!!user);
         } catch {
           setIsAuthenticated(false);
         }
+
+        // Trigger background sync and refresh data when done
+        if (orgId && offlineStore.isOnline) {
+          offlineStore.syncProperty(propertyId, orgId).then(async () => {
+            const [freshItems, freshTypes, freshFields] = await Promise.all([
+              offlineStore.getItems(propertyId),
+              offlineStore.getItemTypes(orgId!),
+              offlineStore.getCustomFields(orgId!),
+            ]);
+            setItems(freshItems);
+            setItemTypes(freshTypes);
+            setCustomFields(freshFields);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load map data:', err);
+      } finally {
         setLoading(false);
-        return;
-      }
-
-      // Read from IndexedDB (cached data available)
-      const [itemData, typeData, fieldData] = await Promise.all([
-        offlineStore.getItems(propertyId),
-        orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
-        orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
-      ]);
-
-      setItems(itemData);
-      setItemTypes(typeData);
-      setCustomFields(fieldData);
-
-      // Check authentication via cached session
-      try {
-        const { createClient } = await import("@/lib/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        setIsAuthenticated(!!user);
-      } catch {
-        setIsAuthenticated(false);
-      }
-
-      setLoading(false);
-
-      // Trigger background sync and refresh data when done
-      if (orgId && offlineStore.isOnline) {
-        offlineStore.syncProperty(propertyId, orgId).then(async () => {
-          const [freshItems, freshTypes, freshFields] = await Promise.all([
-            offlineStore.getItems(propertyId),
-            offlineStore.getItemTypes(orgId!),
-            offlineStore.getCustomFields(orgId!),
-          ]);
-          setItems(freshItems);
-          setItemTypes(freshTypes);
-          setCustomFields(freshFields);
-        });
       }
     }
 
