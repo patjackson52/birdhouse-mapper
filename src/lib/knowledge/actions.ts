@@ -143,8 +143,11 @@ export async function getKnowledgeItems(
   let query = supabase
     .from('knowledge_items')
     .select('*')
-    .eq('org_id', orgId)
     .order('updated_at', { ascending: false });
+
+  if (orgId) {
+    query = query.eq('org_id', orgId);
+  }
 
   if (filters?.search) {
     query = query.ilike('title', `%${filters.search}%`);

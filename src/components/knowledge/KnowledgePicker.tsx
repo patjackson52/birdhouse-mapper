@@ -5,7 +5,7 @@ import { getKnowledgeItems } from '@/lib/knowledge/actions';
 import type { KnowledgeItem } from '@/lib/knowledge/types';
 
 interface KnowledgePickerProps {
-  orgId: string;
+  orgId?: string;
   onSelect: (items: KnowledgeItem[]) => void;
   onClose: () => void;
   multiple?: boolean;
@@ -30,7 +30,7 @@ export default function KnowledgePicker({ orgId, onSelect, onClose, multiple = f
       const tagsToFilter = activeTags.length > 0 ? activeTags : tagFilter;
       if (tagsToFilter && tagsToFilter.length > 0) filters.tags = tagsToFilter;
 
-      const { items: data } = await getKnowledgeItems(orgId, filters);
+      const { items: data } = await getKnowledgeItems(orgId ?? '', filters);
       setItems(data);
       setLoading(false);
     }
