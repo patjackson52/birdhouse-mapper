@@ -1,6 +1,6 @@
 import { defaultCache } from '@serwist/next/worker';
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { Serwist, CacheFirst, ExpirationPlugin, NetworkFirst } from 'serwist';
+import { Serwist, CacheFirst, ExpirationPlugin, NetworkFirst, StaleWhileRevalidate } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -16,6 +16,20 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    // Override defaultCache's CacheFirst for /_next/static JS with
+    // StaleWhileRevalidate so deployments aren't blocked by stale chunks.
+    {
+      matcher: /\/_next\/static.+\.js$/i,
+      handler: new StaleWhileRevalidate({
+        cacheName: 'next-static-js-assets',
+        plugins: [
+          new ExpirationPlugin({
+            maxEntries: 64,
+            maxAgeSeconds: 24 * 60 * 60,
+          }),
+        ],
+      }),
+    },
     {
       matcher: ({ url }) => {
         return (
