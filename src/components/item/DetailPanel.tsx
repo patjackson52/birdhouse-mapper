@@ -3,13 +3,14 @@
 import type { ItemWithDetails } from '@/lib/types';
 import StatusBadge from './StatusBadge';
 import UpdateTimeline from './UpdateTimeline';
-import BottomSheet from '@/components/ui/BottomSheet';
+import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
 import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 import Link from 'next/link';
 import PhotoViewer from '@/components/ui/PhotoViewer';
+import LayoutRenderer from '@/components/layout/LayoutRenderer';
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
@@ -21,6 +22,7 @@ interface DetailPanelProps {
 
 export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [sheetState, setSheetState] = useState<SheetState>('peek');
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -29,13 +31,55 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  useEffect(() => {
+    if (item) setSheetState('peek');
+  }, [item?.id]);
+
   const { position } = useUserLocation();
 
   if (!item) return null;
 
   const distance = getDistanceToItem(position, item);
+  const layout = item.item_type?.layout ?? null;
 
-  const content = (
+  const content = layout ? (
+    <div>
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            {item.item_type && <span className="text-xl">{item.item_type.icon}</span>}
+            <h2 className="font-heading font-semibold text-forest-dark text-xl">
+              {item.name}
+            </h2>
+          </div>
+          {distance != null && (
+            <span className="text-xs text-forest">
+              {formatDistance(distance)} away
+            </span>
+          )}
+        </div>
+        {!isMobile && (
+          <button
+            onClick={onClose}
+            className="ml-2 p-1 rounded-lg text-sage hover:bg-sage-light transition-colors"
+            aria-label="Close panel"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <LayoutRenderer
+        layout={layout}
+        item={item}
+        mode="live"
+        context={isMobile ? 'bottom-sheet' : 'side-panel'}
+        sheetState={isMobile ? sheetState : undefined}
+        customFields={item.custom_fields ?? []}
+      />
+    </div>
+  ) : (
     <div>
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
@@ -164,9 +208,9 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   // Mobile: bottom sheet
   if (isMobile) {
     return (
-      <BottomSheet isOpen={!!item} onClose={onClose}>
+      <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={setSheetState} initialState="peek">
         {content}
-      </BottomSheet>
+      </MultiSnapBottomSheet>
     );
   }
 
