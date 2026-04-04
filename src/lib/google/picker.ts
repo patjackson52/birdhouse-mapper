@@ -1,9 +1,6 @@
 /** Check if Google Photos integration is configured */
 export function isGooglePhotosConfigured(): boolean {
-  return !!(
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID &&
-    process.env.NEXT_PUBLIC_GOOGLE_API_KEY
-  );
+  return !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 }
 
 /**
@@ -31,11 +28,10 @@ export function getGooglePhotosPickerUrl(maxFiles: number, platformDomain: strin
   return `${protocol}://${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
 }
 
-const PICKER_API_URL = 'https://apis.google.com/js/api.js';
 const GIS_URL = 'https://accounts.google.com/gsi/client';
-const PHOTOS_SCOPE = 'https://www.googleapis.com/auth/photoslibrary.readonly';
+const PICKER_API_BASE = 'https://photospicker.googleapis.com/v1';
+const PHOTOS_SCOPE = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
 
-let pickerApiLoaded = false;
 let gisLoaded = false;
 
 /** Load a script tag dynamically, resolves when loaded */
@@ -54,16 +50,6 @@ function loadScript(src: string): Promise<void> {
   });
 }
 
-/** Load Google Picker API */
-async function loadPickerApi(): Promise<void> {
-  if (pickerApiLoaded) return;
-  await loadScript(PICKER_API_URL);
-  await new Promise<void>((resolve) => {
-    (window as any).gapi.load('picker', { callback: resolve });
-  });
-  pickerApiLoaded = true;
-}
-
 /** Load Google Identity Services */
 async function loadGis(): Promise<void> {
   if (gisLoaded) return;
@@ -79,7 +65,8 @@ export function getAccessToken(): string | null {
 }
 
 /** Request an OAuth access token via Google Identity Services */
-function requestAccessToken(): Promise<string> {
+export async function requestAccessToken(): Promise<string> {
+  await loadGis();
   return new Promise((resolve, reject) => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
     const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
@@ -98,48 +85,110 @@ function requestAccessToken(): Promise<string> {
   });
 }
 
-export interface PickerResult {
-  url: string;
-  name: string;
-  mimeType: string;
-  token?: string; // OAuth access token — included when using popup flow
+/* ------------------------------------------------------------------ */
+/*  Google Photos Picker API (session-based)                          */
+/* ------------------------------------------------------------------ */
+
+export interface PickerSession {
+  id: string;
+  pickerUri: string;
+  pollingConfig: {
+    pollInterval: string; // e.g. "2s"
+    timeoutIn: string;    // e.g. "600s"
+  };
+  mediaItemsSet: boolean;
 }
 
-/** Open Google Picker for Photos and return selected items */
-export async function openGooglePhotosPicker(maxFiles: number): Promise<PickerResult[]> {
-  await Promise.all([loadPickerApi(), loadGis()]);
+export interface PickedMediaItem {
+  id: string;
+  type: 'PHOTO' | 'VIDEO';
+  createTime?: string;
+  mediaFile: {
+    baseUrl: string;
+    mimeType: string;
+    filename: string;
+    mediaFileMetadata?: {
+      width: number;
+      height: number;
+    };
+  };
+}
 
-  const accessToken = await requestAccessToken();
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_API_KEY!;
-
-  return new Promise((resolve) => {
-    const google = (window as any).google;
-    const picker = new google.picker.PickerBuilder()
-      .addView(
-        new google.picker.PhotosView()
-          .setType(google.picker.PhotosView.Type.FLAT)
-      )
-      .addView(
-        new google.picker.PhotoAlbumsView()
-      )
-      .enableFeature(google.picker.Feature.MULTISELECT_ENABLED)
-      .setMaxItems(maxFiles)
-      .setOAuthToken(accessToken)
-      .setDeveloperKey(apiKey)
-      .setCallback((data: any) => {
-        if (data.action === google.picker.Action.PICKED) {
-          const results: PickerResult[] = data.docs.map((doc: any) => ({
-            url: doc.url,
-            name: doc.name || 'photo.jpg',
-            mimeType: doc.mimeType || 'image/jpeg',
-          }));
-          resolve(results);
-        } else if (data.action === google.picker.Action.CANCEL) {
-          resolve([]);
-        }
-      })
-      .build();
-
-    picker.setVisible(true);
+/** Create a new picker session */
+export async function createSession(
+  token: string,
+  maxItems: number
+): Promise<PickerSession> {
+  const res = await fetch(`${PICKER_API_BASE}/sessions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      pickingConfig: { maxItemCount: String(maxItems) },
+    }),
   });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Failed to create session: ${res.status} ${text}`);
+  }
+  return res.json();
+}
+
+/** Poll session status */
+export async function getSession(
+  token: string,
+  sessionId: string
+): Promise<PickerSession> {
+  const res = await fetch(`${PICKER_API_BASE}/sessions/${sessionId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to get session: ${res.status}`);
+  }
+  return res.json();
+}
+
+/** List selected media items (handles pagination) */
+export async function listMediaItems(
+  token: string,
+  sessionId: string
+): Promise<PickedMediaItem[]> {
+  const items: PickedMediaItem[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const params = new URLSearchParams({ sessionId, pageSize: '100' });
+    if (pageToken) params.set('pageToken', pageToken);
+
+    const res = await fetch(`${PICKER_API_BASE}/mediaItems?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to list media items: ${res.status}`);
+    }
+    const data = await res.json();
+    if (data.mediaItems) items.push(...data.mediaItems);
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return items;
+}
+
+/** Delete a session (best-effort cleanup) */
+export async function deleteSession(
+  token: string,
+  sessionId: string
+): Promise<void> {
+  await fetch(`${PICKER_API_BASE}/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  }).catch(() => {}); // best-effort
+}
+
+/** Parse a duration string like "2s" or "600s" into milliseconds */
+export function parseDuration(d: string): number {
+  const match = d.match(/^(\d+(?:\.\d+)?)s$/);
+  return match ? parseFloat(match[1]) * 1000 : 5000;
 }
