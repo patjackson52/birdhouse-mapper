@@ -48,6 +48,38 @@ Each block handles missing data gracefully:
 
 ---
 
+## Layout Composition Model
+
+The layout system supports two composition modes:
+
+- **Vertical stacking** — blocks flow top to bottom (the default). Each block occupies the full width.
+- **Horizontal stacking** — a `row` container places 2–4 child blocks side by side, sharing the width equally or at configured ratios.
+
+Nesting is limited to **one level**: rows contain blocks, but rows cannot contain rows. This keeps the builder simple for non-technical users while enabling common patterns like:
+
+```
+┌──────────────────────────────┐
+│  Status Badge (full width)   │
+├──────────────────────────────┤
+│  Photo Gallery (full width)  │
+├──────────────┬───────────────┤
+│  Species     │  Installed    │  ← row with 2 fields
+│  (field)     │  (date field) │
+├──────────────┴───────────────┤
+│  Notes (full width field)    │
+├──────────────────────────────┤
+│  Timeline (full width)       │
+├──────────────────────────────┤
+│  Action Buttons              │
+└──────────────────────────────┘
+```
+
+### Responsive Row Behavior
+
+Rows are horizontal on screens ≥480px. On narrower screens, rows **automatically collapse to vertical stacking** — each child becomes full-width. This means admins design for desktop/tablet and mobile layouts work automatically. No separate mobile layout needed.
+
+---
+
 ## Layout JSON Schema
 
 Stored as a single JSONB column on `item_types`:
@@ -55,14 +87,28 @@ Stored as a single JSONB column on `item_types`:
 ```typescript
 interface TypeLayout {
   version: 1;
-  blocks: LayoutBlock[];
+  blocks: LayoutNode[];
+  spacing: SpacingPreset;  // controls global spacing rhythm
 }
+
+// A node is either a content block or a row container
+type LayoutNode = LayoutBlock | LayoutRow;
 
 interface LayoutBlock {
   id: string;           // nanoid, unique within layout
   type: BlockType;
   config: BlockConfig;  // discriminated by type
   hideWhenEmpty?: boolean;
+}
+
+interface LayoutRow {
+  id: string;
+  type: 'row';
+  children: LayoutBlock[];   // 2–4 blocks, no nested rows
+  gap: 'tight' | 'normal' | 'loose';
+  distribution: 'equal' | 'auto' | number[];  
+  // 'equal' = even split, 'auto' = content-driven,
+  // number[] = explicit ratios e.g. [2, 1] for 2/3 + 1/3
 }
 
 type BlockType =
@@ -75,6 +121,8 @@ type BlockType =
   | 'action_buttons'
   | 'map_snippet'
   | 'timeline';
+
+type SpacingPreset = 'compact' | 'comfortable' | 'spacious';
 ```
 
 ### Block Config Types
@@ -119,10 +167,12 @@ interface ActionButtonsConfig {}
 
 A Zod schema validates layout JSON on save:
 
-- Every block has a valid `type` and unique `id`
+- Every node has a valid `type` and unique `id`
+- `row` nodes contain 2–4 children, no nested rows
+- `row` distribution arrays sum correctly and match children count
 - `field_display` blocks reference a `fieldId` that exists in the type's custom fields
 - Config values are within valid ranges (e.g., `maxPhotos` 1–20, `maxItems` 1–50)
-- At least one block exists (empty layouts are not saved — delete the layout instead)
+- At least one node exists (empty layouts are not saved — delete the layout instead)
 
 ---
 
@@ -196,6 +246,25 @@ The builder opens as a **full-screen overlay** (100dvh × 100vw) to maximize wor
 - The new block auto-scrolls into view and expands its config panel
 - For Field Display blocks, the config immediately shows the field picker / creator
 - Palette items are always available (no drag from palette — just tap to add, then reorder in the list)
+- The palette includes a **Row** item (icon: columns/grid) — tapping it appends a row with 2 empty slots
+
+### Row Interaction
+
+Rows appear in the block list as a visually grouped container with an indented children area:
+
+```
+⠿ ┌ Row (2 columns, equal) ──────── ✕
+  │  ⠿ Species (field)          ✕
+  │  ⠿ Install Date (field)     ✕
+  │  [+ Add to row]
+  └────────────────────────────────
+```
+
+- **Adding blocks to a row:** Tap "+ Add to row" inside the row, or drag an existing block into the row area. Maximum 4 children per row.
+- **Row configuration:** Tap the row header to expand settings — column count (2–4), distribution (equal / auto / custom ratios via a simple slider), gap (tight / normal / loose)
+- **Converting to/from rows:** Select two adjacent blocks and tap "Group into row" from a contextual action. Ungroup a row by tapping "Unstack" in the row config — children become standalone vertical blocks.
+- **Drag behavior:** Blocks can be dragged into or out of rows. Drop indicators show whether the block will land inside the row or between top-level nodes.
+- **Mobile rows:** On the mobile builder, rows show children vertically with a visual grouping indicator (left border line). The preview tab shows how rows collapse on narrow screens.
 
 ### Inline Block Configuration
 
@@ -406,47 +475,104 @@ The layout JSON is cached in the Dexie offline DB as part of the ItemType record
 
 ---
 
-## UX Details
+## UX Design System & Guidelines
 
-### Touch Targets
+### Spacing System
 
-All interactive elements meet 44×44px minimum touch target size per Apple HIG:
-- Drag handles: 44×44px with visible grip dots
-- Block palette pills: 44px height, horizontal padding for comfortable tap
+The layout uses a consistent **4px base unit** spacing scale, applied via the `SpacingPreset` on the layout:
+
+| Preset | Block gap | Row internal gap | Section padding | Use case |
+|--------|-----------|-------------------|-----------------|----------|
+| `compact` | 8px (2 units) | 8px | 12px | Data-dense types with many fields |
+| `comfortable` | 12px (3 units) | 12px | 16px | Default — balanced readability |
+| `spacious` | 16px (4 units) | 16px | 20px | Photo-forward or minimal types |
+
+The spacing preset is a single toggle in the builder (three options with visual previews), not per-block configuration. Consistent rhythm matters more than per-element control.
+
+### Typography Scale
+
+Block text rendering follows a coherent type scale derived from the app's existing Tailwind config:
+
+| Style | Size | Weight | Line Height | Use case |
+|-------|------|--------|-------------|----------|
+| `heading` | 18px / 1.125rem | 600 (semibold) | 1.3 | Section headers within the detail panel |
+| `subheading` | 15px / 0.9375rem | 500 (medium) | 1.4 | Subsection labels, field group titles |
+| `body` | 14px / 0.875rem | 400 (regular) | 1.5 | Field values, descriptions, body text |
+| `caption` | 12px / 0.75rem | 400 (regular) | 1.4 | Timestamps, metadata, secondary info |
+| `field-label` | 12px / 0.75rem | 500 (medium) | 1.3 | Field labels above values, all-caps tracking |
+| `field-value-large` | 20px / 1.25rem | 600 (semibold) | 1.2 | Featured/hero field values (large size config) |
+
+Labels use muted color (`text-gray-500`) to create visual hierarchy against values in `text-gray-900`. This hierarchy is automatic — admins don't configure it.
+
+### Information Architecture
+
+The layout renderer enforces a sensible reading order and visual hierarchy:
+
+- **Primary context first:** Status, identity, and hero imagery at the top establish what the user is looking at
+- **Data in the middle:** Custom fields, entities, and detail content in the main body
+- **History and actions last:** Timeline and action buttons anchor the bottom
+
+The default starter layout follows this pattern. The builder doesn't enforce ordering (admins can arrange freely), but the defaults model good IA.
+
+**Visual grouping:** Rows implicitly create related-field groups. Adjacent Field Display blocks without a divider between them are rendered with tighter spacing (the `compact` gap) to signal they belong together. A Divider block creates a stronger visual break.
+
+### Touch Targets & Interaction Design
+
+All interactive elements meet **44×44px minimum touch target size** per Apple HIG and WCAG 2.5.5 (AAA):
+
+- Drag handles: 44×44px with visible grip dots, generous padding around the hit area
+- Block palette pills: 44px height, minimum 44px width, horizontal padding for comfortable tap
 - Delete buttons: 44×44px (icon only, no small text links)
 - Toggle switches: native size (already compliant)
-- Accordion expand/collapse: entire block header row is tappable
+- Accordion expand/collapse: entire block header row is tappable (full width, 48px min height)
+- Row "Add to row" button: full row width, 44px height
+- Spacing between adjacent tap targets: minimum 8px to prevent mis-taps
+
+**Fitts's Law considerations:**
+- "Done" / "Save" button in the sticky header is large and in a consistent position (top-right)
+- Block palette is pinned at top — always accessible without scrolling
+- Delete actions require intentional reach (positioned at row end, away from drag handle)
 
 ### Transitions & Feedback
 
 - **Adding a block:** Block slides in from right with 200ms ease-out, auto-scrolls into view
-- **Removing a block:** Block fades out over 150ms, list collapses smoothly
-- **Reordering:** Dragged block lifts with subtle shadow, other blocks animate to make room (200ms spring)
-- **Config expand/collapse:** Accordion animation 200ms ease-in-out, content height transitions
-- **Tab switching (mobile):** Crossfade 150ms, no jarring jump
-- **Preview updates:** Blocks in preview animate changes (not instant swap) — fade transition on content changes
-- **Save:** Button shows spinner, then checkmark on success, then returns to normal
+- **Removing a block:** Block fades out over 150ms, list collapses smoothly (no layout jump)
+- **Reordering:** Dragged block lifts with subtle shadow (2px translate-z), other blocks animate to make room (200ms spring easing)
+- **Config expand/collapse:** Accordion animation 200ms ease-in-out, content height animates (not display:none toggle)
+- **Tab switching (mobile):** Crossfade 150ms, scroll position preserved per tab
+- **Preview updates:** Blocks in preview cross-fade on content changes (150ms) — not instant swap
+- **Save:** Button shows spinner → checkmark (hold 600ms) → returns to normal
+- **Row collapse/expand on resize:** Smooth CSS transition, no JS reflow
+
+All animations respect `prefers-reduced-motion: reduce` — transitions become instant, no motion.
 
 ### Accessibility
 
-- Drag/drop has keyboard alternative: select block, use arrow keys to move up/down, Enter to confirm
-- Block palette items are focusable and keyboard-navigable
+- Drag/drop has keyboard alternative: Tab to select block, Space to pick up, Arrow keys to move, Space to drop, Escape to cancel
+- Block palette items are focusable and keyboard-navigable (arrow keys cycle, Enter adds)
 - Screen readers announce block type and position ("Photo Gallery, block 2 of 5")
-- Config forms use proper label associations
-- Color contrast meets WCAG AA throughout
+- Row children announced as "Species field, column 1 of 2 in row"
+- Config forms use proper `<label>` associations and `aria-describedby` for help text
+- Color contrast meets WCAG AA throughout (4.5:1 for text, 3:1 for interactive elements)
+- Focus indicators: visible 2px ring on all interactive elements, not just browser default
+- Error messages linked to inputs via `aria-errormessage`
 
 ### Empty States
 
-- **New type, first time in builder:** Starter layout is pre-populated (not blank). A subtle banner above the block list reads: "Drag to reorder. Tap + to add blocks. Tap a block to configure it."
+- **New type, first time in builder:** Starter layout is pre-populated (not blank). A subtle banner above the block list reads: "Drag to reorder. Tap + to add blocks. Tap a block to configure it." Banner dismisses permanently after first block interaction.
 - **All blocks deleted:** Message with illustration: "Your layout is empty. Add blocks from the palette above to build the detail view." The preview shows just the item name and type icon.
+- **Empty row:** Shows a dashed-border drop zone with "+ Add block" centered inside.
 
 ### Responsive Breakpoints
 
-| Width | Behavior |
-|-------|----------|
-| < 768px | Full-screen overlay, tabbed Build/Preview, single column |
-| 768–1024px | Side-by-side, builder 55% / preview 45% |
-| > 1024px | Side-by-side, builder 60% / preview 40%, more breathing room |
+| Width | Layout | Row behavior |
+|-------|--------|-------------|
+| < 480px | Full-screen overlay, tabbed Build/Preview | Rows collapse to vertical stacking |
+| 480–767px | Full-screen overlay, tabbed Build/Preview | Rows display horizontally |
+| 768–1024px | Side-by-side, builder 55% / preview 45% | Rows display horizontally |
+| > 1024px | Side-by-side, builder 60% / preview 40% | Rows display horizontally |
+
+The preview always renders at the width the end user will see — on mobile builder, the preview tab renders at device width. On desktop, the preview panel constrains to typical mobile/panel width to show the realistic view.
 
 ---
 
@@ -454,7 +580,9 @@ All interactive elements meet 44×44px minimum touch target size per Apple HIG:
 
 ### In Scope
 
-- Layout builder with 9 block types
+- Layout builder with 9 block types + row container
+- Vertical and horizontal composition (rows with 2–4 children, one level deep)
+- Responsive row collapse on narrow screens
 - Layout-first type creation flow
 - Live preview with mock data
 - Mobile full-screen editing
@@ -464,17 +592,21 @@ All interactive elements meet 44×44px minimum touch target size per Apple HIG:
 - Backward-compatible fallback rendering
 - Database migration (single column)
 - Offline support (cached layout JSON)
+- Spacing preset system (compact / comfortable / spacious)
+- Typography scale and visual hierarchy
 - Zod validation
 - `@dnd-kit/sortable` for drag/drop
+- WCAG AA accessibility compliance
 
 ### Out of Scope (Future Consideration)
 
 - Layout templates / presets (start from a template instead of the starter layout)
 - Copy/duplicate layout between types
 - Layout version history or undo beyond session
-- Nested blocks or multi-column layouts within the detail panel
+- Deeply nested layouts (rows in rows, columns in columns)
 - Conditional blocks (show block X only if field Y has value Z)
 - Custom CSS or theme overrides per type
 - Layout builder for UpdateTypes or EntityTypes
 - A/B testing of layouts
 - Layout analytics (which blocks get seen/interacted with)
+- Per-block spacing overrides (global preset only)
