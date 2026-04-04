@@ -23,7 +23,6 @@ interface DetailPanelProps {
 
 export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate, onSheetStateChange }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
-  const [sheetState, setSheetState] = useState<SheetState>('peek');
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -33,10 +32,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   }, []);
 
   useEffect(() => {
-    if (item) {
-      setSheetState('peek');
-      onSheetStateChange?.('peek');
-    } else {
+    if (!item) {
       onSheetStateChange?.(null);
     }
   }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -81,7 +77,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         item={item}
         mode="live"
         context={isMobile ? 'bottom-sheet' : 'side-panel'}
-        sheetState={isMobile ? sheetState : undefined}
+        sheetState={isMobile ? 'full' : undefined}
         customFields={item.custom_fields ?? []}
       />
     </div>
@@ -214,7 +210,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   // Mobile: bottom sheet
   if (isMobile) {
     return (
-      <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={(s) => { setSheetState(s); onSheetStateChange?.(s); }} initialState="peek">
+      <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={(s) => { onSheetStateChange?.(s); }}>
         {content}
       </MultiSnapBottomSheet>
     );
