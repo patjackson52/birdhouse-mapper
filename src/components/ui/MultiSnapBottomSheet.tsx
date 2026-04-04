@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, ReactNode } from 'react';
+import { useEffect, useRef, useState, ReactNode, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export type SheetState = 'peek' | 'half' | 'full';
@@ -8,63 +8,54 @@ export type SheetState = 'peek' | 'half' | 'full';
 interface MultiSnapBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  onStateChange: (state: SheetState) => void;
-  initialState?: SheetState;
+  onStateChange?: (state: SheetState) => void;
   children: ReactNode;
 }
 
-const SNAP_PERCENTAGES: Record<SheetState, number> = {
-  peek: 25,
-  half: 50,
-  full: 92,
-};
-
-const SNAP_ORDER: SheetState[] = ['peek', 'half', 'full'];
-
-function getHeightForState(state: SheetState): string {
-  return `${SNAP_PERCENTAGES[state]}vh`;
-}
-
-function getOverlayOpacity(state: SheetState): number {
-  if (state === 'peek') return 0.15;
-  if (state === 'half') return 0.4;
-  return 0.6;
-}
-
-function findNearestSnap(heightVh: number): SheetState {
-  let nearest: SheetState = 'peek';
-  let minDist = Infinity;
-  for (const state of SNAP_ORDER) {
-    const dist = Math.abs(SNAP_PERCENTAGES[state] - heightVh);
-    if (dist < minDist) {
-      minDist = dist;
-      nearest = state;
-    }
-  }
-  return nearest;
-}
+const HANDLE_HEIGHT = 48; // handle bar + padding
+const MAX_HEIGHT_RATIO = 0.92;
 
 export default function MultiSnapBottomSheet({
   isOpen,
   onClose,
   onStateChange,
-  initialState = 'peek',
   children,
 }: MultiSnapBottomSheetProps) {
-  // Use a ref to hold mutable state values needed in touch handlers without
-  // causing re-renders mid-gesture.
-  const stateRef = useRef<SheetState>(initialState);
-  // We track the "committed" state in a separate ref so we can read it in
-  // touch handlers without needing it in deps arrays.
-  const currentStateRef = useRef<SheetState>(initialState);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [maxHeight, setMaxHeight] = useState(
+    typeof window !== 'undefined' ? window.innerHeight * MAX_HEIGHT_RATIO : 600
+  );
 
-  // Keep currentStateRef up-to-date when the sheet opens/resets.
+  // Measure content natural height
+  useEffect(() => {
+    if (!isOpen || !measureRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContentHeight(entry.contentRect.height);
+      }
+    });
+
+    observer.observe(measureRef.current);
+    return () => observer.disconnect();
+  }, [isOpen]);
+
+  // Track viewport height changes (rotation, resize)
+  useEffect(() => {
+    const handleResize = () => {
+      setMaxHeight(window.innerHeight * MAX_HEIGHT_RATIO);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Emit 'full' when sheet opens
   useEffect(() => {
     if (isOpen) {
-      currentStateRef.current = initialState;
-      stateRef.current = initialState;
+      onStateChange?.('full');
     }
-  }, [isOpen, initialState]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Body overflow lock
   useEffect(() => {
@@ -78,80 +69,33 @@ export default function MultiSnapBottomSheet({
     };
   }, [isOpen]);
 
-  // Touch tracking refs — not state so we don't re-render during a drag.
+  const sheetHeight = Math.min(contentHeight + HANDLE_HEIGHT, maxHeight);
+  const enableScroll = contentHeight + HANDLE_HEIGHT > maxHeight;
+
+  // Swipe-to-dismiss
   const touchStartY = useRef(0);
   const touchStartTime = useRef(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
     touchStartTime.current = Date.now();
-  };
+  }, []);
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
     const endY = e.changedTouches[0].clientY;
-    const deltaY = touchStartY.current - endY; // positive = swipe up
-    const elapsed = (Date.now() - touchStartTime.current) / 1000; // seconds
-    const velocity = Math.abs(deltaY) / elapsed; // px/s
+    const deltaY = endY - touchStartY.current; // positive = swipe down
+    const elapsed = (Date.now() - touchStartTime.current) / 1000;
+    const velocity = Math.abs(deltaY) / elapsed;
 
-    const currentIndex = SNAP_ORDER.indexOf(currentStateRef.current);
-
+    // Only dismiss on downward swipe when content is scrolled to top
     if (deltaY > 0) {
-      // Swiping up — go to next snap(s)
-      if (velocity > 500 && currentIndex < SNAP_ORDER.length - 2) {
-        // Fast swipe: skip one snap point
-        const newState = SNAP_ORDER[currentIndex + 2];
-        currentStateRef.current = newState;
-        onStateChange(newState);
-      } else if (currentIndex < SNAP_ORDER.length - 1) {
-        const newState = SNAP_ORDER[currentIndex + 1];
-        currentStateRef.current = newState;
-        onStateChange(newState);
-      }
-    } else {
-      // Swiping down
-      const viewportHeight = window.innerHeight;
-      const deltaVh = (Math.abs(deltaY) / viewportHeight) * 100;
-      const currentHeightVh = SNAP_PERCENTAGES[currentStateRef.current];
-      const projectedVh = currentHeightVh - deltaVh;
-
-      if (projectedVh < 15) {
-        // Below dismiss threshold
+      const scrollTop = scrollRef.current?.scrollTop ?? 0;
+      if (scrollTop <= 0 && (deltaY > 80 || velocity > 500)) {
         onClose();
-        return;
-      }
-
-      if (velocity > 500 && currentIndex > 1) {
-        // Fast swipe down: skip one snap point
-        const newState = SNAP_ORDER[currentIndex - 2];
-        currentStateRef.current = newState;
-        onStateChange(newState);
-      } else if (currentIndex > 0) {
-        const newState = SNAP_ORDER[currentIndex - 1];
-        currentStateRef.current = newState;
-        onStateChange(newState);
-      } else {
-        // Already at peek, check if should dismiss
-        if (Math.abs(deltaY) > 80) {
-          onClose();
-        }
       }
     }
-  };
-
-  const handleHandleClick = () => {
-    const current = currentStateRef.current;
-    const newState: SheetState = current === 'peek' ? 'half' : 'peek';
-    currentStateRef.current = newState;
-    onStateChange(newState);
-  };
-
-  // We read the committed state to drive the animation height. Because touch
-  // handlers update currentStateRef and call onStateChange, the parent will
-  // re-render us with new props if it manages state externally — but we also
-  // keep our own internal ref for self-contained snap logic.
-  // For animation we derive the height from whatever initialState the parent
-  // last passed (they should mirror onStateChange back as initialState).
-  const animatedState = isOpen ? initialState : 'peek';
+  }, [onClose]);
 
   return (
     <AnimatePresence>
@@ -163,7 +107,7 @@ export default function MultiSnapBottomSheet({
             className="fixed inset-0 z-40"
             style={{ backgroundColor: 'black' }}
             initial={{ opacity: 0 }}
-            animate={{ opacity: getOverlayOpacity(animatedState) }}
+            animate={{ opacity: 0.4 }}
             exit={{ opacity: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             onClick={onClose}
@@ -173,37 +117,32 @@ export default function MultiSnapBottomSheet({
           <motion.div
             className="fixed bottom-0 left-0 right-0 z-50 flex flex-col rounded-t-2xl bg-white shadow-2xl"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-            initial={{ height: '0vh' }}
-            animate={{ height: getHeightForState(animatedState) }}
-            exit={{ height: '0vh' }}
+            initial={{ height: 0 }}
+            animate={{ height: sheetHeight }}
+            exit={{ height: 0 }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
             {/* Handle */}
             <div className="flex shrink-0 items-center justify-center pt-3 pb-2">
-              <button
-                aria-label="Expand or collapse sheet"
-                className="h-1.5 w-12 rounded-full bg-gray-300"
-                onClick={handleHandleClick}
-              />
+              <div className="h-1.5 w-12 rounded-full bg-gray-300" />
             </div>
-
-            {/* Swipe-up affordance — only visible in peek state */}
-            {animatedState === 'peek' && (
-              <div className="flex justify-center -mt-1 mb-1">
-                <svg className="w-4 h-4 text-gray-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-                </svg>
-              </div>
-            )}
 
             {/* Content */}
             <div className="relative min-h-0 flex-1">
-              <div className="overflow-y-auto px-4 pb-4 h-full">
-                {children}
+              <div
+                ref={scrollRef}
+                className="px-4 pb-4 h-full"
+                style={{ overflowY: enableScroll ? 'auto' : 'hidden' }}
+              >
+                <div ref={measureRef}>
+                  {children}
+                </div>
               </div>
-              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+              {enableScroll && (
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
+              )}
             </div>
           </motion.div>
         </>
