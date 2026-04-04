@@ -189,9 +189,21 @@ export default function MultiSnapBottomSheet({
               />
             </div>
 
+            {/* Swipe-up affordance — only visible in peek state */}
+            {animatedState === 'peek' && (
+              <div className="flex justify-center -mt-1 mb-1">
+                <svg className="w-4 h-4 text-gray-400 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                </svg>
+              </div>
+            )}
+
             {/* Content */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
-              {children}
+            <div className="relative min-h-0 flex-1">
+              <div className="overflow-y-auto px-4 pb-4 h-full">
+                {children}
+              </div>
+              <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent" />
             </div>
           </motion.div>
         </>
