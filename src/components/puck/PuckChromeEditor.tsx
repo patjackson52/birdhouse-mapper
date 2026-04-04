@@ -10,9 +10,15 @@ import { useState, useCallback, useMemo, useRef } from 'react';
 import { sanitizePuckData } from '@/lib/puck/sanitize-data';
 
 function refreshPreviewWindow() {
-  const preview = window.open('', 'puck-preview');
-  if (preview && !preview.closed && preview.location.href !== 'about:blank') {
-    preview.location.reload();
+  // Use BroadcastChannel to signal the preview window to reload.
+  // Avoids window.open('', name) which creates a new about:blank window
+  // if no preview window exists.
+  try {
+    const channel = new BroadcastChannel('puck-preview');
+    channel.postMessage({ type: 'reload' });
+    channel.close();
+  } catch {
+    // BroadcastChannel not supported — no-op
   }
 }
 

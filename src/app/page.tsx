@@ -5,6 +5,7 @@ import { LandingRenderer } from '@/components/landing/LandingRenderer';
 import { HomeMapView } from '@/components/map/HomeMapView';
 import { PlatformLanding } from '@/components/platform/PlatformLanding';
 import { PuckPageRenderer } from '@/components/puck/PuckPageRenderer';
+import { PreviewReloadListener } from '@/components/puck/PreviewReloadListener';
 import type { Data } from '@puckeditor/core';
 
 interface HomePageProps {
@@ -48,9 +49,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     return (
       <main className="pb-20 md:pb-0">
         {isPreview && (
-          <div className="bg-yellow-100 px-4 py-2 text-center text-sm text-yellow-800">
-            Preview Mode — This is a draft and not yet published.
-          </div>
+          <>
+            <PreviewReloadListener />
+            <div className="bg-yellow-100 px-4 py-2 text-center text-sm text-yellow-800">
+              Preview Mode — This is a draft and not yet published.
+            </div>
+          </>
         )}
         <PuckPageRenderer data={puckLandingData as Data} />
       </main>
