@@ -67,13 +67,14 @@ export function colorPickerField(label: string) {
 
 /**
  * Creates a Puck custom field config for a knowledge article picker.
+ * When orgId is omitted, relies on Supabase RLS to scope to the user's orgs.
  */
-export function knowledgePickerField(label: string, orgId: string) {
+export function knowledgePickerField(label: string) {
   return {
     type: 'custom' as const,
     label,
     render: ({ value, onChange }: { value: any; onChange: (val: any) => void }) => (
-      <KnowledgePickerField value={value || ''} onChange={onChange} orgId={orgId} />
+      <KnowledgePickerField value={value || ''} onChange={onChange} />
     ),
   };
 }

@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 interface KnowledgePickerFieldProps {
   value: string;
   onChange: (val: string) => void;
-  orgId: string;
+  orgId?: string;
 }
 
 export function KnowledgePickerField({ value, onChange, orgId }: KnowledgePickerFieldProps) {

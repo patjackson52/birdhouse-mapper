@@ -1,5 +1,5 @@
 import type { Config } from '@puckeditor/core';
-import { imagePickerField, iconPickerField, linkField } from './fields';
+import { imagePickerField, iconPickerField, linkField, knowledgePickerField } from './fields';
 import { textSizeField } from './text-styles';
 import { fetchLandingAssets } from './fields/fetch-assets';
 import type {
@@ -481,10 +481,7 @@ export const pageConfig: Config<PageComponents> = {
         textSize: 'medium',
       },
       fields: {
-        knowledgeItemId: {
-          type: 'text',
-          label: 'Knowledge Item ID (paste from admin)',
-        },
+        knowledgeItemId: knowledgePickerField('Knowledge Article'),
         showTitle: { type: 'radio', label: 'Show Title', options: [{ label: 'Yes', value: true }, { label: 'No', value: false }] },
         showAttachments: { type: 'radio', label: 'Show Attachments', options: [{ label: 'Yes', value: true }, { label: 'No', value: false }] },
         textSize: textSizeField(),
