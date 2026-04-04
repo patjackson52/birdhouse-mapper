@@ -5,6 +5,7 @@ import { generateMockItem } from '../mock-data';
 import { deriveFormFields } from '../form-derivation';
 import { removeFieldFromLayout, findFieldsNotInLayout } from '../field-sync';
 import type { CustomField, ItemType } from '@/lib/types';
+import type { LayoutBlock, TypeLayout } from '../types';
 
 const itemType: ItemType = {
   id: 't1',
@@ -75,10 +76,10 @@ describe('Layout system integration', () => {
 
   it('layout with rows validates and derives form correctly', () => {
     const layout = generateDefaultLayout(fields);
-    const fieldBlocks = layout.blocks.filter((b) => b.type === 'field_display');
+    const fieldBlocks = layout.blocks.filter((b) => b.type === 'field_display') as LayoutBlock[];
     const otherBlocks = layout.blocks.filter((b) => b.type !== 'field_display');
 
-    const rowLayout = {
+    const rowLayout: TypeLayout = {
       ...layout,
       blocks: [
         ...otherBlocks.slice(0, -1),
