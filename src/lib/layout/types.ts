@@ -1,21 +1,68 @@
-// ======================
-// Layout block configs
-// ======================
+// src/lib/layout/types.ts
+
+export type SpacingPreset = 'compact' | 'comfortable' | 'spacious';
+
+export interface TypeLayout {
+  version: 1;
+  blocks: LayoutNode[];
+  spacing: SpacingPreset;
+  peekBlockCount: number;
+}
+
+export type LayoutNode = LayoutBlock | LayoutRow;
+
+export interface LayoutBlock {
+  id: string;
+  type: BlockType;
+  config: BlockConfig;
+  hideWhenEmpty?: boolean;
+}
+
+export interface LayoutRow {
+  id: string;
+  type: 'row';
+  children: LayoutBlock[];
+  gap: 'tight' | 'normal' | 'loose';
+  distribution: 'equal' | 'auto' | number[];
+}
+
+export type BlockType =
+  | 'field_display'
+  | 'photo_gallery'
+  | 'status_badge'
+  | 'entity_list'
+  | 'text_label'
+  | 'divider'
+  | 'action_buttons'
+  | 'map_snippet'
+  | 'timeline';
+
+export type BlockConfig =
+  | FieldDisplayConfig
+  | PhotoGalleryConfig
+  | StatusBadgeConfig
+  | EntityListConfig
+  | TimelineConfig
+  | TextLabelConfig
+  | DividerConfig
+  | MapSnippetConfig
+  | ActionButtonsConfig;
 
 export interface FieldDisplayConfig {
   fieldId: string;
-  size: 'normal' | 'large';
+  size: 'compact' | 'normal' | 'large';
   showLabel: boolean;
 }
 
 export interface PhotoGalleryConfig {
-  style: 'hero' | 'grid' | 'strip';
+  style: 'hero' | 'grid' | 'carousel';
   maxPhotos: number;
 }
 
-export interface TextLabelConfig {
-  text: string;
-  style: string;
+export interface StatusBadgeConfig {}
+
+export interface EntityListConfig {
+  entityTypeIds: string[];
 }
 
 export interface TimelineConfig {
@@ -24,108 +71,22 @@ export interface TimelineConfig {
   maxItems: number;
 }
 
-// ======================
-// Layout block types
-// ======================
-
-export type LayoutBlockType =
-  | 'field_display'
-  | 'photo_gallery'
-  | 'text_label'
-  | 'status_badge'
-  | 'entity_list'
-  | 'timeline'
-  | 'map_snippet'
-  | 'action_buttons'
-  | 'divider'
-  | 'row';
-
-interface BaseLayoutBlock {
-  id: string;
-  type: LayoutBlockType;
+export interface TextLabelConfig {
+  text: string;
+  style: 'heading' | 'subheading' | 'body' | 'caption';
 }
 
-export interface FieldDisplayBlock extends BaseLayoutBlock {
-  type: 'field_display';
-  config: FieldDisplayConfig;
+export interface DividerConfig {}
+
+export interface MapSnippetConfig {}
+
+export interface ActionButtonsConfig {}
+
+// Type guard helpers
+export function isLayoutRow(node: LayoutNode): node is LayoutRow {
+  return node.type === 'row';
 }
 
-export interface PhotoGalleryBlock extends BaseLayoutBlock {
-  type: 'photo_gallery';
-  config: PhotoGalleryConfig;
-}
-
-export interface TextLabelBlock extends BaseLayoutBlock {
-  type: 'text_label';
-  config: TextLabelConfig;
-}
-
-export interface StatusBadgeBlock extends BaseLayoutBlock {
-  type: 'status_badge';
-  config: Record<string, unknown>;
-}
-
-export interface EntityListBlock extends BaseLayoutBlock {
-  type: 'entity_list';
-  config: Record<string, unknown>;
-}
-
-export interface TimelineBlock extends BaseLayoutBlock {
-  type: 'timeline';
-  config: TimelineConfig;
-}
-
-export interface MapSnippetBlock extends BaseLayoutBlock {
-  type: 'map_snippet';
-  config: Record<string, unknown>;
-}
-
-export interface ActionButtonsBlock extends BaseLayoutBlock {
-  type: 'action_buttons';
-  config: Record<string, unknown>;
-}
-
-export interface DividerBlock extends BaseLayoutBlock {
-  type: 'divider';
-  config?: Record<string, unknown>;
-}
-
-export interface LayoutRow extends BaseLayoutBlock {
-  type: 'row';
-  children: LayoutBlock[];
-  gap: 'normal' | 'tight' | 'wide';
-  distribution: 'equal' | 'auto';
-}
-
-export type LayoutBlock =
-  | FieldDisplayBlock
-  | PhotoGalleryBlock
-  | TextLabelBlock
-  | StatusBadgeBlock
-  | EntityListBlock
-  | TimelineBlock
-  | MapSnippetBlock
-  | ActionButtonsBlock
-  | DividerBlock
-  | LayoutRow;
-
-export type LayoutNode = LayoutBlock;
-
-// ======================
-// Top-level layout type
-// ======================
-
-export interface TypeLayout {
-  version: number;
-  blocks: LayoutBlock[];
-  spacing: 'comfortable' | 'compact' | 'spacious';
-  peekBlockCount: number;
-}
-
-// ======================
-// Type guards
-// ======================
-
-export function isLayoutRow(block: LayoutBlock): block is LayoutRow {
-  return block.type === 'row';
+export function isLayoutBlock(node: LayoutNode): node is LayoutBlock {
+  return node.type !== 'row';
 }
