@@ -34,8 +34,8 @@ describe('Offline Store', () => {
 
     it('getItemTypes returns types for an org', async () => {
       await db.item_types.bulkPut([
-        { id: 't1', name: 'Birdhouse', icon: '🏠', color: '#000', sort_order: 1, created_at: '', org_id: 'o1', _synced_at: '' },
-        { id: 't2', name: 'Nest', icon: '🪺', color: '#fff', sort_order: 2, created_at: '', org_id: 'o2', _synced_at: '' },
+        { id: 't1', name: 'Birdhouse', icon: '🏠', color: '#000', sort_order: 1, layout: null, created_at: '', org_id: 'o1', _synced_at: '' },
+        { id: 't2', name: 'Nest', icon: '🪺', color: '#fff', sort_order: 2, layout: null, created_at: '', org_id: 'o2', _synced_at: '' },
       ]);
 
       const types = await getItemTypes(db, 'o1');

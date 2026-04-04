@@ -29,6 +29,7 @@ interface MapViewProps {
   boundaryGeoJSON?: FeatureCollection | null;
   onToggleGeoLayer?: (layerId: string) => void;
   visibleGeoLayerIds?: Set<string>;
+  sheetState?: 'peek' | 'half' | 'full' | null;
 }
 
 /** Flies map to user position when trigger increments */
@@ -61,6 +62,7 @@ export default function MapView({
   boundaryGeoJSON,
   onToggleGeoLayer,
   visibleGeoLayerIds,
+  sheetState,
 }: MapViewProps) {
   const config = useConfig();
   const theme = useTheme();
@@ -206,14 +208,18 @@ export default function MapView({
       <LocateButton onLocate={() => setFlyToUserTrigger((n) => n + 1)} />
       <MapLegend itemTypes={itemTypes} />
 
-      {/* Quick-add FAB */}
-      <button
-        onClick={() => setQuickAddOpen(true)}
-        className="fixed bottom-24 right-4 z-30 bg-green-600 hover:bg-green-700 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-light"
-        aria-label="Quick add item"
-      >
-        +
-      </button>
+      {/* Quick-add FAB — hidden when sheet is half/full, raised above peek sheet */}
+      {sheetState !== 'half' && sheetState !== 'full' && (
+        <button
+          onClick={() => setQuickAddOpen(true)}
+          className={`fixed right-4 z-30 bg-green-600 hover:bg-green-700 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-light transition-all duration-300 ${
+            sheetState === 'peek' ? 'bottom-[calc(25vh+1rem)]' : 'bottom-24'
+          }`}
+          aria-label="Quick add item"
+        >
+          +
+        </button>
+      )}
 
       <QuickAddSheet
         open={quickAddOpen}

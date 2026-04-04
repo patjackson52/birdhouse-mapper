@@ -1,5 +1,5 @@
 import type { CustomField } from '@/lib/types';
-import type { LayoutBlock } from './types';
+import type { LayoutBlock, LayoutNode, FieldDisplayConfig, TextLabelConfig } from './types';
 import { isLayoutRow } from './types';
 import type { TypeLayout } from './types';
 
@@ -31,13 +31,13 @@ export function deriveFormFields(layout: TypeLayout, customFields: CustomField[]
   // formElementIndex tracks position among form elements (fields + photo)
   let formElementIndex = 0;
 
-  function processBlock(block: LayoutBlock): void {
-    if (isLayoutRow(block)) {
+  function processNode(node: LayoutNode): void {
+    if (isLayoutRow(node)) {
       const rowFieldIds: string[] = [];
 
-      for (const child of block.children) {
+      for (const child of node.children) {
         if (child.type === 'field_display') {
-          const field = fieldMap.get(child.config.fieldId);
+          const field = fieldMap.get((child.config as FieldDisplayConfig).fieldId);
           if (field) {
             fields.push(field);
             rowFieldIds.push(field.id);
@@ -53,9 +53,9 @@ export function deriveFormFields(layout: TypeLayout, customFields: CustomField[]
       return;
     }
 
-    switch (block.type) {
+    switch (node.type) {
       case 'field_display': {
-        const field = fieldMap.get(block.config.fieldId);
+        const field = fieldMap.get((node.config as FieldDisplayConfig).fieldId);
         if (field) {
           fields.push(field);
           formElementIndex++;
@@ -70,9 +70,10 @@ export function deriveFormFields(layout: TypeLayout, customFields: CustomField[]
       }
 
       case 'text_label': {
+        const config = node.config as TextLabelConfig;
         sections.push({
-          text: block.config.text,
-          style: block.config.style,
+          text: config.text,
+          style: config.style,
           beforeFieldIndex: formElementIndex,
         });
         break;
@@ -89,8 +90,8 @@ export function deriveFormFields(layout: TypeLayout, customFields: CustomField[]
     }
   }
 
-  for (const block of layout.blocks) {
-    processBlock(block);
+  for (const node of layout.blocks) {
+    processNode(node);
   }
 
   return { fields, rows, sections, photoPosition };

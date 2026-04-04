@@ -1,3 +1,5 @@
+import type { TypeLayout } from '@/lib/layout/types';
+
 // ======================
 // Enums / Union types
 // ======================
@@ -48,6 +50,7 @@ export interface ItemType {
   icon: string;
   color: string;
   sort_order: number;
+  layout: TypeLayout | null;
   created_at: string;
   org_id: string;
 }

@@ -22,6 +22,7 @@ import { getPropertyGeoLayersPublic, getGeoLayerPublic } from "@/app/admin/geo-l
 import { clipLayerToBoundary, filterItemsByBoundary } from "@/lib/geo/spatial";
 import type { GeoLayerSummary, GeoLayerProperty } from "@/lib/geo/types";
 import type { FeatureCollection } from "geojson";
+import type { SheetState } from "@/components/ui/MultiSnapBottomSheet";
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
@@ -61,6 +62,8 @@ function HomeMapViewContent() {
   const config = useConfig();
   const propertyId = config.propertyId;
   const offlineStore = useOfflineStore();
+
+  const [sheetState, setSheetState] = useState<SheetState | null>(null);
 
   const [geoLayers, setGeoLayers] = useState<GeoLayerSummary[]>([]);
   const [visibleGeoLayerIds, setVisibleGeoLayerIds] = useState<Set<string>>(new Set());
@@ -286,6 +289,7 @@ function HomeMapViewContent() {
         boundaryGeoJSON={boundaryGeoJSON}
         visibleGeoLayerIds={visibleGeoLayerIds}
         onToggleGeoLayer={handleToggleGeoLayer}
+        sheetState={selectedItem ? sheetState : null}
       />
 
       {/* List view link */}
@@ -303,6 +307,7 @@ function HomeMapViewContent() {
         isAuthenticated={isAuthenticated}
         canEditItem={permissions.items.edit_any || permissions.items.edit_assigned}
         canAddUpdate={permissions.updates.create}
+        onSheetStateChange={setSheetState}
       />
     </div>
   );

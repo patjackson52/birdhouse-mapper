@@ -48,6 +48,7 @@ describe('ItemType structure', () => {
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
       org_id: 'org-1',
+      layout: null,
     };
     expect(type.icon).toBe('🏠');
   });
@@ -123,7 +124,7 @@ describe('ItemWithDetails composite type', () => {
   it('assembles a full item with type, updates, photos, and custom fields', () => {
     const itemType: ItemType = {
       id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
-      sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1',
+      sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1', layout: null,
     };
 
     const updateType: UpdateType = {
@@ -322,7 +323,7 @@ describe('ItemWithDetails with entities', () => {
 
     const itemType: ItemType = {
       id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
-      sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1',
+      sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1', layout: null,
     };
 
     const updateType: UpdateType = {
