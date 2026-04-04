@@ -29,50 +29,55 @@ export default function ListPage() {
     async function fetchData() {
       if (!propertyId) { setLoading(false); return; }
 
-      // Resolve orgId from the properties table in IndexedDB
-      let property = await offlineStore.db.properties.get(propertyId);
+      try {
+        // Resolve orgId from the properties table in IndexedDB
+        let property = await offlineStore.db.properties.get(propertyId);
 
-      // If no property in IndexedDB yet and we're online, bootstrap from Supabase
-      if (!property && offlineStore.isOnline) {
-        try {
-          const { createClient } = await import("@/lib/supabase/client");
-          const supabase = createClient();
-          const { data: propData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
-          if (propData) {
-            await offlineStore.db.properties.put({ ...propData, _synced_at: new Date().toISOString() });
-            await offlineStore.syncProperty(propertyId, propData.org_id);
-            property = await offlineStore.db.properties.get(propertyId);
+        // If no property in IndexedDB yet and we're online, bootstrap from Supabase
+        if (!property && offlineStore.isOnline) {
+          try {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            const { data: propData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
+            if (propData) {
+              await offlineStore.db.properties.put({ ...propData, _synced_at: new Date().toISOString() });
+              await offlineStore.syncProperty(propertyId, propData.org_id);
+              property = await offlineStore.db.properties.get(propertyId);
+            }
+          } catch {
+            // Fall through to read whatever is cached
           }
-        } catch {
-          // Fall through to read whatever is cached
         }
-      }
 
-      const orgId = property?.org_id;
+        const orgId = property?.org_id;
 
-      const [itemData, typeData, fieldData] = await Promise.all([
-        offlineStore.getItems(propertyId),
-        orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
-        orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
-      ]);
+        const [itemData, typeData, fieldData] = await Promise.all([
+          offlineStore.getItems(propertyId),
+          orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
+          orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
+        ]);
 
-      setItems(itemData);
-      setItemTypes(typeData);
-      setCustomFields(fieldData);
-      setLoading(false);
+        setItems(itemData);
+        setItemTypes(typeData);
+        setCustomFields(fieldData);
 
-      // Background sync refresh
-      if (orgId && offlineStore.isOnline) {
-        offlineStore.syncProperty(propertyId, orgId).then(async () => {
-          const [freshItems, freshTypes, freshFields] = await Promise.all([
-            offlineStore.getItems(propertyId),
-            offlineStore.getItemTypes(orgId!),
-            offlineStore.getCustomFields(orgId!),
-          ]);
-          setItems(freshItems);
-          setItemTypes(freshTypes);
-          setCustomFields(freshFields);
-        });
+        // Background sync refresh
+        if (orgId && offlineStore.isOnline) {
+          offlineStore.syncProperty(propertyId, orgId).then(async () => {
+            const [freshItems, freshTypes, freshFields] = await Promise.all([
+              offlineStore.getItems(propertyId),
+              offlineStore.getItemTypes(orgId!),
+              offlineStore.getCustomFields(orgId!),
+            ]);
+            setItems(freshItems);
+            setItemTypes(freshTypes);
+            setCustomFields(freshFields);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load list data:', err);
+      } finally {
+        setLoading(false);
       }
     }
 
