@@ -44,8 +44,9 @@ export default function GooglePhotosPickerPage() {
       window.close();
     } catch (err) {
       setStatus('error');
+      const baseMsg = err instanceof Error ? err.message : "Couldn't connect to Google Photos";
       setErrorMessage(
-        err instanceof Error ? err.message : "Couldn't connect to Google Photos"
+        `${baseMsg}\n\nIf you see "redirect_uri_mismatch", register ${window.location.origin} as an authorized JavaScript origin in Google Cloud Console.`
       );
     }
   }, []);

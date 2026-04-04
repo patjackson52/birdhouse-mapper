@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { resizeImage } from '@/lib/utils';
 import { uploadLandingAsset } from '@/app/admin/landing/actions';
 import { useConfig } from '@/lib/config/client';
-import { isGooglePhotosConfigured } from '@/lib/google/picker';
+import { isGooglePhotosConfigured, getGooglePhotosPickerUrl } from '@/lib/google/picker';
 
 type Tab = 'library' | 'upload' | 'google-photos' | 'url';
 
@@ -132,16 +132,7 @@ function ImagePickerModal({
   function handleGooglePhotos() {
     setGoogleStatus('loading');
 
-    const getPickerUrl = (maxFiles: number) => {
-      const platformDomain = config.platformDomain;
-      if (platformDomain && platformDomain !== 'localhost') {
-        const protocol = platformDomain.includes('localhost') ? 'http' : 'https';
-        return `${protocol}://${platformDomain}/google-photos-picker?maxFiles=${maxFiles}`;
-      }
-      return `/google-photos-picker?maxFiles=${maxFiles}`;
-    };
-
-    const popup = window.open(getPickerUrl(1), 'google-photos-picker', 'width=900,height=600,scrollbars=yes');
+    const popup = window.open(getGooglePhotosPickerUrl(1, config.platformDomain), 'google-photos-picker', 'width=900,height=600,scrollbars=yes');
     if (!popup) {
       setGoogleStatus('error');
       return;
