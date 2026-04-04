@@ -34,7 +34,7 @@ Nine block types, each purpose-built for item detail display:
 | **Timeline** | Updates, scheduled events, due dates on a vertical list | Show updates toggle, show scheduled toggle, max items |
 | **Text Label** | Static text or section headers | Text content, style (heading / subheading / body / caption) |
 | **Divider** | Visual separator | None — renders a horizontal rule with spacing |
-| **Map Snippet** | Small map showing item location | None — auto-centers on item coordinates |
+| **Map Snippet** | Small map showing item location (desktop side panel only — auto-hidden on mobile where the map is visible behind the bottom sheet) | None — auto-centers on item coordinates |
 | **Action Buttons** | Edit item, add update | None — buttons determined by user permissions |
 
 ### Block Empty States
@@ -89,6 +89,7 @@ interface TypeLayout {
   version: 1;
   blocks: LayoutNode[];
   spacing: SpacingPreset;  // controls global spacing rhythm
+  peekBlockCount: number;  // how many top-level nodes to show in bottom sheet peek state (default: 2)
 }
 
 // A node is either a content block or a row container
@@ -206,8 +207,10 @@ Two-panel side-by-side view within the ItemType admin page:
 ```
 
 - Builder panel: ~60% width, scrollable independently
-- Preview panel: ~40% width, fixed position, scrollable content inside DetailPanel shell
-- Preview updates live as blocks are added, reordered, or configured
+- Preview panel: ~40% width, fixed position, with a tab bar at the top: **Detail Preview | Form Preview**
+- Detail Preview shows the bottom sheet simulation with peek line indicator
+- Form Preview shows the auto-generated add/edit form
+- Both previews update live as blocks are added, reordered, or configured
 
 ### Mobile Layout (<768px) — Full-Screen Mode
 
@@ -217,7 +220,7 @@ The builder opens as a **full-screen overlay** (100dvh × 100vw) to maximize wor
 ┌──────────────────────────────┐
 │  ← Bird Box Layout     Done  │  ← sticky header
 ├──────────────────────────────┤
-│  [ Build ]  [ Preview ]      │  ← tab toggle
+│ [ Build ] [ Detail ] [ Form ]│  ← tab toggle
 ├──────────────────────────────┤
 │                              │
 │  (active tab content,        │
@@ -230,15 +233,26 @@ The builder opens as a **full-screen overlay** (100dvh × 100vw) to maximize wor
 **Build tab:**
 - Block palette as a horizontally scrollable row of pill buttons (icon + short label)
 - Block list fills remaining space, vertically scrollable
+- A **peek boundary line** appears between blocks to show what's visible in the bottom sheet peek state (label: "Visible on first tap — swipe up for more"). This line is draggable to adjust `peekBlockCount`.
 - Tap a block to expand its config accordion-style (one open at a time)
 - Drag handles: 44×44px minimum touch target with clear grip affordance
 
-**Preview tab:**
-- Renders the DetailPanel at device width inside a container styled to match the real panel shell
+**Detail Preview tab:**
+- Renders the DetailPanel at device width inside a container styled to match the real bottom sheet shell (with handle, peek/half/full snap indicators)
+- Shows a simulated bottom sheet with the peek state visible by default — admin can swipe/tap to see half and full states
 - Scrollable for long layouts
 - Subtle bottom-edge fade when content extends below the fold
+- A dashed line in the preview marks the peek boundary so admins understand what's visible at first glance
 
-**Tab switching** preserves all state. Edits in Build are immediately visible when switching to Preview.
+**Form Preview tab:**
+- Renders the auto-generated Add Item form for this type
+- Form layout is derived from the detail layout: each `field_display` block becomes the corresponding input (text field, number input, dropdown, date picker), in the same order. Rows carry over — fields in a row appear side by side in the form.
+- Fixed form elements always present: name input (top), location picker, status selector, photo uploader, entity selector (if applicable), submit button (bottom)
+- Custom field inputs appear between location and status, matching the layout block order
+- The form preview is interactive — admins can tap into fields to see focus states, dropdowns, etc. but no data is saved
+- Shows both required indicators and placeholder text
+
+**Tab switching** preserves all state. Edits in Build are immediately visible when switching to either Preview tab.
 
 ### Block Palette Interaction
 
@@ -344,10 +358,50 @@ The Layout tab is the default. Most admins never need the Fields tab.
 
 ## DetailPanel Rendering
 
+### Mobile Bottom Sheet — Multi-Snap States
+
+The current BottomSheet has a single open/closed state. This must be upgraded to a **three-snap-point bottom sheet** following the pattern established by Google Maps, Apple Maps, and Airbnb:
+
+| State | Height | What's visible | Map visibility |
+|-------|--------|----------------|----------------|
+| **Peek** | ~25% of viewport | Item name, type icon, status badge, and the first `peekBlockCount` blocks from the layout (default 2). Enough to identify the item at a glance. | Map fully interactive, marker centered above the sheet |
+| **Half** | ~50% of viewport | More blocks visible, user can scroll within the half-height container | Map visible above, partially interactive |
+| **Full** | ~92% of viewport (safe area aware) | All blocks, full scroll | Map hidden behind sheet |
+
+**Transitions between states:**
+- **Swipe up** from peek → half → full (velocity-based snapping — a fast swipe skips half and goes to full)
+- **Swipe down** from full → half → peek → dismiss
+- **Tap the handle area** toggles between peek and half
+- **Scroll within content** — when content is scrolled to top and user pulls down, the sheet collapses rather than overscrolling. When in peek/half and user scrolls content, the sheet expands to accommodate.
+- Spring physics with 300ms duration, slight overshoot for natural feel
+
+**Peek state design:**
+The layout's `peekBlockCount` controls how many top-level nodes render in peek state. The default of 2 typically gives: Status Badge + Photo Gallery hero — enough visual identity without obscuring the map. The peek state always includes the item name and type icon (these are outside the layout, in the shell). A subtle "swipe up for more" affordance (chevron or fade) hints at additional content.
+
+**Safe areas:**
+- Bottom: accounts for home indicator on notched devices (env(safe-area-inset-bottom))
+- The quick-add FAB (currently `fixed bottom-24 right-4`) repositions above the sheet in peek state, hides in half/full state
+- Full state reserves 8% at top so the user can see they're still in the map context and can swipe down
+
+### Desktop Side Panel
+
+The side panel remains at 384px (`w-96`) width. At this width:
+- **Rows auto-collapse to vertical stacking** — the panel is narrower than the 480px row threshold, so all content stacks vertically. This is intentional: the side panel is a constrained context similar to mobile.
+- If a future need arises for wider panels, the row threshold is a single constant to adjust.
+
+The side panel does not use snap states — it opens fully with slide-in animation and scrolls internally.
+
+### Photo Gallery — Edge-to-Edge in Bottom Sheet
+
+When a `photo_gallery` block with `style: 'hero'` is the first or second block in the layout, it renders **edge-to-edge** (no horizontal padding) within the bottom sheet. This creates the visual pattern users expect from map apps — a hero image that bleeds to the panel edges, anchoring the visual identity of the item.
+
+In non-hero positions or with grid/carousel styles, photos render with standard padding.
+
 ### Component Architecture
 
 ```
-DetailPanel (shell — header, close button, panel chrome)
+DetailPanel (shell — bottom sheet on mobile, side panel on desktop)
+  ├── Handle / drag indicator (mobile only)
   ├── Item name + type icon (always present, outside layout)
   └── LayoutRenderer
        ├── StatusBadgeBlock
@@ -357,7 +411,7 @@ DetailPanel (shell — header, close button, panel chrome)
        ├── EntityListBlock
        ├── TextLabelBlock
        ├── DividerBlock
-       ├── MapSnippetBlock
+       ├── MapSnippetBlock (desktop only — auto-hidden on mobile)
        └── ActionButtonsBlock
 ```
 
@@ -368,15 +422,20 @@ interface LayoutRendererProps {
   layout: TypeLayout;
   item: ItemWithDetails;
   mode: 'live' | 'preview';
+  context: 'bottom-sheet' | 'side-panel' | 'preview';
+  sheetState?: 'peek' | 'half' | 'full';  // mobile only
   customFields: CustomField[];
 }
 ```
 
 - Iterates `layout.blocks` in order, renders the matching block component
+- In `peek` state, only renders the first `peekBlockCount` top-level nodes
+- In `half` / `full` / `side-panel`, renders all blocks
 - Each block is wrapped in a React error boundary — one broken block doesn't crash the panel
 - `mode: 'preview'` passes mock data and suppresses network calls
 - `mode: 'live'` passes real item data and fetches timeline/entities as needed
 - Blocks with `hideWhenEmpty: true` check for data presence and render nothing if empty
+- `context` controls platform-specific behavior (e.g., MapSnippet hidden in bottom-sheet context)
 
 ### Mock Data Generation
 
@@ -401,11 +460,62 @@ Photos use placeholder images. Timeline shows 3 sample updates with realistic da
 
 ### Scrollable Layouts
 
-Long layouts scroll naturally within the DetailPanel content area. The panel shell (header, close button) remains fixed. Both the preview and live DetailPanel use the same scroll behavior:
+Long layouts scroll naturally within the DetailPanel content area. The panel shell (handle, header) remains fixed. Both the preview and live DetailPanel use the same scroll behavior:
 
-- Content area scrolls independently
+- Content area scrolls independently within the current sheet/panel height
+- On mobile: scrolling at the top of content triggers sheet state change (up = expand, down = collapse) rather than rubber-banding
 - Subtle fade gradient at the bottom edge when more content exists below the fold
-- Scroll position resets to top when opening a different item
+- Scroll position resets to top when opening a different item or when sheet collapses to peek
+
+---
+
+## Auto-Generated Form Layout
+
+The Add/Edit Item form layout is **automatically derived** from the detail layout. Admins do not build the form separately — they build the detail view, and the form follows. The Form Preview tab in the builder shows the result.
+
+### Derivation Rules
+
+The form renderer walks the detail layout and translates display blocks to input blocks:
+
+| Detail Block | Form Equivalent |
+|-------------|-----------------|
+| `field_display` | Corresponding input for the field type (text input, number input, dropdown select, date picker) |
+| `photo_gallery` | Photo uploader (camera + gallery picker) |
+| `status_badge` | Status selector dropdown |
+| `entity_list` | Entity multi-select per entity type |
+| `text_label` | Rendered as-is (section header in form) |
+| `divider` | Rendered as-is (visual break in form) |
+| `timeline` | **Omitted** — no form equivalent (display-only) |
+| `map_snippet` | **Omitted** — location picker is a fixed form element |
+| `action_buttons` | **Omitted** — replaced by Submit/Cancel buttons |
+
+### Fixed Form Elements
+
+These elements are always present in the form regardless of layout, in fixed positions:
+
+1. **Item name** — always first (text input, required)
+2. **Location picker** — always second (map tap or GPS, required)
+3. *(layout-derived fields appear here, preserving block order and row grouping)*
+4. **Photo uploader** — after custom fields (unless a `photo_gallery` block exists in the layout, in which case it renders at that position)
+5. **Submit / Cancel buttons** — always last
+
+### Row Behavior in Forms
+
+Rows from the detail layout carry into the form. Two fields in a row render as side-by-side inputs on wider screens (≥480px) and stack vertically on narrow screens — matching the detail view's responsive behavior. This creates visual consistency between the form and the detail view.
+
+### Form-Specific Considerations
+
+- **Required indicators:** Fields marked as required show a red asterisk next to the label
+- **Validation:** Runs on blur and on submit. Errors appear below the input with red text.
+- **Field order matches detail layout:** If an admin puts "Species" before "Install Date" in the detail view, the form inputs appear in the same order
+- **No separate form layout storage:** The form is derived at render time from the detail layout JSON. No additional database column.
+
+### Why Auto-Generated (Not Separately Designed)
+
+- **Cognitive load:** Non-technical admins would struggle to maintain two separate layouts
+- **Consistency:** The form and detail view stay in sync automatically — adding a field to the detail layout adds the input to the form
+- **Scope:** A separate form builder doubles the builder complexity for marginal benefit
+- **Future path:** If custom form layouts are needed later, a `formLayout` field can be added to the JSON schema. Null = auto-generate (backward compatible).
 
 ---
 
@@ -565,12 +675,12 @@ All animations respect `prefers-reduced-motion: reduce` — transitions become i
 
 ### Responsive Breakpoints
 
-| Width | Layout | Row behavior |
-|-------|--------|-------------|
-| < 480px | Full-screen overlay, tabbed Build/Preview | Rows collapse to vertical stacking |
-| 480–767px | Full-screen overlay, tabbed Build/Preview | Rows display horizontally |
-| 768–1024px | Side-by-side, builder 55% / preview 45% | Rows display horizontally |
-| > 1024px | Side-by-side, builder 60% / preview 40% | Rows display horizontally |
+| Width | Builder layout | Preview | Row behavior |
+|-------|---------------|---------|-------------|
+| < 480px | Full-screen overlay, tabbed Build/Detail/Form | Simulated bottom sheet with peek line | Rows collapse to vertical stacking |
+| 480–767px | Full-screen overlay, tabbed Build/Detail/Form | Simulated bottom sheet with peek line | Rows display horizontally |
+| 768–1024px | Side-by-side, builder 55% / preview 45% | Tabbed Detail/Form in preview panel | Rows display horizontally |
+| > 1024px | Side-by-side, builder 60% / preview 40% | Tabbed Detail/Form in preview panel | Rows display horizontally |
 
 The preview always renders at the width the end user will see — on mobile builder, the preview tab renders at device width. On desktop, the preview panel constrains to typical mobile/panel width to show the realistic view.
 
@@ -584,11 +694,15 @@ The preview always renders at the width the end user will see — on mobile buil
 - Vertical and horizontal composition (rows with 2–4 children, one level deep)
 - Responsive row collapse on narrow screens
 - Layout-first type creation flow
-- Live preview with mock data
-- Mobile full-screen editing
+- **Multi-snap bottom sheet** (peek / half / full) with configurable peek boundary
+- **Auto-generated form layout** with Form Preview tab in builder
+- Live detail and form previews with mock data
+- Mobile full-screen editing with three tabs (Build / Detail / Form)
 - Inline field creation from builder
 - Field sync (add/delete notifications)
 - LayoutRenderer for DetailPanel
+- FormRenderer derived from detail layout
+- Edge-to-edge hero photo rendering in bottom sheet
 - Backward-compatible fallback rendering
 - Database migration (single column)
 - Offline support (cached layout JSON)
@@ -607,6 +721,7 @@ The preview always renders at the width the end user will see — on mobile buil
 - Conditional blocks (show block X only if field Y has value Z)
 - Custom CSS or theme overrides per type
 - Layout builder for UpdateTypes or EntityTypes
+- Custom form layout builder (separate from detail layout — currently auto-generated)
 - A/B testing of layouts
 - Layout analytics (which blocks get seen/interacted with)
 - Per-block spacing overrides (global preset only)
