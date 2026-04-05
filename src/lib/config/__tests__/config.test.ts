@@ -13,6 +13,7 @@ describe('buildSiteConfig', () => {
       setup_complete: true,
     };
     const property = {
+      name: 'Eagle River Property',
       description: 'Bainbridge Island',
       map_default_lat: 47.6,
       map_default_lng: -122.5,
@@ -35,7 +36,7 @@ describe('buildSiteConfig', () => {
 
     const config = buildSiteConfig(org, property);
 
-    expect(config.siteName).toBe('My Bird Project');
+    expect(config.siteName).toBe('Eagle River Property');
     expect(config.tagline).toBe('Tracking nests');
     expect(config.locationName).toBe('Bainbridge Island');
     expect(config.mapCenter).toEqual({ lat: 47.6, lng: -122.5, zoom: 16 });
