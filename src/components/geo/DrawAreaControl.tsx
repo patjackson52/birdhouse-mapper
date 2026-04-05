@@ -9,7 +9,7 @@ import type { Feature, Polygon } from 'geojson';
 
 interface DrawAreaControlProps {
   /** Called when user completes drawing a shape */
-  onAreaDrawn: (area: Feature<Polygon>) => void;
+  onAreaDrawn: (area: Feature<Polygon> | null) => void;
   /** If true, show polygon tool in addition to rectangle */
   allowPolygon?: boolean;
 }
@@ -74,7 +74,7 @@ export default function DrawAreaControl({ onAreaDrawn, allowPolygon = false }: D
 
     const handleDeleted = () => {
       if (drawnItems.getLayers().length === 0) {
-        onAreaDrawn(null as any);
+        onAreaDrawn(null);
       }
     };
 

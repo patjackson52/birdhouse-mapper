@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { GeoLayer } from '@/lib/geo/types';
 import type { Feature, FeatureCollection } from 'geojson';
 import { MAX_CANDIDATE_LAYERS } from '@/lib/geo/constants';
+import { bboxOverlaps } from '@/lib/geo/discovery';
 
 type Bbox = [number, number, number, number];
 
@@ -43,13 +44,7 @@ export async function findCandidateLayers(
     .filter((layer) => {
       if (!layer.bbox) return false;
       if (excludeIds.includes(layer.id)) return false;
-      // Bbox overlap check
-      return (
-        layer.bbox[0] <= searchBbox[2] &&
-        layer.bbox[2] >= searchBbox[0] &&
-        layer.bbox[1] <= searchBbox[3] &&
-        layer.bbox[3] >= searchBbox[1]
-      );
+      return bboxOverlaps(layer.bbox, searchBbox);
     })
     .slice(0, MAX_CANDIDATE_LAYERS);
 

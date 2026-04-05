@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { Fragment, useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import GeoLayerRenderer from './GeoLayerRenderer';
@@ -399,7 +399,7 @@ export default function DiscoverWizard({
                 );
 
                 return (
-                  <div key={group.layerId}>
+                  <Fragment key={group.layerId}>
                     {unselectedFeats.length > 0 && (
                       <GeoLayerRenderer
                         geojson={{ type: 'FeatureCollection', features: unselectedFeats.map((df) => df.feature) }}
@@ -432,7 +432,7 @@ export default function DiscoverWizard({
                         }}
                       />
                     )}
-                  </div>
+                  </Fragment>
                 );
               })}
             </MapContainer>
