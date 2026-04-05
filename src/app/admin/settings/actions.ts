@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { getTenantContext } from '@/lib/tenant/server';
+import { invalidateConfig } from '@/lib/config/server';
 import type { SubscriptionTier, SubscriptionStatus } from '@/lib/types';
 
 export interface OrgSettings {
@@ -100,5 +101,6 @@ export async function updateOrgSettings(
     return { error: error.message };
   }
 
+  invalidateConfig();
   return { success: true };
 }

@@ -81,7 +81,7 @@ export function buildSiteConfig(
   }
 ): SiteConfig {
   return {
-    siteName: org.name,
+    siteName: property.name ?? org.name,
     propertyName: property.name ?? null,
     pwaName: property.pwa_name ?? org.pwa_name ?? null,
     tagline: org.tagline ?? '',
