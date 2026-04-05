@@ -31,6 +31,11 @@ export default function Navigation({
     return null;
   }
 
+  // Hide on routes that have their own shell navigation
+  if (pathname.startsWith('/org') || pathname.startsWith('/account') || /^\/p\/[^/]+\/(admin|add|edit|list|activity)/.test(pathname) || /^\/p\/[^/]+$/.test(pathname)) {
+    return null;
+  }
+
   const baseLinks = config.landingPage?.enabled
     ? [
         { href: '/', label: 'Home', icon: HomeIcon },
