@@ -20,6 +20,7 @@ const ORG_NAV_ITEMS: SidebarItem[] = [
   { label: 'Members', href: '/org/members' },
   { label: 'Roles', href: '/org/roles' },
   { type: 'section', label: 'Data' },
+  { label: 'Knowledge', href: '/admin/knowledge' },
   { label: 'Item Types', href: '/org/types' },
   { label: 'Entity Types', href: '/org/entity-types' },
   { label: 'Data Vault', href: '/org/vault' },
