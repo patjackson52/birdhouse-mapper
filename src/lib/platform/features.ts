@@ -12,6 +12,7 @@ export const PLATFORM_FEATURES = {
   ai_context:     { type: 'boolean' as const, label: 'AI Context' },
   custom_domains: { type: 'boolean' as const, label: 'Custom Domains' },
   site_builder:   { type: 'boolean' as const, label: 'Site Builder' },
+  knowledge:      { type: 'boolean' as const, label: 'Knowledge Base' },
   // Numeric limits (null = unlimited)
   max_properties:         { type: 'numeric' as const, label: 'Max Properties' },
   max_members:            { type: 'numeric' as const, label: 'Max Members' },
@@ -32,22 +33,22 @@ export type FeatureMap = {
 export const TIER_DEFAULTS: Record<SubscriptionTier, FeatureMap> = {
   free: {
     tasks: false, volunteers: false, public_forms: true, qr_codes: false,
-    reports: false, ai_context: false, custom_domains: false, site_builder: false,
+    reports: false, ai_context: false, custom_domains: false, site_builder: false, knowledge: false,
     max_properties: 1, max_members: 5, storage_limit_mb: 100, max_ai_context_entries: 0,
   },
   community: {
     tasks: true, volunteers: true, public_forms: true, qr_codes: true,
-    reports: false, ai_context: false, custom_domains: false, site_builder: false,
+    reports: false, ai_context: false, custom_domains: false, site_builder: false, knowledge: false,
     max_properties: 3, max_members: 25, storage_limit_mb: 500, max_ai_context_entries: 10,
   },
   pro: {
     tasks: true, volunteers: true, public_forms: true, qr_codes: true,
-    reports: true, ai_context: true, custom_domains: true, site_builder: true,
+    reports: true, ai_context: true, custom_domains: true, site_builder: true, knowledge: true,
     max_properties: null, max_members: null, storage_limit_mb: 5000, max_ai_context_entries: 100,
   },
   municipal: {
     tasks: true, volunteers: true, public_forms: true, qr_codes: true,
-    reports: true, ai_context: true, custom_domains: true, site_builder: true,
+    reports: true, ai_context: true, custom_domains: true, site_builder: true, knowledge: true,
     max_properties: null, max_members: null, storage_limit_mb: null, max_ai_context_entries: null,
   },
 };
