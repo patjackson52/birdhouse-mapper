@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
@@ -29,6 +29,8 @@ type Property = {
 export default function PropertyMembersPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const pathname = usePathname();
+  const propertyBase = pathname.includes('/p/') ? `/p/${slug}/admin` : `/admin/properties/${slug}`;
 
   const [isPending, startTransition] = useTransition();
   const queryClient = useQueryClient();
@@ -140,7 +142,7 @@ export default function PropertyMembersPage() {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <Link
-          href={`/admin/properties/${slug}`}
+          href={propertyBase}
           className="text-sm text-sage hover:text-forest-dark mb-4 inline-block"
         >
           ← Back to Property
