@@ -37,9 +37,20 @@ export async function GET(request: Request) {
 
     if (!error) {
       if (context === 'platform') {
-        // Check if user has an org membership
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          // Platform admins go straight to /platform
+          const { data: profile } = await supabase
+            .from('users')
+            .select('is_platform_admin')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.is_platform_admin) {
+            return NextResponse.redirect(new URL('/platform', origin));
+          }
+
+          // Check if user has an org membership
           const { data: membership } = await supabase
             .from('org_memberships')
             .select('orgs(slug, custom_domains(domain, is_primary))')
