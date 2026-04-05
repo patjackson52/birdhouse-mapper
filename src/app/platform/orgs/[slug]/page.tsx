@@ -258,159 +258,237 @@ export default function PlatformOrgDetailPage() {
       <div className="card p-4">
         <h2 className="font-heading text-sm font-semibold text-forest-dark mb-4">Feature Configuration</h2>
         <p className="text-xs text-sage mb-4">
-          Showing resolved features for <span className="capitalize font-medium">{editTier}</span> tier.
-          Toggle overrides to customize this org.
+          Showing features for <span className="capitalize font-medium">{editTier}</span> tier.
+          Toggle to override. Changes that match the tier default are automatically cleared.
         </p>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-sage-light">
-                <th className="text-left px-3 py-2 text-xs font-medium text-sage uppercase">Feature</th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-sage uppercase">Tier Default</th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-sage uppercase">Override</th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-sage uppercase">Resolved</th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-sage uppercase">Note</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sage-light">
-              {featureKeys.map((key) => {
-                const def = PLATFORM_FEATURES[key];
-                const tierDefault = tierDefaults[key];
-                const override = overrideMap.get(key);
-                const resolved = override ? override.value : tierDefault;
-                const hasOverride = override !== undefined;
 
-                return (
-                  <FeatureRow
-                    key={key}
-                    featureKey={key}
-                    label={def.label}
-                    type={def.type}
-                    tierDefault={tierDefault}
-                    override={override ?? null}
-                    resolved={resolved}
-                    hasOverride={hasOverride}
-                    onSetOverride={(value, note) => handleSetOverride(key, value, note)}
-                    onRemoveOverride={() => handleRemoveOverride(key)}
-                  />
-                );
-              })}
-            </tbody>
-          </table>
+        {/* Boolean features */}
+        <div className="space-y-3 mb-6">
+          {featureKeys
+            .filter((key) => PLATFORM_FEATURES[key].type === 'boolean')
+            .map((key) => {
+              const def = PLATFORM_FEATURES[key];
+              const tierDefault = tierDefaults[key] as boolean;
+              const override = overrideMap.get(key);
+              const resolved = override ? (override.value as boolean) : tierDefault;
+              const hasOverride = override !== undefined;
+
+              return (
+                <BooleanFeatureRow
+                  key={key}
+                  featureKey={key}
+                  label={def.label}
+                  tierDefault={tierDefault}
+                  resolved={resolved}
+                  hasOverride={hasOverride}
+                  note={override?.note ?? null}
+                  onToggle={async (newValue) => {
+                    if (newValue === tierDefault) {
+                      await handleRemoveOverride(key);
+                    } else {
+                      await handleSetOverride(key, newValue, override?.note ?? undefined);
+                    }
+                  }}
+                  onNoteChange={async (note) => {
+                    await handleSetOverride(key, resolved, note);
+                  }}
+                />
+              );
+            })}
+        </div>
+
+        {/* Numeric limits */}
+        <h3 className="text-xs font-semibold text-sage uppercase tracking-wide mb-3">Limits</h3>
+        <div className="space-y-3">
+          {featureKeys
+            .filter((key) => PLATFORM_FEATURES[key].type === 'numeric')
+            .map((key) => {
+              const def = PLATFORM_FEATURES[key];
+              const tierDefault = tierDefaults[key] as number | null;
+              const override = overrideMap.get(key);
+              const resolved = override ? (override.value as number | null) : tierDefault;
+              const hasOverride = override !== undefined;
+
+              return (
+                <NumericFeatureRow
+                  key={key}
+                  featureKey={key}
+                  label={def.label}
+                  tierDefault={tierDefault}
+                  resolved={resolved}
+                  hasOverride={hasOverride}
+                  note={override?.note ?? null}
+                  onValueChange={async (newValue) => {
+                    if (newValue === tierDefault) {
+                      await handleRemoveOverride(key);
+                    } else {
+                      await handleSetOverride(key, newValue, override?.note ?? undefined);
+                    }
+                  }}
+                  onNoteChange={async (note) => {
+                    await handleSetOverride(key, resolved, note);
+                  }}
+                />
+              );
+            })}
         </div>
       </div>
     </div>
   );
 }
 
-function FeatureRow({
+function BooleanFeatureRow({
   featureKey,
   label,
-  type,
   tierDefault,
-  override,
   resolved,
   hasOverride,
-  onSetOverride,
-  onRemoveOverride,
+  note,
+  onToggle,
+  onNoteChange,
 }: {
   featureKey: string;
   label: string;
-  type: 'boolean' | 'numeric';
-  tierDefault: boolean | number | null;
-  override: Override | null;
-  resolved: unknown;
+  tierDefault: boolean;
+  resolved: boolean;
   hasOverride: boolean;
-  onSetOverride: (value: unknown, note?: string) => void;
-  onRemoveOverride: () => void;
+  note: string | null;
+  onToggle: (newValue: boolean) => void;
+  onNoteChange: (note: string | undefined) => void;
 }) {
-  // Local state for text/numeric inputs — saves on blur, not every keystroke
-  const [localNote, setLocalNote] = useState(override?.note ?? '');
-  const [localNumeric, setLocalNumeric] = useState(
-    override?.value === null ? '' : String(override?.value ?? ''),
-  );
+  const [localNote, setLocalNote] = useState(note ?? '');
+  const [busy, setBusy] = useState(false);
 
-  // Sync local state when override changes from parent (e.g., after refetch)
   useEffect(() => {
-    setLocalNote(override?.note ?? '');
-    setLocalNumeric(override?.value === null ? '' : String(override?.value ?? ''));
-  }, [override?.note, override?.value]);
+    setLocalNote(note ?? '');
+  }, [note]);
 
-  function formatValue(val: unknown): string {
-    if (val === null) return 'unlimited';
-    if (typeof val === 'boolean') return val ? 'true' : 'false';
-    return String(val);
+  return (
+    <div className={`flex items-center gap-3 py-2 px-3 rounded ${hasOverride ? 'bg-amber-50' : ''}`}>
+      {/* Toggle switch */}
+      <button
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          await onToggle(!resolved);
+          setBusy(false);
+        }}
+        className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+          resolved ? 'bg-green-500' : 'bg-gray-300'
+        } ${busy ? 'opacity-50' : ''}`}
+        aria-label={`Toggle ${label}`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+            resolved ? 'translate-x-4' : 'translate-x-0'
+          }`}
+        />
+      </button>
+
+      {/* Label + default info */}
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-forest-dark">{label}</span>
+        {hasOverride && (
+          <span className="ml-2 text-xs text-amber-600">
+            overridden (default: {tierDefault ? 'on' : 'off'})
+          </span>
+        )}
+      </div>
+
+      {/* Note — only visible when overridden */}
+      {hasOverride && (
+        <input
+          type="text"
+          value={localNote}
+          onChange={(e) => setLocalNote(e.target.value)}
+          onBlur={() => {
+            if (localNote !== (note ?? '')) {
+              onNoteChange(localNote || undefined);
+            }
+          }}
+          placeholder="Note..."
+          className="input-field text-xs py-1 w-36"
+        />
+      )}
+    </div>
+  );
+}
+
+function NumericFeatureRow({
+  featureKey,
+  label,
+  tierDefault,
+  resolved,
+  hasOverride,
+  note,
+  onValueChange,
+  onNoteChange,
+}: {
+  featureKey: string;
+  label: string;
+  tierDefault: number | null;
+  resolved: number | null;
+  hasOverride: boolean;
+  note: string | null;
+  onValueChange: (newValue: number | null) => void;
+  onNoteChange: (note: string | undefined) => void;
+}) {
+  const [localValue, setLocalValue] = useState(resolved === null ? '' : String(resolved));
+  const [localNote, setLocalNote] = useState(note ?? '');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setLocalValue(resolved === null ? '' : String(resolved));
+    setLocalNote(note ?? '');
+  }, [resolved, note]);
+
+  function formatDefault(val: number | null): string {
+    return val === null ? 'unlimited' : String(val);
   }
 
   return (
-    <tr>
-      <td className="px-3 py-2 text-sm text-forest-dark">{label}</td>
-      <td className="px-3 py-2 text-sm text-sage">{formatValue(tierDefault)}</td>
-      <td className="px-3 py-2">
-        {hasOverride ? (
-          <div className="flex items-center gap-2">
-            {type === 'boolean' ? (
-              <button
-                onClick={() => onSetOverride(!(override!.value as boolean))}
-                className={`text-xs px-2 py-0.5 rounded font-medium ${
-                  override!.value ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                }`}
-              >
-                {override!.value ? 'true' : 'false'}
-              </button>
-            ) : (
-              <input
-                type="number"
-                value={localNumeric}
-                onChange={(e) => setLocalNumeric(e.target.value)}
-                onBlur={() => {
-                  const val = localNumeric === '' ? null : Number(localNumeric);
-                  onSetOverride(val, override!.note ?? undefined);
-                }}
-                placeholder="unlimited"
-                className="input-field w-24 text-xs py-1"
-              />
-            )}
-            <button
-              onClick={onRemoveOverride}
-              className="text-xs text-red-500 hover:text-red-700"
-              title="Remove override"
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => {
-              if (type === 'boolean') {
-                onSetOverride(!(tierDefault as boolean));
-              } else {
-                onSetOverride(tierDefault);
-              }
-            }}
-            className="text-xs text-golden hover:underline"
-          >
-            + Override
-          </button>
-        )}
-      </td>
-      <td className={`px-3 py-2 text-sm font-medium ${hasOverride ? 'text-forest-dark' : 'text-sage'}`}>
-        {formatValue(resolved)}
-      </td>
-      <td className="px-3 py-2">
-        {hasOverride ? (
-          <input
-            type="text"
-            value={localNote}
-            onChange={(e) => setLocalNote(e.target.value)}
-            onBlur={() => onSetOverride(override!.value, localNote || undefined)}
-            placeholder="Add note..."
-            className="input-field text-xs py-1 w-full"
-          />
-        ) : (
-          <span className="text-sage text-xs">—</span>
-        )}
-      </td>
-    </tr>
+    <div className={`flex items-center gap-3 py-2 px-3 rounded ${hasOverride ? 'bg-amber-50' : ''}`}>
+      {/* Label */}
+      <div className="flex-1 min-w-0">
+        <span className="text-sm text-forest-dark">{label}</span>
+        <span className="ml-2 text-xs text-sage">
+          (default: {formatDefault(tierDefault)})
+        </span>
+      </div>
+
+      {/* Value input */}
+      <input
+        type="number"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onBlur={async () => {
+          const newValue = localValue === '' ? null : Number(localValue);
+          if (newValue !== resolved) {
+            setBusy(true);
+            await onValueChange(newValue);
+            setBusy(false);
+          }
+        }}
+        placeholder="unlimited"
+        disabled={busy}
+        className={`input-field w-24 text-sm py-1 text-center ${busy ? 'opacity-50' : ''}`}
+      />
+
+      {/* Note — only visible when overridden */}
+      {hasOverride && (
+        <input
+          type="text"
+          value={localNote}
+          onChange={(e) => setLocalNote(e.target.value)}
+          onBlur={() => {
+            if (localNote !== (note ?? '')) {
+              onNoteChange(localNote || undefined);
+            }
+          }}
+          placeholder="Note..."
+          className="input-field text-xs py-1 w-36"
+        />
+      )}
+    </div>
   );
 }
