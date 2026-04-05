@@ -14,7 +14,7 @@ export default function SiteBuilderLayout({ children }: { children: React.ReactN
   const previewWindowRef = useRef<Window | null>(null);
 
   const tabs = [
-    { label: 'Landing Page', href: `${base}/landing` },
+    { label: 'Pages', href: `${base}/pages` },
     { label: 'Header & Footer', href: `${base}/chrome` },
     { label: 'Templates', href: `${base}/templates` },
   ];
