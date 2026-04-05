@@ -7,14 +7,16 @@ interface ContextBarProps {
   orgHref: string;
   propertyName?: string;
   propertyHref?: string;
+  leftContent?: React.ReactNode;
   rightContent?: React.ReactNode;
 }
 
-export function ContextBar({ orgName, orgHref, propertyName, propertyHref, rightContent }: ContextBarProps) {
+export function ContextBar({ orgName, orgHref, propertyName, propertyHref, leftContent, rightContent }: ContextBarProps) {
   return (
     <div className="bg-amber-800 text-white flex-shrink-0">
       <div className="px-4 flex items-center justify-between h-12">
         <div className="flex items-center gap-1.5 text-sm min-w-0">
+          {leftContent && <div className="shrink-0">{leftContent}</div>}
           {propertyName ? (
             <>
               {/* Mobile: back chevron + property name */}

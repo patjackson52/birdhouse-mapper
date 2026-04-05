@@ -90,22 +90,20 @@ export function PropertyAdminShell({
         orgHref="/org"
         propertyName={propertyName}
         propertyHref={base}
-        rightContent={
-          <div className="flex items-center gap-2">
-            <button
-              aria-label="Open menu"
-              onClick={() => setDrawerOpen(true)}
-              className="md:hidden text-white/80 hover:text-white transition-colors"
-            >
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <rect x="2" y="4" width="16" height="2" rx="1" />
-                <rect x="2" y="9" width="16" height="2" rx="1" />
-                <rect x="2" y="14" width="16" height="2" rx="1" />
-              </svg>
-            </button>
-            <AvatarMenu userEmail={userEmail} />
-          </div>
+        leftContent={
+          <button
+            aria-label="Open menu"
+            onClick={() => setDrawerOpen(true)}
+            className="md:hidden text-white/80 hover:text-white transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <rect x="2" y="4" width="16" height="2" rx="1" />
+              <rect x="2" y="9" width="16" height="2" rx="1" />
+              <rect x="2" y="14" width="16" height="2" rx="1" />
+            </svg>
+          </button>
         }
+        rightContent={<AvatarMenu userEmail={userEmail} />}
       />
 
       {/* Mobile drawer */}
