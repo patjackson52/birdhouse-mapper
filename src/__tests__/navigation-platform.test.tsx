@@ -77,26 +77,23 @@ describe('Navigation', () => {
   });
 
   describe('auth-gated nav items', () => {
-    it('hides Manage and Settings when not authenticated', async () => {
+    it('hides Admin link when not authenticated', async () => {
       mockUser = null;
       mockPathname = '/map';
       render(<Navigation />);
 
-      // Wait for auth check to resolve
       await waitFor(() => {
-        expect(screen.queryByText('Manage')).toBeNull();
+        expect(screen.queryByText('Admin')).toBeNull();
       });
-      expect(screen.queryByTitle('Site Settings')).toBeNull();
     });
 
-    it('shows Manage and Settings when authenticated', async () => {
+    it('shows Admin link when authenticated', async () => {
       mockUser = { id: 'user-1', email: 'test@test.com' };
       mockPathname = '/map';
       render(<Navigation isAuthenticated={true} />);
 
       await waitFor(() => {
-        // Desktop nav has text "Manage", mobile has "Manage" too
-        expect(screen.getAllByText('Manage').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Admin').length).toBeGreaterThan(0);
       });
     });
   });

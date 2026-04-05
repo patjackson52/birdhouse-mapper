@@ -46,7 +46,7 @@ export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSideba
         const navItem = item as { label: string; href: string };
         const isActive =
           pathname === navItem.href ||
-          (navItem.href !== '/admin' && pathname.startsWith(navItem.href));
+          (navItem.href !== '/admin' && navItem.href !== '/org' && pathname.startsWith(navItem.href));
         return (
           <Link
             key={navItem.href}

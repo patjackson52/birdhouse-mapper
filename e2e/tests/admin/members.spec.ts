@@ -8,8 +8,8 @@ test.describe('Admin Members', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test('members page loads', async ({ page }) => {
-    await page.goto(`/admin/properties/${TEST_DATA.property.slug}/members`);
+    await page.goto(`/p/${TEST_DATA.property.slug}/admin/members`);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Admin').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=Members').first()).toBeVisible({ timeout: 10000 });
   });
 });

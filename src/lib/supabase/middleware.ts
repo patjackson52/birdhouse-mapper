@@ -167,6 +167,14 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // --- IA migration redirects ---
+  const iaRedirect = getIaRedirect(pathname);
+  if (iaRedirect) {
+    const url = request.nextUrl.clone();
+    url.pathname = iaRedirect;
+    return NextResponse.redirect(url, 308);
+  }
+
   // --- Setup complete check ---
   const isSetupRoute = pathname === '/setup' || pathname.startsWith('/setup/');
   const isAuthCallback = pathname.startsWith('/api/auth/');
@@ -214,7 +222,10 @@ export async function updateSession(request: NextRequest) {
   // --- Auth checks (only for protected routes) ---
   const isProtectedRoute =
     pathname.startsWith('/manage') ||
-    pathname.startsWith('/admin');
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/org') ||
+    pathname.startsWith('/p/') ||
+    pathname.startsWith('/account');
 
   if (!isProtectedRoute) {
     return supabaseResponse;
@@ -259,14 +270,19 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Temp users cannot access admin routes
-  if (profile?.is_temporary && pathname.startsWith('/admin')) {
+  if (profile?.is_temporary && (pathname.startsWith('/admin') || pathname.startsWith('/org') || /^\/p\/[^/]+\/admin/.test(pathname))) {
     const url = request.nextUrl.clone();
     url.pathname = '/manage';
     return NextResponse.redirect(url);
   }
 
   // Non-admin users cannot access admin routes
-  if (pathname.startsWith('/admin')) {
+  const isAdminRoute =
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/org') ||
+    /^\/p\/[^/]+\/admin/.test(pathname);
+
+  if (isAdminRoute) {
     let isAdmin = profile?.is_platform_admin ?? false;
     if (!isAdmin) {
       const { data } = await supabase
@@ -286,5 +302,76 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  // --- /manage → /p/[slug] redirect ---
+  if (pathname.startsWith('/manage') && tenant.orgId) {
+    const { data: org } = await tenantClient
+      .from('orgs')
+      .select('default_property_id, properties(slug)')
+      .eq('id', tenant.orgId)
+      .single();
+
+    const defaultPropSlug = tenant.propertySlug || (org?.properties as any)?.[0]?.slug;
+    if (defaultPropSlug) {
+      const url = request.nextUrl.clone();
+      const manageMap: Record<string, string> = {
+        '/manage': `/p/${defaultPropSlug}`,
+        '/manage/add': `/p/${defaultPropSlug}/add`,
+        '/manage/update': `/p/${defaultPropSlug}/activity`,
+        '/manage/offline': `/p/${defaultPropSlug}`,
+      };
+
+      const editMatch = pathname.match(/^\/manage\/edit\/(.+)$/);
+      if (editMatch) {
+        url.pathname = `/p/${defaultPropSlug}/edit/${editMatch[1]}`;
+        return NextResponse.redirect(url, 308);
+      }
+
+      if (manageMap[pathname]) {
+        url.pathname = manageMap[pathname];
+        return NextResponse.redirect(url, 308);
+      }
+    }
+  }
+
   return supabaseResponse;
+}
+
+/**
+ * Map old /admin and /manage routes to new IA routes.
+ * Returns the new pathname, or null if no redirect needed.
+ */
+function getIaRedirect(pathname: string): string | null {
+  // /admin/properties/[slug]/* → /p/[slug]/admin/*
+  const propertyMatch = pathname.match(/^\/admin\/properties\/([^/]+)(\/.*)?$/);
+  if (propertyMatch) {
+    const slug = propertyMatch[1];
+    const rest = propertyMatch[2] ?? '';
+    if (rest === '/types') return '/org/types';
+    if (rest === '/entity-types') return '/org/entity-types';
+    return `/p/${slug}/admin${rest}`;
+  }
+
+  // /admin/* → /org/*
+  const adminMap: Record<string, string> = {
+    '/admin': '/org',
+    '/admin/properties': '/org/properties',
+    '/admin/members': '/org/members',
+    '/admin/roles': '/org/roles',
+    '/admin/vault': '/org/vault',
+    '/admin/ai-context': '/org/ai-context',
+    '/admin/geo-layers': '/org/geo-layers',
+    '/admin/domains': '/org/domains',
+    '/admin/access': '/org/access',
+    '/admin/settings': '/org/settings',
+  };
+
+  const memberMatch = pathname.match(/^\/admin\/members\/(.+)$/);
+  if (memberMatch) return `/org/members/${memberMatch[1]}`;
+
+  const roleMatch = pathname.match(/^\/admin\/roles\/(.+)$/);
+  if (roleMatch) return `/org/roles/${roleMatch[1]}`;
+
+  if (adminMap[pathname]) return adminMap[pathname];
+
+  return null;
 }

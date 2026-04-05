@@ -7,7 +7,10 @@ import { useRef } from 'react';
 export default function SiteBuilderLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { slug } = useParams<{ slug: string }>();
-  const base = `/admin/properties/${slug}/site-builder`;
+  // Derive base from current pathname to work under both /admin/properties/[slug] and /p/[slug]/admin
+  const base = pathname.includes('/p/')
+    ? `/p/${slug}/admin/site-builder`
+    : `/admin/properties/${slug}/site-builder`;
   const previewWindowRef = useRef<Window | null>(null);
 
   const tabs = [
