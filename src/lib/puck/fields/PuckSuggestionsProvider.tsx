@@ -6,20 +6,23 @@ import { extractExternalLinks, type LinkSuggestion } from './link-suggestions';
 
 interface SuggestionsContextValue {
   externalLinks: LinkSuggestion[];
+  pageLinks: LinkSuggestion[];
 }
 
 const SuggestionsContext = createContext<SuggestionsContextValue>({
   externalLinks: [],
+  pageLinks: [],
 });
 
 interface PuckSuggestionsProviderProps {
   data: any;
+  pageLinks?: LinkSuggestion[];
   children: ReactNode;
 }
 
-export function PuckSuggestionsProvider({ data, children }: PuckSuggestionsProviderProps) {
+export function PuckSuggestionsProvider({ data, pageLinks = [], children }: PuckSuggestionsProviderProps) {
   const externalLinks = useMemo(() => extractExternalLinks(data), [data]);
-  const value = useMemo(() => ({ externalLinks }), [externalLinks]);
+  const value = useMemo(() => ({ externalLinks, pageLinks }), [externalLinks, pageLinks]);
 
   return (
     <SuggestionsContext.Provider value={value}>

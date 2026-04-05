@@ -25,9 +25,10 @@ function refreshPreviewWindow() {
 interface PuckPageEditorProps {
   initialData: Data;
   pagePath: string;
+  pageLinks?: Array<{ href: string; label: string }>;
 }
 
-export function PuckPageEditor({ initialData, pagePath }: PuckPageEditorProps) {
+export function PuckPageEditor({ initialData, pagePath, pageLinks = [] }: PuckPageEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const safeInitialData = useMemo(() => sanitizePuckData(initialData), [initialData]);
   const [puckData, setPuckData] = useState<Data>(safeInitialData);
@@ -56,7 +57,7 @@ export function PuckPageEditor({ initialData, pagePath }: PuckPageEditorProps) {
 
   return (
     <div className="h-screen">
-      <PuckSuggestionsProvider data={puckData}>
+      <PuckSuggestionsProvider data={puckData} pageLinks={pageLinks}>
         <Puck
           config={pageConfig}
           data={safeInitialData}
