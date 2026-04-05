@@ -324,6 +324,18 @@ function FeatureRow({
   onSetOverride: (value: unknown, note?: string) => void;
   onRemoveOverride: () => void;
 }) {
+  // Local state for text/numeric inputs — saves on blur, not every keystroke
+  const [localNote, setLocalNote] = useState(override?.note ?? '');
+  const [localNumeric, setLocalNumeric] = useState(
+    override?.value === null ? '' : String(override?.value ?? ''),
+  );
+
+  // Sync local state when override changes from parent (e.g., after refetch)
+  useEffect(() => {
+    setLocalNote(override?.note ?? '');
+    setLocalNumeric(override?.value === null ? '' : String(override?.value ?? ''));
+  }, [override?.note, override?.value]);
+
   function formatValue(val: unknown): string {
     if (val === null) return 'unlimited';
     if (typeof val === 'boolean') return val ? 'true' : 'false';
@@ -349,9 +361,10 @@ function FeatureRow({
             ) : (
               <input
                 type="number"
-                value={override!.value === null ? '' : String(override!.value)}
-                onChange={(e) => {
-                  const val = e.target.value === '' ? null : Number(e.target.value);
+                value={localNumeric}
+                onChange={(e) => setLocalNumeric(e.target.value)}
+                onBlur={() => {
+                  const val = localNumeric === '' ? null : Number(localNumeric);
                   onSetOverride(val, override!.note ?? undefined);
                 }}
                 placeholder="unlimited"
@@ -388,8 +401,9 @@ function FeatureRow({
         {hasOverride ? (
           <input
             type="text"
-            value={override!.note ?? ''}
-            onChange={(e) => onSetOverride(override!.value, e.target.value || undefined)}
+            value={localNote}
+            onChange={(e) => setLocalNote(e.target.value)}
+            onBlur={() => onSetOverride(override!.value, localNote || undefined)}
             placeholder="Add note..."
             className="input-field text-xs py-1 w-full"
           />
