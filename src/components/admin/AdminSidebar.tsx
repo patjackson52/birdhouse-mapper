@@ -12,9 +12,10 @@ interface AdminSidebarProps {
   items: SidebarItem[];
   backLink?: { label: string; href: string };
   onNavClick?: () => void;
+  hideTitle?: boolean;
 }
 
-export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSidebarProps) {
+export function AdminSidebar({ title, items, backLink, onNavClick, hideTitle }: AdminSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -28,9 +29,11 @@ export function AdminSidebar({ title, items, backLink, onNavClick }: AdminSideba
           ← {backLink.label}
         </Link>
       )}
-      <div className="px-4 py-3 font-bold text-forest-dark text-sm">
-        {title}
-      </div>
+      {!hideTitle && (
+        <div className="px-4 py-3 font-bold text-forest-dark text-sm">
+          {title}
+        </div>
+      )}
       {items.map((item, i) => {
         if ('type' in item && item.type === 'section') {
           return (
