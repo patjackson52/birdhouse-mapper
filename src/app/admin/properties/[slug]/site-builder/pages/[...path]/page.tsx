@@ -39,6 +39,15 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
   const data = (puckPagesDraft?.[pagePath] ?? puckPages?.[pagePath] ?? emptyPageData) as Data;
   const pageTitle = pagePath === '/' ? 'Home' : (puckPageMeta?.[pagePath]?.title ?? pagePath);
 
+  // Build page links for the link field suggestions
+  const pageLinks: Array<{ href: string; label: string }> = [];
+  if (puckPagesDraft?.['/'] || puckPages?.['/']) {
+    pageLinks.push({ href: '/', label: 'Home' });
+  }
+  for (const [path, meta] of Object.entries(puckPageMeta ?? {})) {
+    pageLinks.push({ href: path, label: (meta as { title: string }).title });
+  }
+
   const backHref = `/admin/properties/${slug}/site-builder/pages`;
 
   return (
@@ -50,7 +59,7 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
         <span className="text-gray-400">/</span>
         <span className="font-medium text-gray-900">{pageTitle}</span>
       </div>
-      <PuckPageEditor initialData={data} pagePath={pagePath} />
+      <PuckPageEditor initialData={data} pagePath={pagePath} pageLinks={pageLinks} />
     </div>
   );
 }
