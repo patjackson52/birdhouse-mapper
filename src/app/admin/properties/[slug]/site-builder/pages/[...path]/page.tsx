@@ -44,11 +44,14 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
   if (puckPagesDraft?.['/'] || puckPages?.['/']) {
     pageLinks.push({ href: '/', label: 'Home' });
   }
-  for (const [path, meta] of Object.entries(puckPageMeta ?? {})) {
-    pageLinks.push({ href: path, label: (meta as { title: string }).title });
+  for (const [metaPath, meta] of Object.entries(puckPageMeta ?? {})) {
+    if (metaPath === '/') continue; // landing page already added above
+    pageLinks.push({ href: metaPath, label: (meta as { title: string }).title });
   }
 
-  const backHref = `/admin/properties/${slug}/site-builder/pages`;
+  // Use relative link so it works under both /admin/properties/[slug] and /p/[slug]/admin
+  const backSegments = pagePath === '/' ? 1 : pathSegments.length;
+  const backHref = '../'.repeat(backSegments) || './';
 
   return (
     <div>

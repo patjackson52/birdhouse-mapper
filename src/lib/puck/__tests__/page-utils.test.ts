@@ -55,7 +55,14 @@ describe('validatePageSlug', () => {
     expect(validatePageSlug('', {})).toBe('URL slug is required');
   });
 
+  it('returns error for invalid characters', () => {
+    expect(validatePageSlug('My Page!', {})).toBe('Slug must contain only lowercase letters, numbers, and hyphens');
+    expect(validatePageSlug('UPPERCASE', {})).toBe('Slug must contain only lowercase letters, numbers, and hyphens');
+    expect(validatePageSlug('has spaces', {})).toBe('Slug must contain only lowercase letters, numbers, and hyphens');
+  });
+
   it('returns null for valid slug', () => {
     expect(validatePageSlug('volunteer', {})).toBeNull();
+    expect(validatePageSlug('my-page-2', {})).toBeNull();
   });
 });

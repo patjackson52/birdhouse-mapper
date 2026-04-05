@@ -93,10 +93,8 @@ describe('createPage', () => {
     const result = await createPage('About Us', 'about-us', false);
     expect(result).toEqual({ success: true });
     expect(lastUpdatePayload).toBeTruthy();
-    expect(lastUpdatePayload.puck_pages['/about-us']).toEqual({
-      root: { props: {} },
-      content: [],
-    });
+    // New pages go to draft only (not published)
+    expect(lastUpdatePayload.puck_pages['/about-us']).toBeUndefined();
     expect(lastUpdatePayload.puck_pages_draft['/about-us']).toEqual({
       root: { props: {} },
       content: [],
@@ -144,8 +142,8 @@ describe('createPage', () => {
       title: 'Home',
       slug: 'home',
     });
-    // New page placed at /
-    expect(lastUpdatePayload.puck_pages['/']).toEqual({
+    // New page placed at / (draft only)
+    expect(lastUpdatePayload.puck_pages_draft['/']).toEqual({
       root: { props: {} },
       content: [],
     });
@@ -159,7 +157,7 @@ describe('createPage', () => {
     const { createPage } = await import('../actions');
     const result = await createPage('Home', 'home', true);
     expect(result).toEqual({ success: true });
-    expect(lastUpdatePayload.puck_pages['/']).toEqual({
+    expect(lastUpdatePayload.puck_pages_draft['/']).toEqual({
       root: { props: {} },
       content: [],
     });

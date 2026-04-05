@@ -12,7 +12,7 @@ test.describe('Site Builder Pages', () => {
   test('pages list loads', async ({ page }) => {
     await page.goto(pagesUrl);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=All Pages')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2:has-text("Pages")')).toBeVisible({ timeout: 10000 });
   });
 
   test('new page modal opens and has auto-slug', async ({ page }) => {
@@ -23,11 +23,11 @@ test.describe('Site Builder Pages', () => {
     await expect(page.locator('text=New Page').first()).toBeVisible();
 
     // Fill title and verify slug auto-generates
-    const titleInput = page.locator('input[placeholder*="Events"]');
+    const titleInput = page.locator('input[placeholder*="About Us"]');
     await titleInput.fill('Test Page');
 
     // The slug input should have auto-populated
-    const slugInput = page.locator('input[placeholder="events"]');
+    const slugInput = page.locator('input[placeholder*="about-us"]');
     await expect(slugInput).toHaveValue('test-page');
   });
 

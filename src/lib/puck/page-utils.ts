@@ -28,6 +28,7 @@ export function validatePageSlug(
   existingMeta: Record<string, PageMeta>
 ): string | null {
   if (!slug) return 'URL slug is required';
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return 'Slug must contain only lowercase letters, numbers, and hyphens';
   if (RESERVED_SLUGS.has(slug)) return 'This URL is reserved by the system';
   const path = `/${slug}`;
   if (path in existingMeta) return 'A page with this URL already exists';

@@ -236,12 +236,11 @@ export async function createPage(title: string, slug: string, isLandingPage: boo
       updatedDraft[displacedPath] = updatedDraft['/'] ?? EMPTY_PUCK_DATA;
       updatedMeta[displacedPath] = { title: 'Home', slug: displacedSlug, createdAt: now };
     }
-    // Place new page at `/`
-    updatedPages['/'] = EMPTY_PUCK_DATA;
+    // Place new page at `/` (draft only — must be published explicitly)
     updatedDraft['/'] = EMPTY_PUCK_DATA;
     updatedMeta['/'] = { ...newMeta, slug };
   } else {
-    updatedPages[path] = EMPTY_PUCK_DATA;
+    // Draft only — must be published explicitly
     updatedDraft[path] = EMPTY_PUCK_DATA;
     updatedMeta[path] = newMeta;
   }
