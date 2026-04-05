@@ -284,6 +284,8 @@ export async function updateSession(request: NextRequest) {
       url.pathname = '/';
       return NextResponse.redirect(url);
     }
+    // Override tenant source so root layout renders minimal shell (no org theme)
+    supabaseResponse.headers.set('x-tenant-source', 'platform');
   }
 
   // Non-admin users cannot access admin routes
