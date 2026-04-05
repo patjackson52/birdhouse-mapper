@@ -223,14 +223,18 @@ export async function createPage(title: string, slug: string, isLandingPage: boo
   const updatedMeta = { ...puckPageMeta };
 
   if (isLandingPage) {
-    // If `/` already has content, move it to `/home`
+    // If `/` already has content, move it to a free slug
     if (updatedPages['/'] || updatedDraft['/']) {
-      updatedPages['/home'] = updatedPages['/'] ?? EMPTY_PUCK_DATA;
-      updatedDraft['/home'] = updatedDraft['/'] ?? EMPTY_PUCK_DATA;
-      // Move meta from `/` to `/home` if it exists
-      if (updatedMeta['/']) {
-        updatedMeta['/home'] = { ...updatedMeta['/'], slug: 'home' };
+      let displacedSlug = 'home';
+      let displacedPath = `/${displacedSlug}`;
+      let counter = 1;
+      while (displacedPath in updatedMeta || displacedPath in updatedDraft) {
+        displacedSlug = `home-${counter++}`;
+        displacedPath = `/${displacedSlug}`;
       }
+      updatedPages[displacedPath] = updatedPages['/'] ?? EMPTY_PUCK_DATA;
+      updatedDraft[displacedPath] = updatedDraft['/'] ?? EMPTY_PUCK_DATA;
+      updatedMeta[displacedPath] = { title: 'Home', slug: displacedSlug, createdAt: now };
     }
     // Place new page at `/`
     updatedPages['/'] = EMPTY_PUCK_DATA;
@@ -270,6 +274,10 @@ export async function deletePage(path: string) {
   if ('error' in pageData) return pageData;
 
   const { puckPages, puckPagesDraft, puckPageMeta } = pageData;
+
+  if (!(path in puckPageMeta) && !(path in puckPagesDraft) && !(path in puckPages)) {
+    return { error: 'Page not found' };
+  }
 
   const updatedPages = { ...puckPages };
   const updatedDraft = { ...puckPagesDraft };
@@ -355,6 +363,10 @@ export async function updatePageMeta(
   path: string,
   updates: { title?: string; slug?: string }
 ) {
+  if (path === '/' && updates.slug) {
+    return { error: 'Cannot change the slug of the landing page. Use setLandingPage instead.' };
+  }
+
   const result = await getPropertyId();
   if ('error' in result) return result;
 

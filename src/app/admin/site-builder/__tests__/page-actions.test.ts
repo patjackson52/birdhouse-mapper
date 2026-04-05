@@ -141,7 +141,7 @@ describe('createPage', () => {
       content: [{ type: 'Hero', props: {} }],
     });
     expect(lastUpdatePayload.puck_page_meta['/home']).toMatchObject({
-      title: 'Old Home',
+      title: 'Home',
       slug: 'home',
     });
     // New page placed at /
