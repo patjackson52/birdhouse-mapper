@@ -40,6 +40,7 @@ export interface SiteConfig {
   puckTemplate: string | null;
   puckPagesDraft: Record<string, unknown> | null;
   puckRootDraft: Record<string, unknown> | null;
+  puckPageMeta: Record<string, { title: string; slug: string; createdAt: string }> | null;
 }
 
 /**
@@ -78,6 +79,7 @@ export function buildSiteConfig(
     puck_template: string | null;
     puck_pages_draft: unknown | null;
     puck_root_draft: unknown | null;
+    puck_page_meta: unknown | null;
   }
 ): SiteConfig {
   return {
@@ -110,5 +112,6 @@ export function buildSiteConfig(
     puckTemplate: property.puck_template ?? null,
     puckPagesDraft: property.puck_pages_draft as Record<string, unknown> | null ?? null,
     puckRootDraft: property.puck_root_draft as Record<string, unknown> | null ?? null,
+    puckPageMeta: property.puck_page_meta as Record<string, { title: string; slug: string; createdAt: string }> | null ?? null,
   };
 }

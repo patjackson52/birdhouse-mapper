@@ -32,6 +32,7 @@ describe('buildSiteConfig', () => {
       puck_template: null,
       puck_pages_draft: null,
       puck_root_draft: null,
+      puck_page_meta: null,
     };
 
     const config = buildSiteConfig(org, property);
@@ -81,6 +82,7 @@ describe('buildSiteConfig', () => {
       puck_template: null,
       puck_pages_draft: null,
       puck_root_draft: null,
+      puck_page_meta: null,
     };
 
     const config = buildSiteConfig(org, property);
@@ -115,6 +117,7 @@ describe('buildSiteConfig', () => {
       puck_template: null,
       puck_pages_draft: null,
       puck_root_draft: null,
+      puck_page_meta: null,
     };
 
     const config = buildSiteConfig(org, property);
@@ -149,6 +152,7 @@ describe('buildSiteConfig', () => {
       puck_template: null,
       puck_pages_draft: null,
       puck_root_draft: null,
+      puck_page_meta: null,
     };
 
     const config = buildSiteConfig(org, property);
