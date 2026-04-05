@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
 import { puckDataSchema } from '@/lib/puck/schemas';
+import { validatePageSlug, type PageMeta } from '@/lib/puck/page-utils';
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -32,7 +33,7 @@ export async function getPuckData() {
   const supabase = createClient();
   const { data: property, error } = await supabase
     .from('properties')
-    .select('puck_pages, puck_root, puck_template, puck_pages_draft, puck_root_draft')
+    .select('puck_pages, puck_root, puck_template, puck_pages_draft, puck_root_draft, puck_page_meta')
     .eq('id', result.propertyId)
     .single();
 
@@ -46,6 +47,7 @@ export async function getPuckData() {
     puckTemplate: property.puck_template,
     puckPagesDraft: property.puck_pages_draft,
     puckRootDraft: property.puck_root_draft,
+    puckPageMeta: property.puck_page_meta as Record<string, PageMeta> | null,
   };
 }
 
@@ -162,6 +164,246 @@ export async function publishPuckRoot() {
   const { error } = await supabase
     .from('properties')
     .update({ puck_root: property.puck_root_draft })
+    .eq('id', result.propertyId);
+
+  if (error) return { error: error.message };
+
+  invalidateConfig();
+  return { success: true as const };
+}
+
+// ---------------------------------------------------------------------------
+// Page CRUD helpers
+// ---------------------------------------------------------------------------
+
+async function getPropertyPageData(propertyId: string) {
+  const supabase = createClient();
+  const { data: property, error } = await supabase
+    .from('properties')
+    .select('puck_pages, puck_pages_draft, puck_page_meta')
+    .eq('id', propertyId)
+    .single();
+
+  if (error || !property) {
+    return { error: `Failed to read page data: ${error?.message ?? 'not found'}` };
+  }
+
+  return {
+    puckPages: (property.puck_pages ?? {}) as Record<string, unknown>,
+    puckPagesDraft: (property.puck_pages_draft ?? {}) as Record<string, unknown>,
+    puckPageMeta: (property.puck_page_meta ?? {}) as Record<string, PageMeta>,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Page CRUD
+// ---------------------------------------------------------------------------
+
+const EMPTY_PUCK_DATA = { root: { props: {} }, content: [] };
+
+export async function createPage(title: string, slug: string, isLandingPage: boolean) {
+  const result = await getPropertyId();
+  if ('error' in result) return result;
+
+  const pageData = await getPropertyPageData(result.propertyId);
+  if ('error' in pageData) return pageData;
+
+  const { puckPages, puckPagesDraft, puckPageMeta } = pageData;
+
+  const slugError = validatePageSlug(slug, puckPageMeta);
+  if (slugError) return { error: slugError };
+
+  const path = `/${slug}`;
+  const now = new Date().toISOString();
+
+  const newMeta: PageMeta = { title, slug, createdAt: now };
+
+  const updatedPages = { ...puckPages };
+  const updatedDraft = { ...puckPagesDraft };
+  const updatedMeta = { ...puckPageMeta };
+
+  if (isLandingPage) {
+    // If `/` already has content, move it to `/home`
+    if (updatedPages['/'] || updatedDraft['/']) {
+      updatedPages['/home'] = updatedPages['/'] ?? EMPTY_PUCK_DATA;
+      updatedDraft['/home'] = updatedDraft['/'] ?? EMPTY_PUCK_DATA;
+      // Move meta from `/` to `/home` if it exists
+      if (updatedMeta['/']) {
+        updatedMeta['/home'] = { ...updatedMeta['/'], slug: 'home' };
+      }
+    }
+    // Place new page at `/`
+    updatedPages['/'] = EMPTY_PUCK_DATA;
+    updatedDraft['/'] = EMPTY_PUCK_DATA;
+    updatedMeta['/'] = { ...newMeta, slug };
+  } else {
+    updatedPages[path] = EMPTY_PUCK_DATA;
+    updatedDraft[path] = EMPTY_PUCK_DATA;
+    updatedMeta[path] = newMeta;
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('properties')
+    .update({
+      puck_pages: updatedPages,
+      puck_pages_draft: updatedDraft,
+      puck_page_meta: updatedMeta as unknown as Record<string, unknown>,
+    })
+    .eq('id', result.propertyId);
+
+  if (error) return { error: error.message };
+
+  invalidateConfig();
+  return { success: true as const };
+}
+
+export async function deletePage(path: string) {
+  if (path === '/') {
+    return { error: 'Cannot delete the landing page' };
+  }
+
+  const result = await getPropertyId();
+  if ('error' in result) return result;
+
+  const pageData = await getPropertyPageData(result.propertyId);
+  if ('error' in pageData) return pageData;
+
+  const { puckPages, puckPagesDraft, puckPageMeta } = pageData;
+
+  const updatedPages = { ...puckPages };
+  const updatedDraft = { ...puckPagesDraft };
+  const updatedMeta = { ...puckPageMeta };
+
+  delete updatedPages[path];
+  delete updatedDraft[path];
+  delete updatedMeta[path];
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('properties')
+    .update({
+      puck_pages: updatedPages,
+      puck_pages_draft: updatedDraft,
+      puck_page_meta: updatedMeta as unknown as Record<string, unknown>,
+    })
+    .eq('id', result.propertyId);
+
+  if (error) return { error: error.message };
+
+  invalidateConfig();
+  return { success: true as const };
+}
+
+export async function setLandingPage(path: string) {
+  if (path === '/') {
+    return { error: 'This page is already the landing page' };
+  }
+
+  const result = await getPropertyId();
+  if ('error' in result) return result;
+
+  const pageData = await getPropertyPageData(result.propertyId);
+  if ('error' in pageData) return pageData;
+
+  const { puckPages, puckPagesDraft, puckPageMeta } = pageData;
+
+  const updatedPages = { ...puckPages };
+  const updatedDraft = { ...puckPagesDraft };
+  const updatedMeta = { ...puckPageMeta };
+
+  // Swap content between path and `/` in all columns
+  const oldLandingPages = updatedPages['/'];
+  const oldLandingDraft = updatedDraft['/'];
+  const oldLandingMeta = updatedMeta['/'];
+
+  updatedPages['/'] = updatedPages[path] ?? EMPTY_PUCK_DATA;
+  updatedDraft['/'] = updatedDraft[path] ?? EMPTY_PUCK_DATA;
+  updatedMeta['/'] = updatedMeta[path]
+    ? { ...updatedMeta[path] }
+    : { title: 'Home', slug: '', createdAt: new Date().toISOString() };
+
+  if (oldLandingPages || oldLandingDraft || oldLandingMeta) {
+    updatedPages[path] = oldLandingPages ?? EMPTY_PUCK_DATA;
+    updatedDraft[path] = oldLandingDraft ?? EMPTY_PUCK_DATA;
+    updatedMeta[path] = oldLandingMeta
+      ? { ...oldLandingMeta }
+      : { title: 'Home', slug: path.slice(1), createdAt: new Date().toISOString() };
+  } else {
+    delete updatedPages[path];
+    delete updatedDraft[path];
+    delete updatedMeta[path];
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('properties')
+    .update({
+      puck_pages: updatedPages,
+      puck_pages_draft: updatedDraft,
+      puck_page_meta: updatedMeta as unknown as Record<string, unknown>,
+    })
+    .eq('id', result.propertyId);
+
+  if (error) return { error: error.message };
+
+  invalidateConfig();
+  return { success: true as const };
+}
+
+export async function updatePageMeta(
+  path: string,
+  updates: { title?: string; slug?: string }
+) {
+  const result = await getPropertyId();
+  if ('error' in result) return result;
+
+  const pageData = await getPropertyPageData(result.propertyId);
+  if ('error' in pageData) return pageData;
+
+  const { puckPages, puckPagesDraft, puckPageMeta } = pageData;
+
+  if (!(path in puckPageMeta)) {
+    return { error: 'Page not found' };
+  }
+
+  const updatedPages = { ...puckPages };
+  const updatedDraft = { ...puckPagesDraft };
+  const updatedMeta = { ...puckPageMeta };
+
+  const currentMeta = { ...updatedMeta[path] };
+
+  if (updates.title !== undefined) {
+    currentMeta.title = updates.title;
+  }
+
+  if (updates.slug !== undefined && updates.slug !== currentMeta.slug) {
+    const slugError = validatePageSlug(updates.slug, updatedMeta);
+    if (slugError) return { error: slugError };
+
+    const newPath = `/${updates.slug}`;
+
+    // Move content to new path
+    updatedPages[newPath] = updatedPages[path] ?? EMPTY_PUCK_DATA;
+    updatedDraft[newPath] = updatedDraft[path] ?? EMPTY_PUCK_DATA;
+    delete updatedPages[path];
+    delete updatedDraft[path];
+    delete updatedMeta[path];
+
+    currentMeta.slug = updates.slug;
+    updatedMeta[newPath] = currentMeta;
+  } else {
+    updatedMeta[path] = currentMeta;
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('properties')
+    .update({
+      puck_pages: updatedPages,
+      puck_pages_draft: updatedDraft,
+      puck_page_meta: updatedMeta as unknown as Record<string, unknown>,
+    })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
