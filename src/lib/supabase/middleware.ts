@@ -224,6 +224,7 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith('/manage') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/org') ||
+    pathname.startsWith('/platform') ||
     pathname.startsWith('/p/') ||
     pathname.startsWith('/account');
 
@@ -274,6 +275,17 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/manage';
     return NextResponse.redirect(url);
+  }
+
+  // Platform admin routes: only is_platform_admin users
+  if (pathname.startsWith('/platform')) {
+    if (!profile?.is_platform_admin) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+    // Override tenant source so root layout renders minimal shell (no org theme)
+    supabaseResponse.headers.set('x-tenant-source', 'platform');
   }
 
   // Non-admin users cannot access admin routes
