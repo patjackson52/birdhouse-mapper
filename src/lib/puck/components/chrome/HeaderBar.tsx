@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useConfig } from '@/lib/config/client';
+import { getLogoUrl } from '@/lib/config/logo';
 import type { HeaderBarProps } from '../../types';
 import { resolveLink } from '../../fields/link-utils';
 import { IconRenderer } from '../../icons/IconRenderer';
@@ -45,7 +46,7 @@ export function HeaderBar({
 }: HeaderBarProps) {
   const config = useConfig();
   const alignClass = layout === 'centered' ? 'text-center' : 'text-left';
-  const displayLogo = logoUrl || config.logoUrl;
+  const displayLogo = logoUrl || (config.logoUrl ? getLogoUrl(config.logoUrl, 'original.png') : null);
   const isGrouped = taglinePosition === 'grouped' && showTagline && config.tagline;
 
   const nameNode = (
