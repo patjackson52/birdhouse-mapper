@@ -127,7 +127,7 @@ export function PropertyAdminShell({
 
       <div className="flex flex-1 min-h-0">
         <div className="hidden md:block">
-          <AdminSidebar title={propertyName} items={items} backLink={backLink} />
+          <AdminSidebar title={propertyName} items={items} backLink={backLink} hideTitle />
         </div>
         <div className="flex-1 overflow-auto p-6">{children}</div>
       </div>

@@ -89,7 +89,7 @@ export function OrgShell({ orgId, orgSlug, userEmail, children }: OrgShellProps)
 
       <div className="flex flex-1 min-h-0">
         <div className="hidden md:block">
-          <AdminSidebar title={orgName} items={ORG_NAV_ITEMS} />
+          <AdminSidebar title={orgName} items={ORG_NAV_ITEMS} hideTitle />
         </div>
         <main className="flex-1 overflow-auto flex flex-col">{children}</main>
       </div>
