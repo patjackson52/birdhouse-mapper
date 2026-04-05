@@ -15,8 +15,8 @@ export function ContextBar({ orgName, orgHref, propertyName, propertyHref, leftC
   return (
     <div className="bg-amber-800 text-white flex-shrink-0">
       <div className="px-4 flex items-center justify-between h-12">
-        <div className="flex items-center gap-1.5 text-sm min-w-0">
-          {leftContent && <div className="shrink-0">{leftContent}</div>}
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          {leftContent && <div className="flex items-center shrink-0">{leftContent}</div>}
           {propertyName ? (
             <>
               {/* Mobile: back chevron + property name */}
@@ -30,15 +30,15 @@ export function ContextBar({ orgName, orgHref, propertyName, propertyHref, leftC
               {/* Desktop: full breadcrumb */}
               <Link
                 href={orgHref}
-                className="hidden md:inline text-white/70 hover:text-white transition-colors truncate"
+                className="hidden md:inline-flex items-center text-white/70 hover:text-white transition-colors truncate"
               >
                 {orgName}
               </Link>
-              <span className="hidden md:inline text-white/40">/</span>
-              <span className="font-medium truncate">{propertyName}</span>
+              <span className="hidden md:inline-flex items-center text-white/40">/</span>
+              <span className="font-medium truncate leading-none">{propertyName}</span>
             </>
           ) : (
-            <span className="font-medium truncate">{orgName}</span>
+            <span className="font-medium truncate leading-none">{orgName}</span>
           )}
         </div>
         {rightContent && <div className="flex items-center gap-2 shrink-0">{rightContent}</div>}
