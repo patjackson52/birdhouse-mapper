@@ -58,8 +58,8 @@ test.describe('Admin Invites', () => {
       page.locator('h2', { hasText: 'Invite Ready' })
     ).toBeVisible({ timeout: 10000 });
 
-    // QR code SVG should be visible
-    await expect(page.locator('svg').first()).toBeVisible();
+    // QR code SVG should be visible (use :visible to skip hidden shell icons)
+    await expect(page.locator('svg:not([aria-hidden])').first()).toBeVisible();
 
     // Invite URL input should contain /invite/ path
     const urlInput = page.locator('input[readonly]');
