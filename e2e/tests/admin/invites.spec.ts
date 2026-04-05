@@ -18,7 +18,7 @@ test.describe('Admin Invites', () => {
 
   test('invites page loads and shows create button', async ({ page }) => {
     await page.goto(
-      `/admin/properties/${TEST_DATA.property.slug}/invites`
+      `/p/${TEST_DATA.property.slug}/admin/invites`
     );
 
     await expect(page.locator('h1', { hasText: 'Invites' })).toBeVisible({
@@ -31,7 +31,7 @@ test.describe('Admin Invites', () => {
 
   test('admin can create an invite and see QR code', async ({ page }) => {
     await page.goto(
-      `/admin/properties/${TEST_DATA.property.slug}/invites`
+      `/p/${TEST_DATA.property.slug}/admin/invites`
     );
 
     // Wait for the page to load
