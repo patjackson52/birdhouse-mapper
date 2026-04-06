@@ -5,6 +5,7 @@ import { getLogoUrl } from '@/lib/config/logo';
 import type { HeaderBarProps } from '../../types';
 import { resolveLink } from '../../fields/link-utils';
 import { IconRenderer } from '../../icons/IconRenderer';
+import { AuthActions } from './AuthActions';
 
 const bgClasses = {
   primary: 'bg-[var(--color-primary)] text-white',
@@ -43,6 +44,7 @@ export function HeaderBar({
   taglineColor,
   links,
   linkColor,
+  showAuthActions,
 }: HeaderBarProps) {
   const config = useConfig();
   const alignClass = layout === 'centered' ? 'text-center' : 'text-left';
@@ -97,25 +99,28 @@ export function HeaderBar({
             )}
           </Link>
 
-          {links && links.length > 0 && (
-            <nav className="flex items-center gap-4">
-              {links.map((link, i) => {
-                const resolved = resolveLink(link.href);
-                return (
-                  <Link
-                    key={i}
-                    href={resolved.href}
-                    target={resolved.target}
-                    rel={resolved.target === '_blank' ? 'noopener noreferrer' : undefined}
-                    className="text-sm hover:underline"
-                    style={linkColor ? { color: linkColor } : undefined}
-                  >
-                    {link.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          )}
+          <div className="flex items-center gap-4">
+            {links && links.length > 0 && (
+              <nav className="flex items-center gap-4">
+                {links.map((link, i) => {
+                  const resolved = resolveLink(link.href);
+                  return (
+                    <Link
+                      key={i}
+                      href={resolved.href}
+                      target={resolved.target}
+                      rel={resolved.target === '_blank' ? 'noopener noreferrer' : undefined}
+                      className="text-sm hover:underline"
+                      style={linkColor ? { color: linkColor } : undefined}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
+            {showAuthActions && <AuthActions linkColor={linkColor} />}
+          </div>
         </div>
 
         {showTagline && !isGrouped && config.tagline && (

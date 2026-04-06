@@ -147,12 +147,14 @@ export interface HeaderBarProps {
   taglineColor?: string;
   links?: Array<{ label: string; href: string | LinkValue }>;
   linkColor?: string;
+  showAuthActions?: boolean;
 }
 
 export interface NavBarProps {
   style: 'horizontal' | 'hamburger' | 'tabs';
   position: 'below-header' | 'sticky';
   showMobileBottomBar: boolean;
+  showAuthActions?: boolean;
 }
 
 export interface AnnouncementBarProps {

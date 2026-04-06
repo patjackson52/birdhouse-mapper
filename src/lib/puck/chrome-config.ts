@@ -34,6 +34,7 @@ export const chromeConfig: Config<ChromeComponents> = {
         layout: 'left-aligned',
         showTagline: false,
         backgroundColor: 'default',
+        showAuthActions: false,
       },
       fields: {
         layout: {
@@ -136,6 +137,14 @@ export const chromeConfig: Config<ChromeComponents> = {
           },
         },
         linkColor: colorPickerField('Link Color'),
+        showAuthActions: {
+          type: 'radio',
+          label: 'Show Admin & Profile',
+          options: [
+            { label: 'Yes', value: true },
+            { label: 'No', value: false },
+          ],
+        },
       },
       resolveFields: (data: any, { fields }: any) => {
         if (!data.props.showTagline) {
@@ -153,6 +162,7 @@ export const chromeConfig: Config<ChromeComponents> = {
         style: 'horizontal',
         position: 'below-header',
         showMobileBottomBar: false,
+        showAuthActions: false,
       },
       fields: {
         style: {
@@ -175,6 +185,14 @@ export const chromeConfig: Config<ChromeComponents> = {
         showMobileBottomBar: {
           type: 'radio',
           label: 'Show Mobile Bottom Bar',
+          options: [
+            { label: 'Yes', value: true },
+            { label: 'No', value: false },
+          ],
+        },
+        showAuthActions: {
+          type: 'radio',
+          label: 'Show Admin & Profile',
           options: [
             { label: 'Yes', value: true },
             { label: 'No', value: false },
