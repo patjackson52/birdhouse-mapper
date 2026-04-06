@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bboxOverlaps, intersectFeaturesWithArea, injectProvenance } from '@/lib/geo/discovery';
+import { bboxOverlaps, intersectFeaturesWithArea, injectProvenance, geometryKey } from '@/lib/geo/discovery';
 import type { Feature, FeatureCollection, Polygon } from 'geojson';
 
 function bboxToPolygon(bbox: [number, number, number, number]): Feature<Polygon> {
@@ -176,5 +176,35 @@ describe('injectProvenance', () => {
     };
     const result = injectProvenance(feature, 'layer-1', 'Source');
     expect(result.properties?._source_layer_id).toBe('layer-1');
+  });
+});
+
+describe('geometryKey', () => {
+  it('returns same key for identical coordinates', () => {
+    const a: Feature = {
+      type: 'Feature',
+      properties: { name: 'A' },
+      geometry: { type: 'Point', coordinates: [-70.5, 43.5] },
+    };
+    const b: Feature = {
+      type: 'Feature',
+      properties: { name: 'B' },
+      geometry: { type: 'Point', coordinates: [-70.5, 43.5] },
+    };
+    expect(geometryKey(a)).toBe(geometryKey(b));
+  });
+
+  it('returns different keys for different coordinates', () => {
+    const a: Feature = {
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'Point', coordinates: [-70.5, 43.5] },
+    };
+    const b: Feature = {
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'Point', coordinates: [-70.6, 43.5] },
+    };
+    expect(geometryKey(a)).not.toBe(geometryKey(b));
   });
 });

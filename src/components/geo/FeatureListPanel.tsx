@@ -123,6 +123,14 @@ export default function FeatureListPanel({
                       {geometryIcon(df.feature.geometry.type)}
                     </span>
                     <span className="text-sm text-gray-700 truncate">{name}</span>
+                    {df.duplicateSources && df.duplicateSources.length > 0 && (
+                      <span
+                        className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full flex-shrink-0"
+                        title={`Also in: ${df.duplicateSources.map((s) => s.layerName).join(', ')}`}
+                      >
+                        {df.duplicateSources.length + 1} layers
+                      </span>
+                    )}
                   </label>
                 );
               })}

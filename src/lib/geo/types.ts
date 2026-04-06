@@ -75,6 +75,8 @@ export interface DiscoveredFeature {
   sourceLayerId: string;
   sourceLayerName: string;
   sourceLayerColor: string;
+  /** Other source layers that contain this same feature (duplicates) */
+  duplicateSources?: Array<{ layerId: string; layerName: string }>;
 }
 
 /** A group of discovered features from a single source layer */

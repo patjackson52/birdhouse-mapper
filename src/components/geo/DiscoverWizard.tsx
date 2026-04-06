@@ -8,7 +8,7 @@ import GeoLayerRenderer from './GeoLayerRenderer';
 import PropertyBoundary from './PropertyBoundary';
 import FeatureListPanel, { featureKey } from './FeatureListPanel';
 import MultiSnapBottomSheet from '@/components/ui/MultiSnapBottomSheet';
-import { intersectFeaturesWithArea, injectProvenance } from '@/lib/geo/discovery';
+import { intersectFeaturesWithArea, injectProvenance, geometryKey } from '@/lib/geo/discovery';
 import { findCandidateLayers, createDiscoveredLayer } from '@/app/admin/properties/[slug]/geo-layers/discover/actions';
 import { DISCOVERY_COLOR_PALETTE, CANDIDATE_FEATURE_WARNING, SELECTION_FEATURE_WARNING } from '@/lib/geo/constants';
 import type { GeoLayer, FeatureGroup, DiscoveredFeature } from '@/lib/geo/types';
@@ -153,14 +153,34 @@ export default function DiscoverWizard({
       }
     });
 
-    setFeatureGroups(groups);
+    // Deduplicate features across source layers by geometry coordinates
+    const seen = new Map<string, { groupIdx: number; featureIdx: number }>();
+    groups.forEach((group, gi) => {
+      group.features = group.features.filter((df, fi) => {
+        const key = geometryKey(df.feature);
+        const existing = seen.get(key);
+        if (existing) {
+          // Mark the first occurrence with this duplicate source
+          const orig = groups[existing.groupIdx].features[existing.featureIdx];
+          if (!orig.duplicateSources) orig.duplicateSources = [];
+          orig.duplicateSources.push({ layerId: df.sourceLayerId, layerName: df.sourceLayerName });
+          return false; // remove duplicate
+        }
+        seen.set(key, { groupIdx: gi, featureIdx: fi });
+        return true;
+      });
+    });
+    // Remove empty groups after dedup
+    const dedupedGroups = groups.filter((g) => g.features.length > 0);
+
+    setFeatureGroups(dedupedGroups);
     setTotalCandidateFeatures(totalFeatures);
     setLoading(false);
 
-    if (groups.length > 0) {
+    if (dedupedGroups.length > 0) {
       // Auto-select all features
       const allKeys = new Set<string>();
-      groups.forEach((g) =>
+      dedupedGroups.forEach((g) =>
         g.features.forEach((_, i) => allKeys.add(featureKey(g.layerId, i)))
       );
       setSelectedIds(allKeys);

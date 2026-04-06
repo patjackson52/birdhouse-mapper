@@ -60,6 +60,18 @@ export function intersectFeaturesWithArea(
 }
 
 /**
+ * Create a string key from a feature's geometry coordinates for deduplication.
+ * Two features with identical coordinates (regardless of source layer) get the same key.
+ */
+export function geometryKey(feature: Feature): string {
+  const geom = feature.geometry;
+  if ('coordinates' in geom) {
+    return JSON.stringify(geom.coordinates);
+  }
+  return JSON.stringify(geom);
+}
+
+/**
  * Return a copy of the feature with source provenance injected into properties.
  * Does not mutate the original.
  */
