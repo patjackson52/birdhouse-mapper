@@ -41,7 +41,10 @@ export async function runParcelLookup(input: ParcelLookupInput): Promise<ParcelL
   }
 
   if (!config) {
-    return emptyResult('not_found', `No parcel data source found for ${fipsResult.county_name} County.`);
+    const countyLabel = fipsResult.county_name.toLowerCase().includes('county')
+      ? fipsResult.county_name
+      : `${fipsResult.county_name} County`;
+    return emptyResult('not_found', `No parcel data source found for ${countyLabel}.`);
   }
 
   // Step 4: Query parcels at point

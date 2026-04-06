@@ -14,8 +14,9 @@ beforeEach(() => {
 });
 
 describe('searchArcGISHub', () => {
-  it('returns matching feature service URLs', async () => {
-    mockFetch.mockResolvedValueOnce({
+  it('returns matching feature service URLs from first successful query', async () => {
+    // First query returns a parcel result — stops early since we have enough
+    const hubResponse = {
       ok: true,
       json: async () => ({
         results: [
@@ -31,15 +32,36 @@ describe('searchArcGISHub', () => {
           },
         ],
       }),
-    });
+    };
+    // Mock enough responses for the multi-query approach
+    mockFetch.mockResolvedValue(hubResponse);
 
     const results = await searchArcGISHub('Kitsap', 'WA');
-    expect(results.length).toBe(1);
+    expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results[0].title).toBe('Tax Parcel Polygons');
   });
 
-  it('returns empty array on error', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+  it('deduplicates results across multiple queries', async () => {
+    const sameResult = {
+      ok: true,
+      json: async () => ({
+        results: [
+          {
+            title: 'Tax Parcels',
+            url: 'https://example.com/Parcels/FeatureServer',
+          },
+        ],
+      }),
+    };
+    mockFetch.mockResolvedValue(sameResult);
+
+    const results = await searchArcGISHub('Test', 'WA');
+    // Same URL returned by multiple queries should be deduplicated
+    expect(results.length).toBe(1);
+  });
+
+  it('returns empty array when all queries error', async () => {
+    mockFetch.mockRejectedValue(new Error('Network error'));
     const results = await searchArcGISHub('Test', 'WA');
     expect(results).toEqual([]);
   });

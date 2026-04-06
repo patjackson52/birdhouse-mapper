@@ -16,32 +16,46 @@ export async function searchArcGISHub(
   countyName: string,
   state: string
 ): Promise<HubSearchResult[]> {
-  try {
-    const query = `${countyName} ${state} parcel polygon`;
-    const params = new URLSearchParams({
-      q: query,
-      type: 'Feature Service',
-      num: '20',
-      f: 'json',
-    });
-    const res = await fetch(`${ARCGIS_HUB_SEARCH}?${params}`);
-    if (!res.ok) return [];
+  // Try multiple query variations — Hub search results vary significantly by phrasing
+  const queries = [
+    `${countyName} County ${state} parcel`,
+    `${countyName} ${state} parcel polygon`,
+    `${countyName} County tax parcel`,
+    `${countyName} parcel boundary`,
+  ];
 
-    const data = await res.json();
-    const results: HubSearchResult[] = (data.results ?? [])
-      .filter((r: { title: string; type: string }) => {
-        const titleLower = r.title.toLowerCase();
-        return PARCEL_KEYWORDS.some((kw) => titleLower.includes(kw));
-      })
-      .map((r: { title: string; url: string }) => ({
-        title: r.title,
-        url: r.url,
-      }));
+  const seen = new Set<string>();
+  const allResults: HubSearchResult[] = [];
 
-    return results;
-  } catch {
-    return [];
+  for (const query of queries) {
+    try {
+      const params = new URLSearchParams({
+        q: query,
+        type: 'Feature Service',
+        num: '20',
+        f: 'json',
+      });
+      const res = await fetch(`${ARCGIS_HUB_SEARCH}?${params}`);
+      if (!res.ok) continue;
+
+      const data = await res.json();
+      for (const r of data.results ?? []) {
+        const titleLower = (r.title ?? '').toLowerCase();
+        const hasKeyword = PARCEL_KEYWORDS.some((kw) => titleLower.includes(kw));
+        if (hasKeyword && r.url && !seen.has(r.url)) {
+          seen.add(r.url);
+          allResults.push({ title: r.title, url: r.url });
+        }
+      }
+    } catch {
+      continue;
+    }
+
+    // Stop early if we have enough candidates
+    if (allResults.length >= 5) break;
   }
+
+  return allResults;
 }
 
 export async function fetchFeatureServerFields(
