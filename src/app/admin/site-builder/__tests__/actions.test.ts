@@ -98,6 +98,7 @@ let mockPropertyResult: { data: any; error: any } = {
     puck_template: null,
     puck_pages_draft: null,
     puck_root_draft: null,
+    puck_page_meta: null,
   },
   error: null,
 };
@@ -149,6 +150,7 @@ describe('getPuckData', () => {
         puck_template: null,
         puck_pages_draft: null,
         puck_root_draft: null,
+        puck_page_meta: null,
       },
       error: null,
     };
@@ -164,6 +166,7 @@ describe('getPuckData', () => {
       puckTemplate: null,
       puckPagesDraft: null,
       puckRootDraft: null,
+      puckPageMeta: null,
     });
   });
 

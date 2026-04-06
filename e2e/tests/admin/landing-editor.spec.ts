@@ -7,9 +7,10 @@ const ADMIN_AUTH = path.join(__dirname, '..', '..', '.auth', 'admin.json');
 test.describe('Landing Page Editor', () => {
   test.use({ storageState: ADMIN_AUTH });
 
-  test('landing editor page loads', async ({ page }) => {
-    await page.goto(`/admin/properties/${TEST_DATA.property.slug}/landing`);
+  test('landing editor redirects to pages list', async ({ page }) => {
+    await page.goto(`/admin/properties/${TEST_DATA.property.slug}/site-builder/landing`);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Landing Page').first()).toBeVisible({ timeout: 10000 });
+    // Should redirect to pages list
+    await expect(page).toHaveURL(/\/site-builder\/pages/);
   });
 });

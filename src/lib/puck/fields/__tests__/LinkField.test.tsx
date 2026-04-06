@@ -172,3 +172,41 @@ describe('combobox', () => {
     expect(screen.getByText('Previously Used')).toBeDefined();
   });
 });
+
+describe('custom page suggestions', () => {
+  it('shows Custom Pages group when provider has page links', async () => {
+    const puckData = { root: { props: {} }, content: [] };
+    const pageLinks = [
+      { href: '/events', label: 'Events' },
+      { href: '/volunteer', label: 'Volunteer' },
+    ];
+    render(
+      <PuckSuggestionsProvider data={puckData} pageLinks={pageLinks}>
+        <LinkField value="" onChange={vi.fn()} />
+      </PuckSuggestionsProvider>
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    expect(screen.getByText('Custom Pages')).toBeDefined();
+    expect(screen.getByText('Events')).toBeDefined();
+    expect(screen.getByText('Volunteer')).toBeDefined();
+  });
+
+  it('filters custom pages by typing', async () => {
+    const puckData = { root: { props: {} }, content: [] };
+    const pageLinks = [
+      { href: '/events', label: 'Events' },
+      { href: '/volunteer', label: 'Volunteer' },
+    ];
+    render(
+      <PuckSuggestionsProvider data={puckData} pageLinks={pageLinks}>
+        <LinkField value="" onChange={vi.fn()} />
+      </PuckSuggestionsProvider>
+    );
+    const input = screen.getByRole('combobox');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'vol' } });
+    expect(screen.getByText('Volunteer')).toBeDefined();
+    expect(screen.queryByText('Events')).toBeNull();
+  });
+});

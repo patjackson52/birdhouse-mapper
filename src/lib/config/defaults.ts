@@ -26,4 +26,5 @@ export const DEFAULT_CONFIG: SiteConfig = {
   puckTemplate: null,
   puckPagesDraft: null,
   puckRootDraft: null,
+  puckPageMeta: null,
 };

@@ -22,7 +22,7 @@ export function LinkField({ value, onChange }: LinkFieldProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const listboxId = useRef(`linkfield-listbox-${Math.random().toString(36).slice(2, 8)}`).current;
 
-  const { externalLinks } = useLinkSuggestions();
+  const { externalLinks, pageLinks } = useLinkSuggestions();
 
   useEffect(() => {
     const r = resolveLink(value);
@@ -38,6 +38,13 @@ export function LinkField({ value, onChange }: LinkFieldProps) {
       r.href.toLowerCase().includes(href.toLowerCase())
   );
 
+  const filteredCustomPages = pageLinks.filter(
+    (r) =>
+      !href ||
+      r.label.toLowerCase().includes(href.toLowerCase()) ||
+      r.href.toLowerCase().includes(href.toLowerCase())
+  );
+
   const filteredExternal = externalLinks.filter(
     (r) =>
       !href ||
@@ -45,7 +52,7 @@ export function LinkField({ value, onChange }: LinkFieldProps) {
       r.href.toLowerCase().includes(href.toLowerCase())
   );
 
-  const allSuggestions: LinkSuggestion[] = [...filteredPages, ...filteredExternal];
+  const allSuggestions: LinkSuggestion[] = [...filteredPages, ...filteredCustomPages, ...filteredExternal];
 
   function emitChange(updates: Partial<LinkValue>) {
     const next: LinkValue = {
@@ -128,6 +135,7 @@ export function LinkField({ value, onChange }: LinkFieldProps) {
     emitChange({ color: c });
   }
 
+  const showCustomPages = filteredCustomPages.length > 0;
   const showExternal = filteredExternal.length > 0;
   const activeId =
     activeIndex >= 0 ? `${listboxId}-option-${activeIndex}` : undefined;
@@ -192,13 +200,44 @@ export function LinkField({ value, onChange }: LinkFieldProps) {
               </>
             )}
 
+            {showCustomPages && (
+              <>
+                <li className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-50">
+                  Custom Pages
+                </li>
+                {filteredCustomPages.map((suggestion, i) => {
+                  const globalIndex = filteredPages.length + i;
+                  return (
+                    <li
+                      key={suggestion.href}
+                      id={`${listboxId}-option-${globalIndex}`}
+                      role="option"
+                      aria-selected={activeIndex === globalIndex}
+                      className={`flex cursor-pointer items-center justify-between px-2 py-1.5 text-xs ${
+                        activeIndex === globalIndex
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectSuggestion(suggestion)}
+                    >
+                      <span>{suggestion.label}</span>
+                      <span className="text-[10px] text-gray-400">
+                        {suggestion.href}
+                      </span>
+                    </li>
+                  );
+                })}
+              </>
+            )}
+
             {showExternal && (
               <>
                 <li className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-50">
                   Previously Used
                 </li>
                 {filteredExternal.map((suggestion, i) => {
-                  const globalIndex = filteredPages.length + i;
+                  const globalIndex = filteredPages.length + filteredCustomPages.length + i;
                   return (
                     <li
                       key={suggestion.href}
