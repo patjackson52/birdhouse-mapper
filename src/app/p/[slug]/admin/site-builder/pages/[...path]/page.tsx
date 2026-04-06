@@ -51,12 +51,15 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2 text-sm">
-        <Link href={backHref} className="text-gray-500 hover:text-gray-700">
-          ← Pages
-        </Link>
-        <span className="text-gray-400">/</span>
-        <span className="font-medium text-gray-900">{pageTitle}</span>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <Link href={backHref} className="text-gray-500 hover:text-gray-700">
+            ← Pages
+          </Link>
+          <span className="text-gray-400">/</span>
+          <span className="font-medium text-gray-900">{pageTitle}</span>
+        </div>
+        <span className="text-xs text-gray-400">{pagePath}</span>
       </div>
       <PuckPageEditor initialData={data} pagePath={pagePath} pageLinks={pageLinks} />
     </div>
