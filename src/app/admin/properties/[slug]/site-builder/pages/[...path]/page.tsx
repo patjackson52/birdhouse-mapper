@@ -49,9 +49,7 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
     pageLinks.push({ href: metaPath, label: (meta as { title: string }).title });
   }
 
-  // Use relative link so it works under both /admin/properties/[slug] and /p/[slug]/admin
-  const backSegments = pagePath === '/' ? 1 : pathSegments.length;
-  const backHref = '../'.repeat(backSegments) || './';
+  const backHref = `/admin/properties/${slug}/site-builder/pages`;
 
   return (
     <div>
