@@ -49,18 +49,29 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
     pageLinks.push({ href: metaPath, label: (meta as { title: string }).title });
   }
 
-  // Use relative link so it works under both /admin/properties/[slug] and /p/[slug]/admin
-  const backSegments = pagePath === '/' ? 1 : pathSegments.length;
-  const backHref = '../'.repeat(backSegments) || './';
+  const backHref = `/admin/properties/${slug}/site-builder/pages`;
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-2 text-sm">
-        <Link href={backHref} className="text-gray-500 hover:text-gray-700">
-          ← Pages
-        </Link>
-        <span className="text-gray-400">/</span>
-        <span className="font-medium text-gray-900">{pageTitle}</span>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm">
+          <Link href={backHref} className="text-gray-500 hover:text-gray-700">
+            ← Pages
+          </Link>
+          <span className="text-gray-400">/</span>
+          <span className="font-medium text-gray-900">{pageTitle}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400">{pagePath}</span>
+          <a
+            href={`${pagePath}${pagePath === '/' ? '' : '/'}?preview=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            Preview Page ↗
+          </a>
+        </div>
       </div>
       <PuckPageEditor initialData={data} pagePath={pagePath} pageLinks={pageLinks} />
     </div>
