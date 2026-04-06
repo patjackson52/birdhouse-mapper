@@ -1,8 +1,9 @@
 'use client';
 
-import { Fragment, useState, useCallback, useMemo } from 'react';
+import { Fragment, useState, useCallback, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import GeoLayerRenderer from './GeoLayerRenderer';
 import PropertyBoundary from './PropertyBoundary';
 import FeatureListPanel, { featureKey } from './FeatureListPanel';
@@ -23,6 +24,25 @@ const STEPS: { key: WizardStep; label: string }[] = [
   { key: 'select', label: 'Select Features' },
   { key: 'confirm', label: 'Confirm' },
 ];
+
+/** Fits the map bounds to the given feature groups when they change */
+function FitToFeatures({ groups }: { groups: FeatureGroup[] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (groups.length === 0) return;
+    const bounds = L.latLngBounds([]);
+    groups.forEach((g) => {
+      g.features.forEach((df) => {
+        const geoLayer = L.geoJSON(df.feature);
+        bounds.extend(geoLayer.getBounds());
+      });
+    });
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [map, groups]);
+  return null;
+}
 
 interface DiscoverWizardProps {
   orgId: string;
@@ -330,6 +350,7 @@ export default function DiscoverWizard({
           <div className="flex-[2] rounded-lg overflow-hidden border border-gray-200">
             <MapContainer center={searchMapCenter} zoom={mapZoom} className="w-full h-full">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <FitToFeatures groups={featureGroups} />
               {featureGroups.map((group) => {
                 const fc: FeatureCollection = {
                   type: 'FeatureCollection',
@@ -346,6 +367,7 @@ export default function DiscoverWizard({
                       opacity: 0.6,
                       feature_count: group.features.length,
                     } as any}
+                    showTooltip
                   />
                 );
               })}
@@ -390,6 +412,7 @@ export default function DiscoverWizard({
           <div className="flex-[2] rounded-lg overflow-hidden border border-gray-200">
             <MapContainer center={searchMapCenter} zoom={mapZoom} className="w-full h-full">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <FitToFeatures groups={featureGroups} />
               {featureGroups.map((group) => {
                 const selectedFeats = group.features.filter((_, i) =>
                   selectedIds.has(featureKey(group.layerId, i))
@@ -414,6 +437,7 @@ export default function DiscoverWizard({
                           const idx = group.features.findIndex((df) => df.feature === feature);
                           if (idx >= 0) toggleFeature(featureKey(group.layerId, idx));
                         }}
+                        showTooltip
                       />
                     )}
                     {selectedFeats.length > 0 && (
@@ -430,6 +454,7 @@ export default function DiscoverWizard({
                           const idx = group.features.findIndex((df) => df.feature === feature);
                           if (idx >= 0) toggleFeature(featureKey(group.layerId, idx));
                         }}
+                        showTooltip
                       />
                     )}
                   </Fragment>
