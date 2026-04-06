@@ -20,16 +20,18 @@ test.describe('Photo Source Picker Integration', () => {
     await page.goto(`/admin/properties/${TEST_DATA.property.slug}/settings`);
     await page.waitForLoadState('networkidle');
 
-    // Should have a Geo Layers tab
-    await expect(page.getByText('Geo Layers')).toBeVisible({ timeout: 10000 });
+    // Should have a Geo Layers tab (scope to main content to avoid matching sidebar nav)
+    const main = page.locator('main');
+    await expect(main.getByText('Geo Layers')).toBeVisible({ timeout: 10000 });
   });
 
   test('geo layers tab shows boundary selector and empty layer list', async ({ page }) => {
     await page.goto(`/admin/properties/${TEST_DATA.property.slug}/settings`);
     await page.waitForLoadState('networkidle');
 
-    // Click the Geo Layers tab
-    await page.getByText('Geo Layers').click();
+    // Click the Geo Layers tab (scope to main content to avoid matching sidebar nav)
+    const main = page.locator('main');
+    await main.getByText('Geo Layers').click();
 
     // Should show boundary section and empty layer state
     await expect(page.getByText('Property Boundary')).toBeVisible({ timeout: 5000 });
