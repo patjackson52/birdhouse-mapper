@@ -4,8 +4,9 @@ import { usePathname } from 'next/navigation';
 import { useConfig } from '@/lib/config/client';
 import { useState } from 'react';
 import type { NavBarProps } from '../../types';
+import { AuthActions } from './AuthActions';
 
-export function NavBar({ style, position, showMobileBottomBar }: NavBarProps) {
+export function NavBar({ style, position, showMobileBottomBar, showAuthActions }: NavBarProps) {
   const config = useConfig();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -29,6 +30,7 @@ export function NavBar({ style, position, showMobileBottomBar }: NavBarProps) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
             </svg>
           </button>
+          {showAuthActions && <AuthActions />}
         </div>
         {menuOpen && (
           <div className="border-t border-gray-100 py-2">
@@ -44,16 +46,19 @@ export function NavBar({ style, position, showMobileBottomBar }: NavBarProps) {
   return (
     <>
       <nav className={`bg-white border-b border-gray-200 px-4 py-2 ${positionClass}`}>
-        <div className="mx-auto flex max-w-6xl items-center gap-6">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link key={item.href} href={item.href}
-                className={`text-sm font-medium transition ${isActive ? 'text-[var(--color-primary)]' : 'text-gray-600 hover:text-gray-900'}`}>
-                {item.label}
-              </Link>
-            );
-          })}
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="flex items-center gap-6">
+            {navItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link key={item.href} href={item.href}
+                  className={`text-sm font-medium transition ${isActive ? 'text-[var(--color-primary)]' : 'text-gray-600 hover:text-gray-900'}`}>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+          {showAuthActions && <AuthActions />}
         </div>
       </nav>
       {showMobileBottomBar && (
