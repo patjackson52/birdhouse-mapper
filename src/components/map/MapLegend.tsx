@@ -25,6 +25,10 @@ export default function MapLegend({ itemTypes, legendConfig }: MapLegendProps) {
     label: statusLabels[s],
   }));
 
+  const visibleTypes = legendConfig?.itemTypeIds
+    ? itemTypes.filter((t) => legendConfig.itemTypeIds!.includes(t.id))
+    : itemTypes;
+
   return (
     <div className="absolute bottom-20 md:bottom-6 left-4 z-10">
       {collapsed ? (
@@ -64,26 +68,21 @@ export default function MapLegend({ itemTypes, legendConfig }: MapLegendProps) {
               </div>
             ))}
           </div>
-          {(() => {
-            const visibleTypes = legendConfig?.itemTypeIds
-              ? itemTypes.filter((t) => legendConfig.itemTypeIds!.includes(t.id))
-              : itemTypes;
-            return visibleTypes.length > 1 ? (
-              <>
-                <h4 className="text-[10px] font-medium text-sage uppercase tracking-wider mt-2 mb-1.5">
-                  Types
-                </h4>
-                <div className="space-y-1">
-                  {visibleTypes.map((type) => (
-                    <div key={type.id} className="flex items-center gap-2">
-                      <span className="text-sm">{type.icon}</span>
-                      <span className="text-xs text-forest-dark">{type.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : null;
-          })()}
+          {visibleTypes.length > 1 && (
+            <>
+              <h4 className="text-[10px] font-medium text-sage uppercase tracking-wider mt-2 mb-1.5">
+                Types
+              </h4>
+              <div className="space-y-1">
+                {visibleTypes.map((type) => (
+                  <div key={type.id} className="flex items-center gap-2">
+                    <span className="text-sm">{type.icon}</span>
+                    <span className="text-xs text-forest-dark">{type.name}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

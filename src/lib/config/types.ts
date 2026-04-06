@@ -1,5 +1,5 @@
 import type { LandingPageConfig } from './landing-types';
-import { resolveMapDisplayConfig, type ResolvedMapDisplayConfig } from './map-display';
+import { resolveMapDisplayConfig, type ResolvedMapDisplayConfig, type MapDisplayConfig } from './map-display';
 
 export interface SiteConfig {
   siteName: string;
@@ -118,8 +118,8 @@ export function buildSiteConfig(
     puckRootDraft: property.puck_root_draft as Record<string, unknown> | null ?? null,
     puckPageMeta: property.puck_page_meta as Record<string, { title: string; slug: string; createdAt: string }> | null ?? null,
     mapDisplayConfig: resolveMapDisplayConfig(
-      org.map_display_config as import('./map-display').MapDisplayConfig | null,
-      property.map_display_config as import('./map-display').MapDisplayConfig | null,
+      org.map_display_config as MapDisplayConfig | null,
+      property.map_display_config as MapDisplayConfig | null,
     ),
   };
 }

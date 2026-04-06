@@ -78,12 +78,14 @@ export default function SettingsPage() {
   });
 
   const { data: orgMapDisplayConfig } = useQuery({
-    queryKey: ['admin', 'orgMapDisplayConfig'],
+    queryKey: ['admin', 'orgMapDisplayConfig', orgId],
     queryFn: async () => {
+      if (!orgId) return null;
       const supabase = createClient();
-      const { data: org } = await supabase.from('orgs').select('map_display_config').limit(1).single();
+      const { data: org } = await supabase.from('orgs').select('map_display_config').eq('id', orgId).single();
       return (org?.map_display_config as MapDisplayConfig | null) ?? null;
     },
+    enabled: !!orgId,
   });
 
   const { data: propertyMapDisplayConfig, refetch: refetchPropertyConfig } = useQuery({

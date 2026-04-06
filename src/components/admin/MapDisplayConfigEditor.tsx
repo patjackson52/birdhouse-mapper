@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import type { MapDisplayConfig } from '@/lib/config/map-display';
 import type { ItemType, ItemStatus } from '@/lib/types';
 import { statusColors, statusLabels } from '@/lib/utils';
