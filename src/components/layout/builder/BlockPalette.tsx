@@ -1,5 +1,6 @@
 'use client';
 
+import { useDraggable } from '@dnd-kit/core';
 import type { BlockType } from '@/lib/layout/types';
 
 interface PaletteItem {
@@ -21,22 +22,33 @@ const PALETTE_ITEMS: PaletteItem[] = [
   { type: 'row', icon: '⬜', label: 'Row' },
 ];
 
-interface Props {
-  onAdd: (type: BlockType | 'row') => void;
+function PaletteChip({ item }: { item: PaletteItem }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `palette-${item.type}`,
+    data: { type: item.type, source: 'palette' },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      aria-label={`Drag to add ${item.label}`}
+      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full border border-sage-light bg-white hover:bg-sage-light/50 text-sm font-medium text-forest-dark transition-colors min-h-[44px] cursor-grab active:cursor-grabbing touch-none select-none ${
+        isDragging ? 'opacity-40' : ''
+      }`}
+    >
+      <span>{item.icon}</span>
+      <span>{item.label}</span>
+    </div>
+  );
 }
 
-export default function BlockPalette({ onAdd }: Props) {
+export default function BlockPalette() {
   return (
     <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
       {PALETTE_ITEMS.map((item) => (
-        <button
-          key={item.type}
-          onClick={() => onAdd(item.type)}
-          className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full border border-sage-light bg-white hover:bg-sage-light/50 text-sm font-medium text-forest-dark transition-colors min-h-[44px]"
-        >
-          <span>{item.icon}</span>
-          <span>{item.label}</span>
-        </button>
+        <PaletteChip key={item.type} item={item} />
       ))}
     </div>
   );
