@@ -17,7 +17,7 @@ export default async function ParcelLookupPage({
 
   const { data: property } = await supabase
     .from('properties')
-    .select('id, name')
+    .select('id, name, slug')
     .eq('org_id', tenant.orgId)
     .eq('slug', params.slug)
     .single();
@@ -33,6 +33,7 @@ export default async function ParcelLookupPage({
       <ParcelLookup
         propertyId={property.id}
         propertyName={property.name}
+        propertySlug={params.slug}
         orgId={tenant.orgId}
       />
     </div>

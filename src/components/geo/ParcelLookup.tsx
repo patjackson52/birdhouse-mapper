@@ -18,10 +18,11 @@ type LookupState =
 interface ParcelLookupProps {
   propertyId: string;
   propertyName: string;
+  propertySlug: string;
   orgId: string;
 }
 
-export default function ParcelLookup({ propertyId, propertyName, orgId }: ParcelLookupProps) {
+export default function ParcelLookup({ propertyId, propertyName, propertySlug, orgId }: ParcelLookupProps) {
   const [state, setState] = useState<LookupState>({ step: 'idle' });
   const [address, setAddress] = useState('');
   const [selectedApns, setSelectedApns] = useState<Set<string>>(new Set());
@@ -253,7 +254,7 @@ export default function ParcelLookup({ propertyId, propertyName, orgId }: Parcel
             </p>
           </div>
           <div className="flex gap-2 justify-center mt-4">
-            <a href="/admin/geo-layers" className="btn-secondary text-sm">
+            <a href={`/admin/properties/${propertySlug}/geo-layers/discover`} className="btn-secondary text-sm">
               View in Geo Layers
             </a>
             <button className="btn-secondary text-sm" onClick={handleReset}>
@@ -275,10 +276,10 @@ export default function ParcelLookup({ propertyId, propertyName, orgId }: Parcel
             <button className="btn-secondary w-full text-left text-sm" onClick={handleReset}>
               Try a different address
             </button>
-            <a href="/admin/properties" className="btn-secondary w-full text-left text-sm block">
+            <a href={`/admin/properties/${propertySlug}/geo-layers/discover`} className="btn-secondary w-full text-left text-sm block">
               Draw boundary on map
             </a>
-            <a href="/admin/geo-layers" className="btn-secondary w-full text-left text-sm block">
+            <a href={`/admin/properties/${propertySlug}/geo-layers/discover`} className="btn-secondary w-full text-left text-sm block">
               Upload boundary file
             </a>
           </div>

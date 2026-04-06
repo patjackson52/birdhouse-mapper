@@ -36,3 +36,19 @@ CREATE POLICY "Org admins can insert parcel lookups"
     WHERE om.user_id = auth.uid() AND om.status = 'active'
     AND r.base_role IN ('owner', 'admin', 'staff')
   ));
+
+CREATE POLICY "Org admins can update parcel lookups"
+  ON parcel_lookups FOR UPDATE
+  TO authenticated
+  USING (org_id IN (
+    SELECT om.org_id FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid() AND om.status = 'active'
+    AND r.base_role IN ('owner', 'admin', 'staff')
+  ))
+  WITH CHECK (org_id IN (
+    SELECT om.org_id FROM org_memberships om
+    JOIN roles r ON r.id = om.role_id
+    WHERE om.user_id = auth.uid() AND om.status = 'active'
+    AND r.base_role IN ('owner', 'admin', 'staff')
+  ));

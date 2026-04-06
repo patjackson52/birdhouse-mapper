@@ -170,5 +170,8 @@ async function discoverEndpoint(
 }
 
 function escapeArcGIS(value: string): string {
-  return value.replace(/'/g, "''");
+  return value
+    .replace(/'/g, "''")
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_');
 }
