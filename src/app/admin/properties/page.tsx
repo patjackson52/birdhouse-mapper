@@ -131,7 +131,7 @@ export default function PropertiesPage() {
     }
 
     // Redirect to the new property's admin page
-    router.push(`/admin/properties/${result.slug}/parcel-lookup`);
+    router.push(`/admin/properties/${result.slug}`);
   }
 
   function handleArchiveToggle(property: Property) {
