@@ -59,7 +59,17 @@ export default async function SiteBuilderPageEditor({ params }: PageEditorProps)
           <span className="text-gray-400">/</span>
           <span className="font-medium text-gray-900">{pageTitle}</span>
         </div>
-        <span className="text-xs text-gray-400">{pagePath}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400">{pagePath}</span>
+          <a
+            href={`${pagePath}${pagePath === '/' ? '' : '/'}?preview=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 transition hover:bg-gray-50"
+          >
+            Preview Page ↗
+          </a>
+        </div>
       </div>
       <PuckPageEditor initialData={data} pagePath={pagePath} pageLinks={pageLinks} />
     </div>
