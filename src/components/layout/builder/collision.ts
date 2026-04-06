@@ -1,4 +1,4 @@
-import type { CollisionDetection, CollisionDescriptor, DroppableContainer } from '@dnd-kit/core';
+import type { ClientRect, CollisionDetection, CollisionDescriptor, DroppableContainer, UniqueIdentifier } from '@dnd-kit/core';
 
 /**
  * Row-aware collision detection. When the pointer is inside a row's bounding box,
@@ -60,7 +60,7 @@ export const rowAwareCollision: CollisionDetection = ({
 
 function closestByDistance(
   containers: DroppableContainer[],
-  rects: Map<string | number, DOMRect>,
+  rects: Map<UniqueIdentifier, ClientRect>,
   pointer: { x: number; y: number },
 ): CollisionDescriptor[] {
   const results: CollisionDescriptor[] = [];
