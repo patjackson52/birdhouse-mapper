@@ -2,7 +2,18 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { nanoid } from 'nanoid';
-import { arrayMove } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { TypeLayout, LayoutNode, LayoutBlock, LayoutRow, BlockType, BlockConfig, SpacingPreset } from '@/lib/layout/types';
 import { isLayoutRow } from '@/lib/layout/types';
 import type { CustomField, EntityType, ItemType } from '@/lib/types';
@@ -13,6 +24,8 @@ import BlockList from './BlockList';
 import SpacingPicker from './SpacingPicker';
 import LayoutRenderer from '../LayoutRenderer';
 import FormPreview from '../preview/FormPreview';
+import DragOverlayContent from './DragOverlayContent';
+import { rowAwareCollision } from './collision';
 
 interface Props {
   itemType: ItemType;
@@ -53,6 +66,17 @@ function createRow(): LayoutRow {
   };
 }
 
+function findNode(nodes: LayoutNode[], id: string): LayoutNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (isLayoutRow(node)) {
+      const child = node.children.find((c) => c.id === id);
+      if (child) return child;
+    }
+  }
+  return null;
+}
+
 export default function LayoutBuilder({ itemType, initialLayout, customFields, entityTypes, onSave, onCancel }: Props) {
   const [layout, setLayout] = useState<TypeLayout>(
     () => initialLayout ?? generateDefaultLayout(customFields),
@@ -62,6 +86,14 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<'build' | 'detail' | 'form'>('build');
   const [previewTab, setPreviewTab] = useState<PreviewTab>('detail');
+  const [activeNode, setActiveNode] = useState<LayoutNode | null>(null);
+  const [activeType, setActiveType] = useState<'block' | 'row' | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -85,6 +117,52 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   ];
 
   const mockItem = generateMockItem(itemType, allFields);
+
+  // --- DnD handlers ---
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    const data = active.data.current as Record<string, unknown> | undefined;
+
+    if (data?.source === 'palette') {
+      // Create a temporary node for the overlay preview
+      const paletteType = data.type as BlockType | 'row';
+      const tempNode: LayoutNode = paletteType === 'row' ? createRow() : createBlock(paletteType);
+      setActiveNode(tempNode);
+      setActiveType(paletteType === 'row' ? 'row' : 'block');
+      return;
+    }
+
+    // Existing block/row drag
+    const id = String(active.id);
+    const found = findNode(layout.blocks, id);
+    if (found) {
+      setActiveNode(found);
+      setActiveType(isLayoutRow(found) ? 'row' : 'block');
+    }
+  }, [layout.blocks]);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveNode(null);
+    setActiveType(null);
+
+    if (!over) return;
+
+    const activeData = active.data.current as Record<string, unknown>;
+    const overData = over.data.current as Record<string, unknown>;
+
+    // If over target has zone data, it's a drop zone
+    if (overData?.zone) {
+      handleDrop(String(active.id), activeData ?? {}, overData);
+      return;
+    }
+
+    // Otherwise it's a sortable reorder
+    if (active.id !== over.id) {
+      handleReorder(String(active.id), String(over.id));
+    }
+  }, []);
 
   // Unified drop handler for all drag-and-drop scenarios
   const handleDrop = useCallback((activeId: string, activeData: Record<string, unknown>, targetData: Record<string, unknown>) => {
@@ -119,6 +197,8 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
 
       // Existing block move — find and remove from current position
       let movingNode: LayoutNode | null = null;
+      let sourceRowId: string | null = null;
+      let sourceChildIdx = -1;
 
       const topIdx = blocks.findIndex((b) => b.id === activeId);
       if (topIdx !== -1) {
@@ -131,10 +211,13 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
             const childIdx = node.children.findIndex((c) => c.id === activeId);
             if (childIdx !== -1) {
               movingNode = node.children[childIdx];
+              sourceRowId = node.id;
+              sourceChildIdx = childIdx;
               const remaining = node.children.filter((c) => c.id !== activeId);
-              if (remaining.length <= 1) {
-                blocks[i] = remaining[0] ?? node;
-                if (remaining.length === 0) blocks.splice(i, 1);
+              if (remaining.length === 0) {
+                blocks.splice(i, 1);
+              } else if (remaining.length === 1) {
+                blocks[i] = remaining[0];
               } else {
                 blocks[i] = { ...node, children: remaining };
               }
@@ -159,7 +242,12 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
           const row = blocks[rowIdx] as LayoutRow;
           if (row.children.length < 4) {
             const children = [...row.children];
-            children.splice(targetIndex, 0, movingNode as LayoutBlock);
+            // Adjust index for same-row moves
+            let adjustedIndex = targetIndex;
+            if (sourceRowId === rowId && sourceChildIdx < targetIndex) {
+              adjustedIndex--;
+            }
+            children.splice(Math.min(adjustedIndex, children.length), 0, movingNode as LayoutBlock);
             blocks[rowIdx] = { ...row, children };
           }
         }
@@ -242,15 +330,12 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   const handleRemoveFromRow = useCallback((rowId: string, blockId: string) => {
     setLayout((prev) => ({
       ...prev,
-      blocks: prev.blocks.map((node) => {
-        if (node.id === rowId && isLayoutRow(node)) {
-          const remaining = node.children.filter((c) => c.id !== blockId);
-          if (remaining.length <= 1) {
-            return remaining[0] ?? node;
-          }
-          return { ...node, children: remaining };
-        }
-        return node;
+      blocks: prev.blocks.flatMap((node) => {
+        if (node.id !== rowId || !isLayoutRow(node)) return [node];
+        const remaining = node.children.filter((c) => c.id !== blockId);
+        if (remaining.length === 0) return [];
+        if (remaining.length === 1) return [remaining[0]];
+        return [{ ...node, children: remaining }];
       }),
     }));
   }, []);
@@ -273,9 +358,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
         customFields={allFields}
         entityTypes={entityTypes}
         peekBlockCount={layout.peekBlockCount}
-        mockItem={mockItem}
-        onDrop={handleDrop}
-        onReorder={handleReorder}
+        activeType={activeType}
         onConfigChange={handleConfigChange}
         onDeleteBlock={handleDeleteBlock}
         onCreateField={handleCreateField}
@@ -308,6 +391,26 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     <FormPreview layout={layout} customFields={allFields} itemTypeName={itemType.name} />
   );
 
+  const dndWrapped = (content: React.ReactNode) => (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rowAwareCollision}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      {content}
+      <DragOverlay>
+        {activeNode ? (
+          <DragOverlayContent
+            node={activeNode}
+            customFields={allFields}
+            mockItem={mockItem}
+          />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+
   if (isMobile) {
     return (
       <div className="fixed inset-0 z-50 bg-white flex flex-col" style={{ height: '100dvh' }}>
@@ -338,7 +441,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'build' && buildContent}
+          {activeTab === 'build' && dndWrapped(buildContent)}
           {activeTab === 'detail' && detailPreview}
           {activeTab === 'form' && formPreviewContent}
         </div>
@@ -358,7 +461,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
             </button>
           </div>
         </div>
-        {buildContent}
+        {dndWrapped(buildContent)}
       </div>
 
       <div className="flex-[2] overflow-y-auto">
