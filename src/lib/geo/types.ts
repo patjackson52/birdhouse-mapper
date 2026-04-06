@@ -3,7 +3,7 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson';
 export type GeoSourceFormat = 'geojson' | 'shapefile' | 'kml' | 'kmz';
 
 export type GeoLayerStatus = 'draft' | 'published';
-export type GeoLayerSource = 'manual' | 'ai' | 'discovered';
+export type GeoLayerSource = 'manual' | 'ai' | 'discovered' | 'parcel_lookup';
 
 export interface GeoLayer {
   id: string;
@@ -86,4 +86,49 @@ export interface FeatureGroup {
   layerColor: string;
   sourceFormat: GeoSourceFormat;
   features: DiscoveredFeature[];
+}
+
+// --- Parcel Lookup Types ---
+
+export interface FieldMap {
+  parcel_id: string;
+  owner_name?: string;
+  site_address?: string;
+  house_number?: string;
+  street_name?: string;
+  acres?: string;
+  address_link_field?: string;
+}
+
+export interface CountyGISConfig {
+  id: string;
+  fips: string;
+  county_name: string;
+  state: string;
+  parcel_layer_url: string;
+  address_layer_url: string | null;
+  field_map: FieldMap;
+  discovery_method: 'manual' | 'auto';
+  confidence: 'high' | 'medium' | 'low';
+  last_verified_at: string | null;
+}
+
+export interface ParcelCandidate {
+  apn: string;
+  geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
+  acres: number | null;
+  owner_of_record: string | null;
+  site_address: string | null;
+  source_url: string;
+}
+
+export type ParcelLookupStatus = 'found' | 'multiple' | 'not_found' | 'error';
+
+export interface ParcelLookupResult {
+  status: ParcelLookupStatus;
+  parcels: ParcelCandidate[];
+  source: 'county_arcgis' | null;
+  county_fips: string | null;
+  county_name: string | null;
+  error_message?: string;
 }
