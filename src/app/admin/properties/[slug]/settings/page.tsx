@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useConfig } from '@/lib/config/client';
@@ -14,6 +14,9 @@ import { getPropertyGeoLayers, setPropertyBoundary } from '@/app/admin/geo-layer
 import LogoUploader from '@/components/admin/LogoUploader';
 import { getLogoUrl } from '@/lib/config/logo';
 import type { GeoLayerSummary, GeoLayerProperty } from '@/lib/geo/types';
+import MapDisplayConfigEditor from '@/components/admin/MapDisplayConfigEditor';
+import type { MapDisplayConfig } from '@/lib/config/map-display';
+import type { ItemType } from '@/lib/types';
 
 const CenterPicker = dynamic(() => import('@/components/manage/CenterPicker'), {
   ssr: false,
@@ -35,6 +38,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [currentBoundaryId, setCurrentBoundaryId] = useState<string | null>(null);
+  const [mapDisplayConfig, setMapDisplayConfig] = useState<MapDisplayConfig | null>(null);
+  const [mapDisplayInitialized, setMapDisplayInitialized] = useState(false);
 
   const { data: propertyId } = useQuery({
     queryKey: ['admin', 'property', slug, 'id'],
@@ -61,6 +66,37 @@ export default function SettingsPage() {
     },
   });
 
+  const { data: itemTypes = [] } = useQuery({
+    queryKey: ['admin', 'itemTypes', orgId],
+    queryFn: async () => {
+      if (!orgId) return [];
+      const supabase = createClient();
+      const { data } = await supabase.from('item_types').select('*').eq('org_id', orgId).order('name');
+      return (data ?? []) as ItemType[];
+    },
+    enabled: !!orgId,
+  });
+
+  const { data: orgMapDisplayConfig } = useQuery({
+    queryKey: ['admin', 'orgMapDisplayConfig'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data: org } = await supabase.from('orgs').select('map_display_config').limit(1).single();
+      return (org?.map_display_config as MapDisplayConfig | null) ?? null;
+    },
+  });
+
+  const { data: propertyMapDisplayConfig, refetch: refetchPropertyConfig } = useQuery({
+    queryKey: ['admin', 'property', slug, 'mapDisplayConfig'],
+    queryFn: async () => {
+      if (!propertyId) return null;
+      const supabase = createClient();
+      const { data } = await supabase.from('properties').select('map_display_config').eq('id', propertyId).single();
+      return (data?.map_display_config as MapDisplayConfig | null) ?? null;
+    },
+    enabled: !!propertyId,
+  });
+
   const { data: geoLayerData } = useQuery({
     queryKey: ['admin', 'property', slug, 'geo-layers'],
     queryFn: async () => {
@@ -76,6 +112,13 @@ export default function SettingsPage() {
 
   const propertyGeoLayers: GeoLayerSummary[] = geoLayerData?.layers ?? [];
   const layerAssignments: GeoLayerProperty[] = geoLayerData?.assignments ?? [];
+
+  useEffect(() => {
+    if (propertyMapDisplayConfig !== undefined && !mapDisplayInitialized) {
+      setMapDisplayConfig(propertyMapDisplayConfig);
+      setMapDisplayInitialized(true);
+    }
+  }, [propertyMapDisplayConfig, mapDisplayInitialized]);
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'general', label: 'General' },
@@ -158,6 +201,28 @@ export default function SettingsPage() {
               />
             </section>
           )}
+          <section className="card space-y-5">
+            <h2 className="font-heading text-lg font-semibold text-forest-dark">
+              Map Display
+            </h2>
+            <MapDisplayConfigEditor
+              value={mapDisplayConfig}
+              onChange={setMapDisplayConfig}
+              itemTypes={itemTypes}
+              orgDefaults={orgMapDisplayConfig}
+            />
+            <button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                await handleSave([{ key: 'map_display_config', value: mapDisplayConfig }]);
+                refetchPropertyConfig();
+              }}
+              className="btn-primary"
+            >
+              {saving ? 'Saving...' : 'Save Map Display'}
+            </button>
+          </section>
         </div>
       )}
       {activeTab === 'custommap' && (
