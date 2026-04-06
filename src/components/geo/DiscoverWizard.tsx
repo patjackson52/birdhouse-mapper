@@ -7,6 +7,7 @@ import L from 'leaflet';
 import GeoLayerRenderer from './GeoLayerRenderer';
 import PropertyBoundary from './PropertyBoundary';
 import FeatureListPanel, { featureKey } from './FeatureListPanel';
+import MultiSnapBottomSheet from '@/components/ui/MultiSnapBottomSheet';
 import { intersectFeaturesWithArea, injectProvenance } from '@/lib/geo/discovery';
 import { findCandidateLayers, createDiscoveredLayer } from '@/app/admin/properties/[slug]/geo-layers/discover/actions';
 import { DISCOVERY_COLOR_PALETTE, CANDIDATE_FEATURE_WARNING, SELECTION_FEATURE_WARNING } from '@/lib/geo/constants';
@@ -79,6 +80,7 @@ export default function DiscoverWizard({
   const [layerName, setLayerName] = useState(`${propertyName} — Discovered Features`);
   const [submitting, setSubmitting] = useState(false);
   const [createdLayerId, setCreatedLayerId] = useState<string | null>(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   // Derive the active search area (boundary or drawn)
   const activeSearchArea = useMemo(() => {
@@ -347,7 +349,7 @@ export default function DiscoverWizard({
 
         <div className="flex flex-col md:flex-row gap-4" style={{ height: 'calc(100vh - 240px)' }}>
           {/* Map */}
-          <div className="flex-[2] rounded-lg overflow-hidden border border-gray-200">
+          <div className="flex-1 md:flex-[2] rounded-lg overflow-hidden border border-gray-200">
             <MapContainer center={searchMapCenter} zoom={mapZoom} className="w-full h-full">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <FitToFeatures groups={featureGroups} />
@@ -374,8 +376,8 @@ export default function DiscoverWizard({
             </MapContainer>
           </div>
 
-          {/* List panel */}
-          <div className="flex-1 min-w-[280px] border border-gray-200 rounded-lg overflow-hidden md:max-h-full max-h-[40vh]">
+          {/* Desktop list panel */}
+          <div className="hidden md:block flex-1 min-w-[280px] border border-gray-200 rounded-lg overflow-hidden">
             <FeatureListPanel
               groups={featureGroups}
               selectedIds={selectedIds}
@@ -383,6 +385,24 @@ export default function DiscoverWizard({
               onToggleGroup={toggleGroup}
             />
           </div>
+        </div>
+
+        {/* Mobile: toggle button + bottom sheet */}
+        <button
+          onClick={() => setMobileSheetOpen(true)}
+          className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-30 btn-primary shadow-lg"
+        >
+          {selectedIds.size} features selected
+        </button>
+        <div className="md:hidden">
+          <MultiSnapBottomSheet isOpen={mobileSheetOpen} onClose={() => setMobileSheetOpen(false)}>
+            <FeatureListPanel
+              groups={featureGroups}
+              selectedIds={selectedIds}
+              onToggleFeature={toggleFeature}
+              onToggleGroup={toggleGroup}
+            />
+          </MultiSnapBottomSheet>
         </div>
 
         <div className="flex justify-between mt-4">
@@ -409,7 +429,7 @@ export default function DiscoverWizard({
 
         <div className="flex flex-col md:flex-row gap-4" style={{ height: 'calc(100vh - 300px)' }}>
           {/* Map with selection-aware styling */}
-          <div className="flex-[2] rounded-lg overflow-hidden border border-gray-200">
+          <div className="flex-1 md:flex-[2] rounded-lg overflow-hidden border border-gray-200">
             <MapContainer center={searchMapCenter} zoom={mapZoom} className="w-full h-full">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <FitToFeatures groups={featureGroups} />
@@ -463,8 +483,8 @@ export default function DiscoverWizard({
             </MapContainer>
           </div>
 
-          {/* List panel */}
-          <div className="flex-1 min-w-[280px] border border-gray-200 rounded-lg overflow-hidden md:max-h-full max-h-[40vh]">
+          {/* Desktop list panel */}
+          <div className="hidden md:block flex-1 min-w-[280px] border border-gray-200 rounded-lg overflow-hidden">
             <FeatureListPanel
               groups={featureGroups}
               selectedIds={selectedIds}
@@ -472,6 +492,24 @@ export default function DiscoverWizard({
               onToggleGroup={toggleGroup}
             />
           </div>
+        </div>
+
+        {/* Mobile: toggle button + bottom sheet */}
+        <button
+          onClick={() => setMobileSheetOpen(true)}
+          className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-30 btn-primary shadow-lg"
+        >
+          {selectedIds.size} features selected
+        </button>
+        <div className="md:hidden">
+          <MultiSnapBottomSheet isOpen={mobileSheetOpen} onClose={() => setMobileSheetOpen(false)}>
+            <FeatureListPanel
+              groups={featureGroups}
+              selectedIds={selectedIds}
+              onToggleFeature={toggleFeature}
+              onToggleGroup={toggleGroup}
+            />
+          </MultiSnapBottomSheet>
         </div>
 
         {/* Layer name input */}
