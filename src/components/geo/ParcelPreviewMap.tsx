@@ -20,8 +20,11 @@ export default function ParcelPreviewMap({
 }: ParcelPreviewMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const layersRef = useRef<L.GeoJSON[]>([]);
+  const layersRef = useRef<Map<string, L.GeoJSON>>(new Map());
+  const onToggleRef = useRef(onToggleParcel);
+  onToggleRef.current = onToggleParcel;
 
+  // Initialize map and add layers when parcels change
   useEffect(() => {
     if (!mapRef.current || typeof window === 'undefined') return;
 
@@ -39,38 +42,29 @@ export default function ParcelPreviewMap({
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
 
-    layersRef.current.forEach((l) => l.remove());
-    layersRef.current = [];
-
+    const newLayers = new Map<string, L.GeoJSON>();
     const allBounds = L.latLngBounds([]);
 
     parcels.forEach((parcel, i) => {
       const color = PARCEL_COLORS[i % PARCEL_COLORS.length];
-      const isSelected = selectedApns.has(parcel.apn);
-
       const feature: GeoJSON.Feature = {
         type: 'Feature',
-        properties: { apn: parcel.apn },
+        properties: { apn: parcel.apn, _color: color },
         geometry: parcel.geometry,
       };
 
       const layer = L.geoJSON(feature, {
-        style: {
-          color: isSelected ? color : '#94a3b8',
-          fillColor: isSelected ? color : '#cbd5e1',
-          fillOpacity: isSelected ? 0.3 : 0.1,
-          weight: isSelected ? 3 : 1,
-        },
+        style: { color, fillColor: color, fillOpacity: 0.3, weight: 3 },
         onEachFeature: (_: unknown, featureLayer: L.Layer) => {
-          if (onToggleParcel) {
-            featureLayer.on('click', () => onToggleParcel(parcel.apn));
-          }
+          featureLayer.on('click', () => onToggleRef.current?.(parcel.apn));
         },
       }).addTo(map);
 
       allBounds.extend(layer.getBounds());
-      layersRef.current.push(layer);
+      newLayers.set(parcel.apn, layer);
     });
+
+    layersRef.current = newLayers;
 
     if (allBounds.isValid()) {
       map.fitBounds(allBounds, { padding: [30, 30] });
@@ -80,7 +74,22 @@ export default function ParcelPreviewMap({
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, [parcels, selectedApns, onToggleParcel]);
+  }, [parcels]);
+
+  // Update layer styles when selection changes (no map rebuild)
+  useEffect(() => {
+    layersRef.current.forEach((layer, apn) => {
+      const isSelected = selectedApns.has(apn);
+      const innerLayer = layer.getLayers()[0] as L.Layer & { feature?: GeoJSON.Feature };
+      const color = innerLayer?.feature?.properties?._color ?? '#16a34a';
+      layer.setStyle({
+        color: isSelected ? color : '#94a3b8',
+        fillColor: isSelected ? color : '#cbd5e1',
+        fillOpacity: isSelected ? 0.3 : 0.1,
+        weight: isSelected ? 3 : 1,
+      });
+    });
+  }, [selectedApns]);
 
   return <div ref={mapRef} style={{ height, width: '100%', borderRadius: '8px' }} />;
 }
