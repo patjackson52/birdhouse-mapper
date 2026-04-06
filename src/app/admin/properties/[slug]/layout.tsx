@@ -33,6 +33,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
   const base = `/admin/properties/${slug}`;
   const items = [
     { label: 'Data', href: `${base}/data` },
+    { label: 'Geo Layers', href: `${base}/geo-layers/discover` },
     { label: 'Settings', href: `${base}/settings` },
     { label: 'Landing Page', href: `${base}/landing` },
     { label: 'Site Builder', href: `${base}/site-builder/templates` },

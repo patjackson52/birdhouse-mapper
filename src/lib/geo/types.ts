@@ -3,7 +3,7 @@ import type { Feature, FeatureCollection, Geometry } from 'geojson';
 export type GeoSourceFormat = 'geojson' | 'shapefile' | 'kml' | 'kmz';
 
 export type GeoLayerStatus = 'draft' | 'published';
-export type GeoLayerSource = 'manual' | 'ai';
+export type GeoLayerSource = 'manual' | 'ai' | 'discovered';
 
 export interface GeoLayer {
   id: string;
@@ -67,4 +67,23 @@ export interface GeoValidationResult {
   errors: string[];
   warnings: string[];
   featureCount: number;
+}
+
+/** A single feature tagged with its source layer info, used during discovery */
+export interface DiscoveredFeature {
+  feature: GeoJSON.Feature;
+  sourceLayerId: string;
+  sourceLayerName: string;
+  sourceLayerColor: string;
+  /** Other source layers that contain this same feature (duplicates) */
+  duplicateSources?: Array<{ layerId: string; layerName: string }>;
+}
+
+/** A group of discovered features from a single source layer */
+export interface FeatureGroup {
+  layerId: string;
+  layerName: string;
+  layerColor: string;
+  sourceFormat: GeoSourceFormat;
+  features: DiscoveredFeature[];
 }

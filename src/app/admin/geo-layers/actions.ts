@@ -17,7 +17,7 @@ interface CreateGeoLayerInput {
   bbox: [number, number, number, number] | null;
   isPropertyBoundary: boolean;
   status?: 'draft' | 'published';
-  source?: 'manual' | 'ai';
+  source?: 'manual' | 'ai' | 'discovered';
 }
 
 export async function createGeoLayer(

@@ -332,6 +332,13 @@ export default function GeoLayersAdminPage() {
                         >
                           Edit
                         </button>
+                        <a
+                          href="/admin/properties"
+                          className="text-xs text-blue-600 hover:text-blue-800 mr-3"
+                          title="Assign features from this layer to a property by area"
+                        >
+                          Assign by Area
+                        </a>
                         <button
                           onClick={() => handleDelete(layer)}
                           className="text-red-500 hover:text-red-700 text-sm"
