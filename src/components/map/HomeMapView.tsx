@@ -60,6 +60,7 @@ function HomeMapViewContent() {
   const searchParams = useSearchParams();
   const deepLinkedRef = useRef(false);
   const config = useConfig();
+  const { controls: mapControls } = config.mapDisplayConfig;
   const propertyId = config.propertyId;
   const offlineStore = useOfflineStore();
 
@@ -293,12 +294,14 @@ function HomeMapViewContent() {
       />
 
       {/* List view link */}
-      <Link
-        href="/list"
-        className="absolute top-4 right-4 z-10 bg-white backdrop-blur-sm rounded-lg shadow-lg border border-sage-light px-3 py-2 text-xs font-medium text-forest-dark hover:bg-sage-light transition-colors"
-      >
-        View as List
-      </Link>
+      {mapControls.viewAsList && (
+        <Link
+          href="/list"
+          className="absolute top-4 right-4 z-10 bg-white backdrop-blur-sm rounded-lg shadow-lg border border-sage-light px-3 py-2 text-xs font-medium text-forest-dark hover:bg-sage-light transition-colors"
+        >
+          View as List
+        </Link>
+      )}
 
       {/* Detail panel */}
       <DetailPanel
