@@ -1,0 +1,30 @@
+---
+description: Project overview and architecture for FieldMapper
+globs:
+alwaysApply: true
+---
+
+# FieldMapper — Project Overview
+
+FieldMapper is a multi-tenant field mapping platform for conservation teams.
+
+## Stack
+- Next.js 14 (App Router)
+- Supabase (Auth, PostgreSQL, RLS)
+- Tailwind CSS (custom classes: .card, .btn-primary, .btn-secondary, .input-field, .label)
+- Leaflet (mapping)
+
+## Architecture
+- Multi-tenant: tenant resolution via middleware
+- Server actions: `'use server'` files, return `{ success: true }` or `{ error: string }`
+- Auth: Supabase Auth (email/password + Google OAuth)
+- No external UI component library — all custom
+
+## Key Commands
+- `npm run dev` — dev server
+- `npm run build` — production build
+- `npm run test` — Vitest
+- `npm run type-check` — TypeScript check
+
+## Full Details
+See AGENTS.md for the complete operating manual.

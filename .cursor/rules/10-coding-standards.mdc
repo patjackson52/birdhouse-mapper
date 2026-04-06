@@ -1,0 +1,30 @@
+---
+description: Coding standards and safe modification policy
+globs:
+alwaysApply: true
+---
+
+# Coding Standards
+
+## TypeScript
+- Strict TypeScript throughout
+- No `any` types without justification
+
+## Styling
+- Tailwind CSS only — no inline styles, no CSS modules
+- Use custom utility classes (.card, .btn-primary, etc.)
+
+## Server Actions
+- Return `{ success: true }` or `{ error: string }`
+- Use `createClient()` from `@/lib/supabase/server`
+
+## Testing
+- Unit tests: Vitest + @testing-library/react
+- E2E tests: Playwright
+- Run `npm run test` before committing
+
+## Safe Modification Policy
+- Read existing code before modifying
+- Make small, focused changes
+- Do not refactor code unrelated to the current task
+- Do not add features beyond what was requested

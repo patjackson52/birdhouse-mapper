@@ -1,0 +1,63 @@
+name: Memory Check
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  memory-reminder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes that may need memory updates
+        run: |
+          # Get changed files
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD 2>/dev/null || echo "")
+
+          NEEDS_REVIEW=false
+          REASONS=""
+
+          # Check for infrastructure/config changes
+          if echo "$CHANGED" | grep -qE '(next\.config|vercel\.json|\.env\.example|tsconfig)'; then
+            NEEDS_REVIEW=true
+            REASONS="${REASONS}\n- Configuration files changed"
+          fi
+
+          # Check for database/migration changes
+          if echo "$CHANGED" | grep -qE '(supabase/migrations|schema)'; then
+            NEEDS_REVIEW=true
+            REASONS="${REASONS}\n- Database migrations or schema changed"
+          fi
+
+          # Check for new dependencies
+          if echo "$CHANGED" | grep -q 'package\.json'; then
+            NEEDS_REVIEW=true
+            REASONS="${REASONS}\n- Dependencies may have changed (package.json modified)"
+          fi
+
+          # Check for middleware/auth changes
+          if echo "$CHANGED" | grep -qE '(middleware\.(ts|js)|auth|supabase/.*config)'; then
+            NEEDS_REVIEW=true
+            REASONS="${REASONS}\n- Auth or middleware changed"
+          fi
+
+          # Check for workflow changes
+          if echo "$CHANGED" | grep -qE '\.github/workflows/'; then
+            NEEDS_REVIEW=true
+            REASONS="${REASONS}\n- CI/CD workflows changed"
+          fi
+
+          if [ "$NEEDS_REVIEW" = true ]; then
+            echo "::notice::📝 Memory check: This PR includes changes that may warrant an ADR or memory update."
+            echo -e "Reasons:${REASONS}"
+            echo ""
+            echo "Consider:"
+            echo "  - Creating an ADR: ./scripts/new-adr.sh \"Your decision title\""
+            echo "  - Updating memory: ./scripts/remember.sh project \"What changed and why\""
+            echo "  - Checking docs/adr/ and memory/ are up to date"
+          else
+            echo "No memory-sensitive changes detected."
+          fi
