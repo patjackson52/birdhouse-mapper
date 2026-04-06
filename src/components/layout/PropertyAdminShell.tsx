@@ -64,6 +64,8 @@ export function PropertyAdminShell({
     { type: 'section', label: 'Field Work' },
     { label: 'Map', href: `/p/${propertySlug}` },
     { label: 'Data', href: `${base}/data` },
+    { label: 'Geo Layers', href: `${base}/geo-layers/discover` },
+    { label: 'Parcel Lookup', href: `${base}/parcel-lookup` },
     { type: 'section', label: 'Content' },
     { label: 'Data Vault', href: `${base}/vault` },
     { type: 'section', label: 'Site' },
