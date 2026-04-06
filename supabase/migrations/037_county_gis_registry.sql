@@ -1,4 +1,4 @@
--- supabase/migrations/034_county_gis_registry.sql
+-- supabase/migrations/037_county_gis_registry.sql
 CREATE TABLE county_gis_registry (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   fips text UNIQUE NOT NULL,

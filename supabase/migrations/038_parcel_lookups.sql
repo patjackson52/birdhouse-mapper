@@ -1,4 +1,4 @@
--- supabase/migrations/035_parcel_lookups.sql
+-- supabase/migrations/038_parcel_lookups.sql
 CREATE TABLE parcel_lookups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id uuid NOT NULL REFERENCES orgs(id),
