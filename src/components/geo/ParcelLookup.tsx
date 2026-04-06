@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { usePathname } from 'next/navigation';
 import { lookupParcel, confirmParcelSelection } from '@/app/admin/properties/[slug]/parcel-lookup/actions';
 import type { ParcelCandidate, ParcelLookupResult } from '@/lib/geo/types';
 
@@ -23,6 +24,13 @@ interface ParcelLookupProps {
 }
 
 export default function ParcelLookup({ propertyId, propertyName, propertySlug, orgId }: ParcelLookupProps) {
+  const pathname = usePathname();
+  // Derive admin base from current URL: "/p/slug/admin" or "/admin/properties/slug"
+  const adminBase = useMemo(() => {
+    const parcelIdx = pathname.indexOf('/parcel-lookup');
+    return parcelIdx >= 0 ? pathname.slice(0, parcelIdx) : pathname;
+  }, [pathname]);
+
   const [state, setState] = useState<LookupState>({ step: 'idle' });
   const [address, setAddress] = useState('');
   const [selectedApns, setSelectedApns] = useState<Set<string>>(new Set());
@@ -254,7 +262,7 @@ export default function ParcelLookup({ propertyId, propertyName, propertySlug, o
             </p>
           </div>
           <div className="flex gap-2 justify-center mt-4">
-            <a href={`/admin/properties/${propertySlug}/geo-layers/discover`} className="btn-secondary text-sm">
+            <a href={`${adminBase}/geo-layers/discover`} className="btn-secondary text-sm">
               View in Geo Layers
             </a>
             <button className="btn-secondary text-sm" onClick={handleReset}>
@@ -276,10 +284,10 @@ export default function ParcelLookup({ propertyId, propertyName, propertySlug, o
             <button className="btn-secondary w-full text-left text-sm" onClick={handleReset}>
               Try a different address
             </button>
-            <a href={`/admin/properties/${propertySlug}/geo-layers/discover`} className="btn-secondary w-full text-left text-sm block">
+            <a href={`${adminBase}/geo-layers/discover`} className="btn-secondary w-full text-left text-sm block">
               Draw boundary on map
             </a>
-            <a href={`/admin/properties/${propertySlug}/geo-layers/discover`} className="btn-secondary w-full text-left text-sm block">
+            <a href={`${adminBase}/geo-layers/discover`} className="btn-secondary w-full text-left text-sm block">
               Upload boundary file
             </a>
           </div>

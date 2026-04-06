@@ -32,10 +32,22 @@ export async function runParcelLookup(input: ParcelLookupInput): Promise<ParcelL
 
   // Step 3: Resolve ArcGIS endpoint
   let config = await input.registryLookup(fipsResult.fips);
+  let features: GeoJSON.Feature[] = [];
 
-  if (!config) {
-    config = await discoverEndpoint(fipsResult.county_name, fipsResult.state_fips, fipsResult.fips);
-    if (config) {
+  if (config) {
+    // Use cached registry entry
+    features = await queryParcelsByPoint(config.parcel_layer_url, geo.lat, geo.lng);
+  }
+
+  if (!config || features.length === 0) {
+    // Auto-discover — validates each candidate with a test query
+    const discovered = await discoverAndValidateEndpoint(
+      fipsResult.county_name, fipsResult.state_fips, fipsResult.fips,
+      geo.lat, geo.lng
+    );
+    if (discovered) {
+      config = discovered.config;
+      features = discovered.features;
       await input.registrySave(config);
     }
   }
@@ -47,8 +59,6 @@ export async function runParcelLookup(input: ParcelLookupInput): Promise<ParcelL
     return emptyResult('not_found', `No parcel data source found for ${countyLabel}.`);
   }
 
-  // Step 4: Query parcels at point
-  const features = await queryParcelsByPoint(config.parcel_layer_url, geo.lat, geo.lng);
   if (features.length === 0) {
     return {
       status: 'not_found',
@@ -137,11 +147,13 @@ const STATE_FIPS_TO_ABBR: Record<string, string> = {
   '49': 'UT', '19': 'IA',
 };
 
-async function discoverEndpoint(
+async function discoverAndValidateEndpoint(
   countyName: string,
   stateFips: string,
-  fips: string
-): Promise<CountyGISConfig | null> {
+  fips: string,
+  testLat: number,
+  testLng: number
+): Promise<{ config: CountyGISConfig; features: GeoJSON.Feature[] } | null> {
   const stateAbbr = STATE_FIPS_TO_ABBR[stateFips] ?? '';
   const hubResults = await searchArcGISHub(countyName, stateAbbr);
 
@@ -155,7 +167,11 @@ async function discoverEndpoint(
     const match = matchFields(meta.fields);
     if (!match) continue;
 
-    return {
+    // Validate with a test query at the geocoded point
+    const testFeatures = await queryParcelsByPoint(layerUrl, testLat, testLng);
+    if (testFeatures.length === 0) continue;
+
+    const config: CountyGISConfig = {
       id: '',
       fips,
       county_name: countyName,
@@ -167,6 +183,8 @@ async function discoverEndpoint(
       confidence: match.confidence,
       last_verified_at: null,
     };
+
+    return { config, features: testFeatures };
   }
 
   return null;
