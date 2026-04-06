@@ -65,6 +65,7 @@ export default function MapView({
   sheetState,
 }: MapViewProps) {
   const config = useConfig();
+  const { controls: mapControls } = config.mapDisplayConfig;
   const theme = useTheme();
   const { position } = useUserLocation();
   const center: [number, number] = [config.mapCenter.lat, config.mapCenter.lng];
@@ -151,7 +152,7 @@ export default function MapView({
         })}
       </MapContainer>
 
-      {geoLayers && geoLayers.length > 0 && (
+      {mapControls.layerSelector && geoLayers && geoLayers.length > 0 && (
         <LayerControlPanel
           layers={geoLayers}
           visibleLayerIds={visibleGeoLayerIds ?? new Set()}
@@ -205,11 +206,11 @@ export default function MapView({
         )}
       </button>
 
-      <LocateButton onLocate={() => setFlyToUserTrigger((n) => n + 1)} />
-      <MapLegend itemTypes={itemTypes} />
+      {mapControls.locateMe && (<LocateButton onLocate={() => setFlyToUserTrigger((n) => n + 1)} />)}
+      {mapControls.legend && (<MapLegend itemTypes={itemTypes} legendConfig={config.mapDisplayConfig.legend} />)}
 
       {/* Quick-add FAB — hidden when sheet is half/full, raised above peek sheet */}
-      {sheetState !== 'half' && sheetState !== 'full' && (
+      {mapControls.quickAdd && sheetState !== 'half' && sheetState !== 'full' && (
         <button
           onClick={() => setQuickAddOpen(true)}
           className={`fixed right-4 z-30 bg-green-600 hover:bg-green-700 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-light transition-all duration-300 ${

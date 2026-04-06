@@ -142,6 +142,7 @@ export interface Org {
   default_property_id: string | null;
   created_at: string;
   updated_at: string;
+  map_display_config: unknown | null;
 }
 
 export interface RolePermissions {
@@ -221,6 +222,7 @@ export interface Property {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+  map_display_config: unknown | null;
 }
 
 export interface PropertyMembership {

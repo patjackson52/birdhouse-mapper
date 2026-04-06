@@ -124,6 +124,46 @@ describe('buildSiteConfig', () => {
     expect(config.logoUrl).toBe('https://example.com/org-logo.png');
   });
 
+  it('resolves mapDisplayConfig from org and property', () => {
+    const org = {
+      name: 'Test',
+      tagline: null,
+      logo_url: null,
+      favicon_url: null,
+      theme: null,
+      setup_complete: false,
+      map_display_config: { controls: { legend: false, quickAdd: false } },
+    };
+    const property = {
+      description: null,
+      map_default_lat: null,
+      map_default_lng: null,
+      map_default_zoom: null,
+      map_style: null,
+      custom_map: null,
+      about_content: null,
+      about_page_enabled: null,
+      footer_text: null,
+      footer_links: null,
+      custom_nav_items: null,
+      landing_page: null,
+      logo_url: null,
+      puck_pages: null,
+      puck_root: null,
+      puck_template: null,
+      puck_pages_draft: null,
+      puck_root_draft: null,
+      puck_page_meta: null,
+      map_display_config: { controls: { legend: true } },
+    };
+
+    const config = buildSiteConfig(org, property);
+
+    expect(config.mapDisplayConfig.controls.legend).toBe(true);
+    expect(config.mapDisplayConfig.controls.quickAdd).toBe(false);
+    expect(config.mapDisplayConfig.controls.locateMe).toBe(true);
+  });
+
   it('uses defaults for null org/property fields', () => {
     const org = {
       name: 'Minimal',

@@ -8,6 +8,10 @@ import type { OrgSettingsUpdates } from './actions';
 import type { SubscriptionTier, SubscriptionStatus } from '@/lib/types';
 import LogoUploader from '@/components/admin/LogoUploader';
 import { getLogoUrl } from '@/lib/config/logo';
+import MapDisplayConfigEditor from '@/components/admin/MapDisplayConfigEditor';
+import type { MapDisplayConfig } from '@/lib/config/map-display';
+import type { ItemType } from '@/lib/types';
+import { createClient } from '@/lib/supabase/client';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -59,6 +63,7 @@ export default function OrgSettingsPage() {
   const [pwaName, setPwaName] = useState('');
   const [themeJson, setThemeJson] = useState('');
   const [themeJsonError, setThemeJsonError] = useState('');
+  const [mapDisplayConfig, setMapDisplayConfig] = useState<MapDisplayConfig | null>(null);
 
   const { data: settings, isLoading: loading } = useQuery({
     queryKey: ['admin', 'settings'],
@@ -72,6 +77,17 @@ export default function OrgSettingsPage() {
     },
   });
 
+  const { data: itemTypes = [] } = useQuery({
+    queryKey: ['admin', 'itemTypes'],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data: org } = await supabase.from('orgs').select('id').limit(1).single();
+      if (!org) return [];
+      const { data } = await supabase.from('item_types').select('*').eq('org_id', org.id).order('name');
+      return (data ?? []) as ItemType[];
+    },
+  });
+
   useEffect(() => {
     if (settings && !initialized.current) {
       initialized.current = true;
@@ -80,6 +96,7 @@ export default function OrgSettingsPage() {
       setTagline(settings.tagline ?? '');
       setPwaName(settings.pwa_name ?? '');
       setThemeJson(settings.theme ? JSON.stringify(settings.theme, null, 2) : '');
+      setMapDisplayConfig(settings.map_display_config as MapDisplayConfig | null);
     }
   }, [settings]);
 
@@ -108,6 +125,10 @@ export default function OrgSettingsPage() {
       const newThemeStr = parsedTheme !== undefined ? JSON.stringify(parsedTheme) : '';
       if (newThemeStr !== currentThemeStr) updates.theme = parsedTheme ?? null;
     }
+
+    const currentMapConfig = JSON.stringify(settings?.map_display_config ?? null);
+    const newMapConfig = JSON.stringify(mapDisplayConfig);
+    if (newMapConfig !== currentMapConfig) updates.map_display_config = mapDisplayConfig;
 
     setSaving(true);
     setMessage('');
@@ -271,6 +292,21 @@ export default function OrgSettingsPage() {
               default theme.
             </p>
           </div>
+        </section>
+
+        {/* Map Display section */}
+        <section className="card space-y-5">
+          <h2 className="font-heading text-lg font-semibold text-forest-dark">
+            Map Display
+          </h2>
+          <p className="text-xs text-sage">
+            Configure which controls appear on the map. These defaults apply to all properties unless overridden.
+          </p>
+          <MapDisplayConfigEditor
+            value={mapDisplayConfig}
+            onChange={setMapDisplayConfig}
+            itemTypes={itemTypes}
+          />
         </section>
 
         {/* Subscription section (read-only) */}

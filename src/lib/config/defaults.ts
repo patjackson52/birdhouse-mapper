@@ -1,4 +1,5 @@
 import type { SiteConfig } from './types';
+import { resolveMapDisplayConfig } from './map-display';
 
 export const DEFAULT_CONFIG: SiteConfig = {
   siteName: 'Field Mapper',
@@ -27,4 +28,5 @@ export const DEFAULT_CONFIG: SiteConfig = {
   puckPagesDraft: null,
   puckRootDraft: null,
   puckPageMeta: null,
+  mapDisplayConfig: resolveMapDisplayConfig(null, null),
 };

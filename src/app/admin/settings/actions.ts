@@ -16,6 +16,7 @@ export interface OrgSettings {
   theme: unknown | null;
   subscription_tier: SubscriptionTier;
   subscription_status: SubscriptionStatus;
+  map_display_config: unknown | null;
 }
 
 export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: string }> {
@@ -25,7 +26,7 @@ export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: st
 
   const { data, error } = await supabase
     .from('orgs')
-    .select('id, name, slug, tagline, pwa_name, logo_url, favicon_url, theme, subscription_tier, subscription_status')
+    .select('id, name, slug, tagline, pwa_name, logo_url, favicon_url, theme, subscription_tier, subscription_status, map_display_config')
     .eq('id', tenant.orgId)
     .single();
 
@@ -45,6 +46,7 @@ export async function getOrgSettings(): Promise<{ data?: OrgSettings; error?: st
       theme: data.theme,
       subscription_tier: data.subscription_tier as SubscriptionTier,
       subscription_status: data.subscription_status as SubscriptionStatus,
+      map_display_config: data.map_display_config,
     },
   };
 }
@@ -56,6 +58,7 @@ export interface OrgSettingsUpdates {
   pwa_name?: string;
   logo_url?: string;
   theme?: unknown;
+  map_display_config?: unknown;
 }
 
 export async function updateOrgSettings(
@@ -84,6 +87,7 @@ export async function updateOrgSettings(
   if (updates.pwa_name !== undefined) payload.pwa_name = updates.pwa_name;
   if (updates.logo_url !== undefined) payload.logo_url = updates.logo_url;
   if (updates.theme !== undefined) payload.theme = updates.theme;
+  if (updates.map_display_config !== undefined) payload.map_display_config = updates.map_display_config;
 
   if (Object.keys(payload).length === 0) {
     return { success: true }; // nothing to update

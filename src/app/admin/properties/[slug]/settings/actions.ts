@@ -23,6 +23,7 @@ const PROPERTY_KEY_TO_COLUMN: Record<string, string> = {
   footer_text: 'footer_text',
   footer_links: 'footer_links',
   custom_nav_items: 'custom_nav_items',
+  map_display_config: 'map_display_config',
 };
 
 /**

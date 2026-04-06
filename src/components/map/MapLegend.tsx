@@ -1,21 +1,33 @@
 'use client';
 
 import { useState } from 'react';
-import type { ItemType } from '@/lib/types';
-import { statusColors } from '@/lib/utils';
+import type { ItemType, ItemStatus } from '@/lib/types';
+import { statusColors, statusLabels } from '@/lib/utils';
 
 interface MapLegendProps {
   itemTypes: ItemType[];
+  legendConfig?: {
+    statuses?: string[];
+    itemTypeIds?: string[];
+  };
 }
 
-export default function MapLegend({ itemTypes }: MapLegendProps) {
+export default function MapLegend({ itemTypes, legendConfig }: MapLegendProps) {
   const [collapsed, setCollapsed] = useState(false);
 
-  const statusItems = [
-    { color: statusColors.active, label: 'Active' },
-    { color: statusColors.planned, label: 'Planned' },
-    { color: statusColors.damaged, label: 'Needs Repair' },
-  ];
+  const allStatuses: ItemStatus[] = ['active', 'planned', 'damaged', 'removed'];
+  const visibleStatuses = legendConfig?.statuses
+    ? allStatuses.filter((s) => legendConfig.statuses!.includes(s))
+    : allStatuses.filter((s) => s !== 'removed');
+
+  const statusItems = visibleStatuses.map((s) => ({
+    color: statusColors[s],
+    label: statusLabels[s],
+  }));
+
+  const visibleTypes = legendConfig?.itemTypeIds
+    ? itemTypes.filter((t) => legendConfig.itemTypeIds!.includes(t.id))
+    : itemTypes;
 
   return (
     <div className="absolute bottom-20 md:bottom-6 left-4 z-10">
@@ -56,13 +68,13 @@ export default function MapLegend({ itemTypes }: MapLegendProps) {
               </div>
             ))}
           </div>
-          {itemTypes.length > 1 && (
+          {visibleTypes.length > 1 && (
             <>
               <h4 className="text-[10px] font-medium text-sage uppercase tracking-wider mt-2 mb-1.5">
                 Types
               </h4>
               <div className="space-y-1">
-                {itemTypes.map((type) => (
+                {visibleTypes.map((type) => (
                   <div key={type.id} className="flex items-center gap-2">
                     <span className="text-sm">{type.icon}</span>
                     <span className="text-xs text-forest-dark">{type.name}</span>

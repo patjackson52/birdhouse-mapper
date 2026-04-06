@@ -1,4 +1,5 @@
 import type { LandingPageConfig } from './landing-types';
+import { resolveMapDisplayConfig, type ResolvedMapDisplayConfig, type MapDisplayConfig } from './map-display';
 
 export interface SiteConfig {
   siteName: string;
@@ -41,6 +42,7 @@ export interface SiteConfig {
   puckPagesDraft: Record<string, unknown> | null;
   puckRootDraft: Record<string, unknown> | null;
   puckPageMeta: Record<string, { title: string; slug: string; createdAt: string }> | null;
+  mapDisplayConfig: ResolvedMapDisplayConfig;
 }
 
 /**
@@ -56,6 +58,7 @@ export function buildSiteConfig(
     favicon_url: string | null;
     theme: { preset: string; overrides?: Record<string, string> } | null;
     setup_complete: boolean;
+    map_display_config?: unknown | null;
   },
   property: {
     id?: string;
@@ -80,6 +83,7 @@ export function buildSiteConfig(
     puck_pages_draft: unknown | null;
     puck_root_draft: unknown | null;
     puck_page_meta: unknown | null;
+    map_display_config?: unknown | null;
   }
 ): SiteConfig {
   return {
@@ -113,5 +117,9 @@ export function buildSiteConfig(
     puckPagesDraft: property.puck_pages_draft as Record<string, unknown> | null ?? null,
     puckRootDraft: property.puck_root_draft as Record<string, unknown> | null ?? null,
     puckPageMeta: property.puck_page_meta as Record<string, { title: string; slug: string; createdAt: string }> | null ?? null,
+    mapDisplayConfig: resolveMapDisplayConfig(
+      org.map_display_config as MapDisplayConfig | null,
+      property.map_display_config as MapDisplayConfig | null,
+    ),
   };
 }

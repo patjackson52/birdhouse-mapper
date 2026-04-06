@@ -47,6 +47,7 @@ describe('Phase 2 types', () => {
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
         deleted_at: null,
+        map_display_config: null,
       };
       expect(prop.org_id).toBe('org-1');
     });
