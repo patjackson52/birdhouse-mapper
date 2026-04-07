@@ -1,7 +1,8 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { PasteFormatDialog } from './PasteFormatDialog';
 import { getEditorExtensions } from './extensions';
 import { uploadToVault } from '@/lib/vault/actions';
 import VaultPicker from '@/components/vault/VaultPicker';
@@ -18,6 +19,7 @@ const LINE_HEIGHT_OPTIONS = [
 
 export default function RichTextEditor({ content, onChange, orgId, editable = true }: RichTextEditorProps) {
   const [showVaultPicker, setShowVaultPicker] = useState(false);
+  const [pendingPaste, setPendingPaste] = useState<{ html: string; plain: string } | null>(null);
 
   const editor = useEditor({
     extensions: getEditorExtensions(),
@@ -54,6 +56,15 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
             }
           }
         }
+
+        const html = event.clipboardData?.getData('text/html') ?? '';
+        if (html && /style\s*=/i.test(html)) {
+          event.preventDefault();
+          const plain = event.clipboardData?.getData('text/plain') ?? '';
+          setPendingPaste({ html, plain });
+          return true;
+        }
+
         return false;
       },
     },
@@ -119,6 +130,32 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
 
     setShowVaultPicker(false);
   }
+
+  function handleKeepPaste() {
+    if (!editor || !pendingPaste) return;
+    editor.commands.insertContent(pendingPaste.html);
+    setPendingPaste(null);
+  }
+
+  function handlePlainPaste() {
+    if (!editor || !pendingPaste) return;
+    editor.commands.insertContent(pendingPaste.plain);
+    setPendingPaste(null);
+  }
+
+  useEffect(() => {
+    if (!pendingPaste) return;
+    function handleKeyDown() {
+      setPendingPaste((prev) => {
+        if (prev && editor) {
+          editor.commands.insertContent(prev.html);
+        }
+        return null;
+      });
+    }
+    document.addEventListener('keydown', handleKeyDown, { once: true });
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [pendingPaste, editor]);
 
   if (!editor) return null;
 
@@ -234,6 +271,12 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
       )}
 
       <EditorContent editor={editor} />
+
+      {pendingPaste && (
+        <div className="relative">
+          <PasteFormatDialog onKeep={handleKeepPaste} onPlainText={handlePlainPaste} />
+        </div>
+      )}
 
       {showVaultPicker && (
         <VaultPicker
