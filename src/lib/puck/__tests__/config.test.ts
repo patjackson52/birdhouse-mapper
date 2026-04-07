@@ -20,7 +20,8 @@ describe('pageConfig', () => {
     expect(componentNames).toContain('Embed');
     expect(componentNames).toContain('KnowledgeEmbed');
     expect(componentNames).toContain('KnowledgeList');
-    expect(componentNames.length).toBe(16);
+    expect(componentNames).toContain('SubscribeBlock');
+    expect(componentNames.length).toBe(17);
   });
 
   it('each component has a render function', () => {

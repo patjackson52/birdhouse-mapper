@@ -57,10 +57,9 @@ export default function CommunicationsSettingsPage() {
       ]);
 
       setTopics(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (topicsResult.data ?? []).map((t: any) => ({
+        (topicsResult.data ?? []).map((t) => ({
           ...t,
-          subscriber_count: t.user_subscriptions?.[0]?.count ?? 0,
+          subscriber_count: (t as { user_subscriptions?: { count: number }[] }).user_subscriptions?.[0]?.count ?? 0,
         }))
       );
       setProperties(propsResult.data ?? []);
