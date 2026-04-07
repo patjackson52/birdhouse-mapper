@@ -54,6 +54,7 @@ export default async function RootLayout({
   const puckRoot = (isPreview
     ? (config.puckRootDraft ?? config.puckRoot)
     : config.puckRoot) as Data | null;
+  const isAdminRoute = headersList.get('x-is-admin-route') === 'true';
 
   return (
     <html lang="en">
@@ -70,7 +71,7 @@ export default async function RootLayout({
           <UserLocationProvider>
             <OfflineProvider>
               <QueryProvider>
-                {puckRoot ? (
+                {puckRoot && !isAdminRoute ? (
                   <PuckRootRenderer data={puckRoot}>
                     <main className="flex-1">{children}</main>
                   </PuckRootRenderer>
