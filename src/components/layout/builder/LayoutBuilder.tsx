@@ -2,7 +2,18 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { nanoid } from 'nanoid';
-import { arrayMove } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { TypeLayout, LayoutNode, LayoutBlock, LayoutRow, BlockType, BlockConfig, SpacingPreset } from '@/lib/layout/types';
 import { isLayoutRow } from '@/lib/layout/types';
 import type { CustomField, EntityType, ItemType } from '@/lib/types';
@@ -13,6 +24,8 @@ import BlockList from './BlockList';
 import SpacingPicker from './SpacingPicker';
 import LayoutRenderer from '../LayoutRenderer';
 import FormPreview from '../preview/FormPreview';
+import DragOverlayContent from './DragOverlayContent';
+import { rowAwareCollision } from './collision';
 
 interface Props {
   itemType: ItemType;
@@ -36,6 +49,34 @@ function getDefaultConfig(type: BlockType): BlockConfig {
   }
 }
 
+function createBlock(type: BlockType): LayoutBlock {
+  return { id: nanoid(10), type, config: getDefaultConfig(type) };
+}
+
+function createRow(): LayoutRow {
+  return {
+    id: nanoid(10),
+    type: 'row',
+    children: [
+      { id: nanoid(10), type: 'status_badge', config: {} },
+      { id: nanoid(10), type: 'status_badge', config: {} },
+    ],
+    gap: 'normal',
+    distribution: 'equal',
+  };
+}
+
+function findNode(nodes: LayoutNode[], id: string): LayoutNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    if (isLayoutRow(node)) {
+      const child = node.children.find((c) => c.id === id);
+      if (child) return child;
+    }
+  }
+  return null;
+}
+
 export default function LayoutBuilder({ itemType, initialLayout, customFields, entityTypes, onSave, onCancel }: Props) {
   const [layout, setLayout] = useState<TypeLayout>(
     () => initialLayout ?? generateDefaultLayout(customFields),
@@ -45,6 +86,14 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<'build' | 'detail' | 'form'>('build');
   const [previewTab, setPreviewTab] = useState<PreviewTab>('detail');
+  const [activeNode, setActiveNode] = useState<LayoutNode | null>(null);
+  const [activeType, setActiveType] = useState<'block' | 'row' | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -53,7 +102,6 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Combine real fields + pending fields for preview
   const allFields: CustomField[] = [
     ...customFields,
     ...pendingFields.map((f, i) => ({
@@ -70,30 +118,146 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
 
   const mockItem = generateMockItem(itemType, allFields);
 
-  const handleAddBlock = useCallback((type: BlockType | 'row') => {
+  // --- DnD handlers ---
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    const data = active.data.current as Record<string, unknown> | undefined;
+
+    if (data?.source === 'palette') {
+      // Create a temporary node for the overlay preview
+      const paletteType = data.type as BlockType | 'row';
+      const tempNode: LayoutNode = paletteType === 'row' ? createRow() : createBlock(paletteType);
+      setActiveNode(tempNode);
+      setActiveType(paletteType === 'row' ? 'row' : 'block');
+      return;
+    }
+
+    // Existing block/row drag
+    const id = String(active.id);
+    const found = findNode(layout.blocks, id);
+    if (found) {
+      setActiveNode(found);
+      setActiveType(isLayoutRow(found) ? 'row' : 'block');
+    }
+  }, [layout.blocks]);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveNode(null);
+    setActiveType(null);
+
+    if (!over) return;
+
+    const activeData = active.data.current as Record<string, unknown>;
+    const overData = over.data.current as Record<string, unknown>;
+
+    // If over target has zone data, it's a drop zone
+    if (overData?.zone) {
+      handleDrop(String(active.id), activeData ?? {}, overData);
+      return;
+    }
+
+    // Otherwise it's a sortable reorder
+    if (active.id !== over.id) {
+      handleReorder(String(active.id), String(over.id));
+    }
+  }, []);
+
+  // Unified drop handler for all drag-and-drop scenarios
+  const handleDrop = useCallback((activeId: string, activeData: Record<string, unknown>, targetData: Record<string, unknown>) => {
+    const isPalette = activeData.source === 'palette';
+    const targetZone = targetData.zone as string;
+    const targetIndex = targetData.index as number;
+
     setLayout((prev) => {
-      if (type === 'row') {
-        const newRow: LayoutRow = {
-          id: nanoid(10),
-          type: 'row',
-          children: [
-            { id: nanoid(10), type: 'status_badge', config: {} },
-            { id: nanoid(10), type: 'status_badge', config: {} },
-          ],
-          gap: 'normal',
-          distribution: 'equal',
-        };
-        return { ...prev, blocks: [...prev.blocks, newRow] };
+      const blocks = [...prev.blocks];
+
+      if (isPalette) {
+        const paletteType = activeData.type as BlockType | 'row';
+        const newNode: LayoutNode = paletteType === 'row' ? createRow() : createBlock(paletteType);
+
+        if (targetZone === 'top-level') {
+          blocks.splice(targetIndex, 0, newNode);
+        } else if (targetZone === 'row') {
+          const rowId = targetData.rowId as string;
+          const rowIdx = blocks.findIndex((b) => b.id === rowId);
+          if (rowIdx !== -1 && isLayoutRow(blocks[rowIdx])) {
+            const row = blocks[rowIdx] as LayoutRow;
+            if (row.children.length < 4 && !isLayoutRow(newNode)) {
+              const children = [...row.children];
+              children.splice(targetIndex, 0, newNode as LayoutBlock);
+              blocks[rowIdx] = { ...row, children };
+            }
+          }
+        }
+
+        return { ...prev, blocks };
       }
-      const newBlock: LayoutBlock = {
-        id: nanoid(10),
-        type: type,
-        config: getDefaultConfig(type),
-      };
-      return { ...prev, blocks: [...prev.blocks, newBlock] };
+
+      // Existing block move — find and remove from current position
+      let movingNode: LayoutNode | null = null;
+      let sourceRowId: string | null = null;
+      let sourceChildIdx = -1;
+
+      const topIdx = blocks.findIndex((b) => b.id === activeId);
+      if (topIdx !== -1) {
+        movingNode = blocks[topIdx];
+        blocks.splice(topIdx, 1);
+      } else {
+        for (let i = 0; i < blocks.length; i++) {
+          const node = blocks[i];
+          if (isLayoutRow(node)) {
+            const childIdx = node.children.findIndex((c) => c.id === activeId);
+            if (childIdx !== -1) {
+              movingNode = node.children[childIdx];
+              sourceRowId = node.id;
+              sourceChildIdx = childIdx;
+              const remaining = node.children.filter((c) => c.id !== activeId);
+              if (remaining.length === 0) {
+                blocks.splice(i, 1);
+              } else if (remaining.length === 1) {
+                blocks[i] = remaining[0];
+              } else {
+                blocks[i] = { ...node, children: remaining };
+              }
+              break;
+            }
+          }
+        }
+      }
+
+      if (!movingNode) return prev;
+
+      if (targetZone === 'top-level') {
+        let adjustedIndex = targetIndex;
+        if (topIdx !== -1 && topIdx < targetIndex) {
+          adjustedIndex--;
+        }
+        blocks.splice(Math.min(adjustedIndex, blocks.length), 0, movingNode);
+      } else if (targetZone === 'row') {
+        const rowId = targetData.rowId as string;
+        const rowIdx = blocks.findIndex((b) => b.id === rowId);
+        if (rowIdx !== -1 && isLayoutRow(blocks[rowIdx]) && !isLayoutRow(movingNode)) {
+          const row = blocks[rowIdx] as LayoutRow;
+          if (row.children.length < 4) {
+            const children = [...row.children];
+            // Adjust index for same-row moves
+            let adjustedIndex = targetIndex;
+            if (sourceRowId === rowId && sourceChildIdx < targetIndex) {
+              adjustedIndex--;
+            }
+            children.splice(Math.min(adjustedIndex, children.length), 0, movingNode as LayoutBlock);
+            blocks[rowIdx] = { ...row, children };
+          }
+        }
+      }
+
+      return { ...prev, blocks };
     });
   }, []);
 
+  // Sortable reorder (fallback for SortableContext)
   const handleReorder = useCallback((activeId: string, overId: string) => {
     setLayout((prev) => {
       const oldIndex = prev.blocks.findIndex((b) => b.id === activeId);
@@ -133,7 +297,6 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   const handleCreateField = useCallback((field: { name: string; field_type: string; options: string[]; required: boolean }) => {
     const tempId = `temp-${nanoid(10)}`;
     setPendingFields((prev) => [...prev, { ...field, tempId }]);
-    // Auto-update the last field_display block that has no fieldId
     setLayout((prev) => {
       const blocks = [...prev.blocks];
       for (let i = blocks.length - 1; i >= 0; i--) {
@@ -164,36 +327,15 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     }));
   }, []);
 
-  const handleAddToRow = useCallback((rowId: string, blockType: string) => {
-    setLayout((prev) => ({
-      ...prev,
-      blocks: prev.blocks.map((node) => {
-        if (node.id === rowId && isLayoutRow(node) && node.children.length < 4) {
-          return {
-            ...node,
-            children: [
-              ...node.children,
-              { id: nanoid(10), type: blockType as BlockType, config: getDefaultConfig(blockType as BlockType) },
-            ],
-          };
-        }
-        return node;
-      }),
-    }));
-  }, []);
-
   const handleRemoveFromRow = useCallback((rowId: string, blockId: string) => {
     setLayout((prev) => ({
       ...prev,
-      blocks: prev.blocks.map((node) => {
-        if (node.id === rowId && isLayoutRow(node)) {
-          const remaining = node.children.filter((c) => c.id !== blockId);
-          if (remaining.length <= 1) {
-            return remaining[0] ?? node;
-          }
-          return { ...node, children: remaining };
-        }
-        return node;
+      blocks: prev.blocks.flatMap((node) => {
+        if (node.id !== rowId || !isLayoutRow(node)) return [node];
+        const remaining = node.children.filter((c) => c.id !== blockId);
+        if (remaining.length === 0) return [];
+        if (remaining.length === 1) return [remaining[0]];
+        return [{ ...node, children: remaining }];
       }),
     }));
   }, []);
@@ -207,23 +349,21 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     }
   };
 
-  // Build panel content
   const buildContent = (
     <div className="space-y-4">
-      <BlockPalette onAdd={handleAddBlock} />
+      <BlockPalette />
       <SpacingPicker value={layout.spacing} onChange={handleSpacingChange} />
       <BlockList
         nodes={layout.blocks}
         customFields={allFields}
         entityTypes={entityTypes}
         peekBlockCount={layout.peekBlockCount}
-        onReorder={handleReorder}
+        activeType={activeType}
         onConfigChange={handleConfigChange}
         onDeleteBlock={handleDeleteBlock}
         onCreateField={handleCreateField}
         onPeekCountChange={handlePeekCountChange}
         onRowChange={handleRowChange}
-        onAddToRow={handleAddToRow}
         onRemoveFromRow={handleRemoveFromRow}
       />
     </div>
@@ -251,11 +391,29 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     <FormPreview layout={layout} customFields={allFields} itemTypeName={itemType.name} />
   );
 
-  // Mobile: full-screen with tabs
+  const dndWrapped = (content: React.ReactNode) => (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={rowAwareCollision}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      {content}
+      <DragOverlay>
+        {activeNode ? (
+          <DragOverlayContent
+            node={activeNode}
+            customFields={allFields}
+            mockItem={mockItem}
+          />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+
   if (isMobile) {
     return (
       <div className="fixed inset-0 z-50 bg-white flex flex-col" style={{ height: '100dvh' }}>
-        {/* Sticky header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-sage-light">
           <button onClick={onCancel} className="text-sm text-forest font-medium">
             Cancel
@@ -266,7 +424,6 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
           </button>
         </div>
 
-        {/* Tab toggle */}
         <div className="flex border-b border-sage-light">
           {(['build', 'detail', 'form'] as const).map((tab) => (
             <button
@@ -283,9 +440,8 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
           ))}
         </div>
 
-        {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'build' && buildContent}
+          {activeTab === 'build' && dndWrapped(buildContent)}
           {activeTab === 'detail' && detailPreview}
           {activeTab === 'form' && formPreviewContent}
         </div>
@@ -293,10 +449,8 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     );
   }
 
-  // Desktop: side-by-side
   return (
     <div className="flex gap-6 min-h-[600px]">
-      {/* Builder panel */}
       <div className="flex-[3] overflow-y-auto pr-4 border-r border-sage-light">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-heading font-semibold text-forest-dark">Layout Builder</h3>
@@ -307,10 +461,9 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
             </button>
           </div>
         </div>
-        {buildContent}
+        {dndWrapped(buildContent)}
       </div>
 
-      {/* Preview panel */}
       <div className="flex-[2] overflow-y-auto">
         <div className="flex gap-1 mb-3">
           {(['detail', 'form'] as const).map((tab) => (

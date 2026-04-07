@@ -7,7 +7,7 @@ import type { LayoutBlock } from '@/lib/layout/types';
 import type { CustomField, EntityType } from '@/lib/types';
 import BlockConfigPanel from './BlockConfigPanel';
 import type { BlockConfig } from '@/lib/layout/types';
-import { GripVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 
 const BLOCK_LABELS: Record<string, string> = {
   field_display: 'Field',
@@ -58,7 +58,7 @@ export default function BlockListItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
 
   const label = block.type === 'field_display' && fieldName
@@ -66,20 +66,18 @@ export default function BlockListItem({
     : BLOCK_LABELS[block.type] ?? block.type;
 
   return (
-    <div ref={setNodeRef} style={style} className="border border-sage-light rounded-lg bg-white">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="border border-sage-light rounded-lg bg-white cursor-grab active:cursor-grabbing touch-none"
+      {...attributes}
+      {...listeners}
+    >
       {/* Header row */}
       <div className="flex items-center min-h-[48px]">
         <button
-          {...attributes}
-          {...listeners}
-          className="p-3 cursor-grab active:cursor-grabbing touch-none"
-          aria-label="Drag to reorder"
-        >
-          <GripVertical className="w-4 h-4 text-sage" />
-        </button>
-        <button
-          onClick={onToggleExpand}
-          className="flex-1 flex items-center gap-2 py-2 text-left"
+          onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+          className="flex-1 flex items-center gap-2 py-2 pl-3 text-left"
         >
           {isExpanded ? (
             <ChevronDown className="w-4 h-4 text-sage" />
@@ -90,16 +88,16 @@ export default function BlockListItem({
         </button>
         {showDeleteConfirm ? (
           <div className="flex items-center gap-1 pr-2">
-            <button onClick={() => onDelete(block.id)} className="text-xs text-red-600 font-medium px-2 py-1">
+            <button onClick={(e) => { e.stopPropagation(); onDelete(block.id); }} className="text-xs text-red-600 font-medium px-2 py-1">
               Delete
             </button>
-            <button onClick={() => setShowDeleteConfirm(false)} className="text-xs text-sage px-2 py-1">
+            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }} className="text-xs text-sage px-2 py-1">
               Cancel
             </button>
           </div>
         ) : (
           <button
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
             className="p-3 text-sage hover:text-red-500 transition-colors"
             aria-label="Delete block"
           >
@@ -110,7 +108,7 @@ export default function BlockListItem({
 
       {/* Config panel (accordion) */}
       {isExpanded && (
-        <div className="px-3 pb-3 border-t border-sage-light/50">
+        <div className="px-3 pb-3 border-t border-sage-light/50" onPointerDown={(e) => e.stopPropagation()}>
           <BlockConfigPanel
             block={block}
             customFields={customFields}

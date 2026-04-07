@@ -1,8 +1,12 @@
 'use client';
 
-import type { LayoutRow, BlockConfig, BlockType } from '@/lib/layout/types';
+import { useDroppable } from '@dnd-kit/core';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { LayoutRow, BlockConfig } from '@/lib/layout/types';
 import type { CustomField, EntityType } from '@/lib/types';
 import BlockListItem from './BlockListItem';
+import DropZone from './DropZone';
 import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,8 +21,8 @@ interface Props {
   onDeleteBlock: (blockId: string) => void;
   onCreateField: (field: { name: string; field_type: string; options: string[]; required: boolean }) => void;
   onRowChange: (rowId: string, update: Partial<Pick<LayoutRow, 'gap' | 'distribution'>>) => void;
-  onAddToRow: (rowId: string, blockType: string) => void;
   onRemoveFromRow: (rowId: string, blockId: string) => void;
+  activeType?: 'block' | 'row' | null;
 }
 
 export default function RowEditor({
@@ -32,26 +36,47 @@ export default function RowEditor({
   onDeleteBlock,
   onCreateField,
   onRowChange,
-  onAddToRow,
   onRemoveFromRow,
+  activeType,
 }: Props) {
   const [showRowConfig, setShowRowConfig] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showAddPicker, setShowAddPicker] = useState(false);
 
-  const ADD_TYPES: { type: BlockType; label: string }[] = [
-    { type: 'field_display', label: 'Field' },
-    { type: 'status_badge', label: 'Status' },
-    { type: 'text_label', label: 'Text' },
-    { type: 'divider', label: 'Divider' },
-  ];
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: row.id, data: { isRow: true } });
+
+  const { setNodeRef: setBoundsRef } = useDroppable({
+    id: `row-bounds-${row.id}`,
+    data: { zone: 'row-bounds', rowId: row.id },
+    disabled: true,
+  });
+
+  const canAcceptDrop = row.children.length < 4 && activeType !== 'row';
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+  };
 
   return (
-    <div className="border-2 border-dashed border-sage rounded-lg p-2 space-y-2">
+    <div
+      ref={(el) => { setNodeRef(el); setBoundsRef(el); }}
+      style={style}
+      className="border-2 border-dashed border-sage rounded-lg p-2 space-y-2 cursor-grab active:cursor-grabbing touch-none"
+      {...attributes}
+      {...listeners}
+    >
       {/* Row header */}
       <div className="flex items-center justify-between min-h-[44px]">
         <button
-          onClick={() => setShowRowConfig(!showRowConfig)}
+          onClick={(e) => { e.stopPropagation(); setShowRowConfig(!showRowConfig); }}
           className="flex items-center gap-2 text-sm font-medium text-forest-dark"
         >
           {showRowConfig ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -59,16 +84,16 @@ export default function RowEditor({
         </button>
         {showDeleteConfirm ? (
           <div className="flex items-center gap-1 pr-2">
-            <button onClick={() => onDeleteBlock(row.id)} className="text-xs text-red-600 font-medium px-2 py-1">
+            <button onClick={(e) => { e.stopPropagation(); onDeleteBlock(row.id); }} className="text-xs text-red-600 font-medium px-2 py-1">
               Delete
             </button>
-            <button onClick={() => setShowDeleteConfirm(false)} className="text-xs text-sage px-2 py-1">
+            <button onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(false); }} className="text-xs text-sage px-2 py-1">
               Cancel
             </button>
           </div>
         ) : (
           <button
-            onClick={() => setShowDeleteConfirm(true)}
+            onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(true); }}
             className="p-2 text-sage hover:text-red-500"
             aria-label="Delete row"
           >
@@ -79,7 +104,7 @@ export default function RowEditor({
 
       {/* Row config */}
       {showRowConfig && (
-        <div className="space-y-2 px-2 pb-2 border-b border-sage-light">
+        <div className="space-y-2 px-2 pb-2 border-b border-sage-light" onPointerDown={(e) => e.stopPropagation()}>
           <div>
             <label className="label">Distribution</label>
             <div className="flex gap-1">
@@ -115,54 +140,41 @@ export default function RowEditor({
         </div>
       )}
 
-      {/* Children */}
-      <div className="pl-3 border-l-2 border-sage-light space-y-2">
-        {row.children.map((child) => (
-          <BlockListItem
-            key={child.id}
-            block={child}
-            customFields={customFields}
-            entityTypes={entityTypes}
-            fieldName={
-              child.type === 'field_display'
-                ? fieldMap.get((child.config as { fieldId: string }).fieldId)?.name
-                : undefined
-            }
-            onConfigChange={onConfigChange}
-            onDelete={(id) => onRemoveFromRow(row.id, id)}
-            onCreateField={onCreateField}
-            isExpanded={expandedId === child.id}
-            onToggleExpand={() => onToggleExpand(child.id)}
-          />
-        ))}
-        {row.children.length < 4 && (
-          showAddPicker ? (
-            <div className="flex gap-1 flex-wrap">
-              {ADD_TYPES.map((t) => (
-                <button
-                  key={t.type}
-                  onClick={() => { onAddToRow(row.id, t.type); setShowAddPicker(false); }}
-                  className="px-3 py-1.5 rounded-md text-xs font-medium bg-white border border-sage-light hover:bg-sage-light/50 transition-colors"
-                >
-                  {t.label}
-                </button>
-              ))}
-              <button
-                onClick={() => setShowAddPicker(false)}
-                className="px-3 py-1.5 rounded-md text-xs text-sage"
-              >
-                Cancel
-              </button>
+      {/* Children with horizontal drop zones */}
+      <div className="pl-3 border-l-2 border-sage-light flex items-stretch gap-0" onPointerDown={(e) => e.stopPropagation()}>
+        <DropZone
+          id={`drop-row-${row.id}-0`}
+          data={{ zone: 'row', rowId: row.id, index: 0 }}
+          direction="horizontal"
+          disabled={!canAcceptDrop}
+        />
+        {row.children.map((child, i) => (
+          <div key={child.id} className="flex items-stretch flex-1 min-w-0">
+            <div className="flex-1 min-w-0">
+              <BlockListItem
+                block={child}
+                customFields={customFields}
+                entityTypes={entityTypes}
+                fieldName={
+                  child.type === 'field_display'
+                    ? fieldMap.get((child.config as { fieldId: string }).fieldId)?.name
+                    : undefined
+                }
+                onConfigChange={onConfigChange}
+                onDelete={(id) => onRemoveFromRow(row.id, id)}
+                onCreateField={onCreateField}
+                isExpanded={expandedId === child.id}
+                onToggleExpand={() => onToggleExpand(child.id)}
+              />
             </div>
-          ) : (
-            <button
-              onClick={() => setShowAddPicker(true)}
-              className="w-full py-2 border-2 border-dashed border-sage-light rounded-lg text-xs text-sage font-medium hover:border-forest hover:text-forest transition-colors min-h-[44px]"
-            >
-              + Add to row
-            </button>
-          )
-        )}
+            <DropZone
+              id={`drop-row-${row.id}-${i + 1}`}
+              data={{ zone: 'row', rowId: row.id, index: i + 1 }}
+              direction="horizontal"
+              disabled={!canAcceptDrop}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
