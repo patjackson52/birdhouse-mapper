@@ -1,7 +1,7 @@
 'use client';
 
 import { useEditor, EditorContent } from '@tiptap/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { PasteFormatDialog } from './PasteFormatDialog';
 import { getEditorExtensions } from './extensions';
 import { uploadToVault } from '@/lib/vault/actions';
@@ -58,6 +58,7 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
         }
 
         const html = event.clipboardData?.getData('text/html') ?? '';
+        if (html.includes('data-pm-slice')) return false;
         if (html && /style\s*=/i.test(html)) {
           event.preventDefault();
           const plain = event.clipboardData?.getData('text/plain') ?? '';
@@ -294,13 +295,26 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
 
 function LineHeightDropdown({ editor }: { editor: Editor }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [open]);
 
   const currentLineHeight = editor.getAttributes('paragraph').lineHeight
     || editor.getAttributes('heading').lineHeight
+    || editor.getAttributes('bulletList').lineHeight
+    || editor.getAttributes('orderedList').lineHeight
     || null;
 
   return (
-    <div className="relative">
+    <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
