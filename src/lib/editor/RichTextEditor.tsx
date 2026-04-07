@@ -161,9 +161,9 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
   if (!editor) return null;
 
   return (
-    <div className="border border-sage-light rounded-lg overflow-hidden bg-white">
+    <div className="border border-sage-light rounded-lg overflow-clip bg-white">
       {editable && (
-        <div className="flex flex-wrap gap-1 px-3 py-2 border-b border-sage-light bg-parchment/50">
+        <div className="sticky top-0 z-10 flex flex-wrap gap-1 px-3 py-2 border-b border-sage-light bg-parchment/50">
           <ToolbarButton
             active={editor.isActive('bold')}
             onClick={() => editor.chain().focus().toggleBold().run()}
