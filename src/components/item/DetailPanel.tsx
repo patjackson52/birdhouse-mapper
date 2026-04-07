@@ -79,6 +79,9 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         context={isMobile ? 'bottom-sheet' : 'side-panel'}
         sheetState={isMobile ? 'full' : undefined}
         customFields={item.custom_fields ?? []}
+        canEdit={canEditItem}
+        canAddUpdate={canAddUpdate}
+        isAuthenticated={isAuthenticated}
       />
     </div>
   ) : (
