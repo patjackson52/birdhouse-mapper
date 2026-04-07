@@ -29,7 +29,7 @@ export const getConfig = unstable_cache(
     // Get the first org and its default property
     const { data: org, error: orgError } = await supabase
       .from('orgs')
-      .select('name, pwa_name, tagline, logo_url, favicon_url, theme, setup_complete, default_property_id, map_display_config')
+      .select('name, pwa_name, tagline, logo_url, favicon_url, theme, setup_complete, default_property_id, map_display_config, communications_enabled')
       .limit(1)
       .single();
 

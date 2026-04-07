@@ -43,6 +43,7 @@ export interface SiteConfig {
   puckRootDraft: Record<string, unknown> | null;
   puckPageMeta: Record<string, { title: string; slug: string; createdAt: string }> | null;
   mapDisplayConfig: ResolvedMapDisplayConfig;
+  communicationsEnabled: boolean;
 }
 
 /**
@@ -59,6 +60,7 @@ export function buildSiteConfig(
     theme: { preset: string; overrides?: Record<string, string> } | null;
     setup_complete: boolean;
     map_display_config?: unknown | null;
+    communications_enabled?: boolean | null;
   },
   property: {
     id?: string;
@@ -84,6 +86,7 @@ export function buildSiteConfig(
     puck_root_draft: unknown | null;
     puck_page_meta: unknown | null;
     map_display_config?: unknown | null;
+    communications_enabled?: boolean | null;
   }
 ): SiteConfig {
   return {
@@ -121,5 +124,6 @@ export function buildSiteConfig(
       org.map_display_config as MapDisplayConfig | null,
       property.map_display_config as MapDisplayConfig | null,
     ),
+    communicationsEnabled: (org.communications_enabled ?? false) && (property.communications_enabled ?? true),
   };
 }
