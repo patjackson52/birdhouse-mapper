@@ -4,10 +4,11 @@ interface ActionButtonsBlockProps {
   itemId: string;
   canEdit: boolean;
   canAddUpdate: boolean;
+  isAuthenticated?: boolean;
   mode: 'live' | 'preview';
 }
 
-export default function ActionButtonsBlock({ itemId, canEdit, canAddUpdate, mode }: ActionButtonsBlockProps) {
+export default function ActionButtonsBlock({ itemId, canEdit, canAddUpdate, isAuthenticated = false, mode }: ActionButtonsBlockProps) {
   if (mode === 'preview') {
     return (
       <div className="flex flex-wrap gap-2 opacity-60">
@@ -25,6 +26,10 @@ export default function ActionButtonsBlock({ itemId, canEdit, canAddUpdate, mode
     );
   }
 
+  const addUpdateHref = isAuthenticated
+    ? `/manage/update?item=${itemId}`
+    : `/login?redirect=${encodeURIComponent(`/manage/update?item=${itemId}`)}`;
+
   return (
     <div className="flex flex-wrap gap-2">
       {canEdit && (
@@ -33,7 +38,7 @@ export default function ActionButtonsBlock({ itemId, canEdit, canAddUpdate, mode
         </Link>
       )}
       {canAddUpdate && (
-        <Link href={`/manage/update?item=${itemId}`} className="btn-primary text-sm">
+        <Link href={addUpdateHref} className="btn-primary text-sm">
           Add Update
         </Link>
       )}
