@@ -24,6 +24,9 @@ export interface LayoutRendererProps {
   context: 'bottom-sheet' | 'side-panel' | 'preview';
   sheetState?: 'peek' | 'half' | 'full';
   customFields: CustomField[];
+  canEdit?: boolean;
+  canAddUpdate?: boolean;
+  isAuthenticated?: boolean;
 }
 
 function renderBlock(
@@ -110,8 +113,9 @@ function renderBlockContent(
       return (
         <ActionButtonsBlock
           itemId={item.id}
-          canEdit={true}
-          canAddUpdate={true}
+          canEdit={props.canEdit ?? false}
+          canAddUpdate={props.canAddUpdate ?? false}
+          isAuthenticated={props.isAuthenticated ?? false}
           mode={mode}
         />
       );

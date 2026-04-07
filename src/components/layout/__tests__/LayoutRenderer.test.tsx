@@ -31,7 +31,14 @@ vi.mock('@/components/layout/blocks/DividerBlock', () => ({
 }));
 
 vi.mock('@/components/layout/blocks/ActionButtonsBlock', () => ({
-  default: () => <div data-testid="block-action_buttons" />,
+  default: (props: { canEdit: boolean; canAddUpdate: boolean; isAuthenticated: boolean }) => (
+    <div
+      data-testid="block-action_buttons"
+      data-can-edit={String(props.canEdit)}
+      data-can-add-update={String(props.canAddUpdate)}
+      data-is-authenticated={String(props.isAuthenticated)}
+    />
+  ),
 }));
 
 vi.mock('@/components/layout/blocks/MapSnippetBlock', () => ({
@@ -278,5 +285,81 @@ describe('LayoutRenderer', () => {
     expect(screen.getByTestId('block-status_badge')).toBeDefined();
     expect(screen.getByTestId('block-divider')).toBeDefined();
     // unknown block renders nothing — no error thrown
+  });
+
+  it('passes permission props to action_buttons block', () => {
+    const layout = makeLayout([makeBlock('action_buttons', 'ab1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+        canEdit={true}
+        canAddUpdate={false}
+        isAuthenticated={true}
+      />
+    );
+
+    expect(screen.getByTestId('block-action_buttons')).toBeDefined();
+  });
+
+  it('defaults permission props to false when not provided', () => {
+    const layout = makeLayout([makeBlock('action_buttons', 'ab1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    expect(screen.getByTestId('block-action_buttons')).toBeDefined();
+  });
+
+  it('threads canEdit=true to action_buttons block', () => {
+    const layout = makeLayout([makeBlock('action_buttons', 'ab1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+        canEdit={true}
+        canAddUpdate={false}
+        isAuthenticated={true}
+      />
+    );
+
+    const block = screen.getByTestId('block-action_buttons');
+    expect(block.getAttribute('data-can-edit')).toBe('true');
+    expect(block.getAttribute('data-can-add-update')).toBe('false');
+    expect(block.getAttribute('data-is-authenticated')).toBe('true');
+  });
+
+  it('defaults all permission props to false', () => {
+    const layout = makeLayout([makeBlock('action_buttons', 'ab1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    const block = screen.getByTestId('block-action_buttons');
+    expect(block.getAttribute('data-can-edit')).toBe('false');
+    expect(block.getAttribute('data-can-add-update')).toBe('false');
+    expect(block.getAttribute('data-is-authenticated')).toBe('false');
   });
 });
