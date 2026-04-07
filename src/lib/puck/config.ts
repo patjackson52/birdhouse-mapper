@@ -37,6 +37,7 @@ import { Testimonial } from './components/page/Testimonial';
 import { Embed } from './components/page/Embed';
 import { KnowledgeEmbed } from './components/page/KnowledgeEmbed';
 import { KnowledgeList } from './components/page/KnowledgeList';
+import { SubscribeBlock, type SubscribeBlockProps } from './components/content/SubscribeBlock';
 
 type PageComponents = {
   Hero: HeroProps;
@@ -55,6 +56,7 @@ type PageComponents = {
   Embed: EmbedProps;
   KnowledgeEmbed: KnowledgeEmbedProps;
   KnowledgeList: KnowledgeListProps;
+  SubscribeBlock: SubscribeBlockProps;
 };
 
 const themeColorOptions = [
@@ -506,6 +508,28 @@ export const pageConfig: Config<PageComponents> = {
         textSize: textSizeField(),
       },
       render: KnowledgeList,
+    },
+
+    SubscribeBlock: {
+      label: 'Subscribe / Get Updates',
+      defaultProps: {
+        heading: 'Get Involved',
+        description: "Choose what you'd like to hear about:",
+        layout: 'expanded' as const,
+      },
+      fields: {
+        heading: { type: 'text', label: 'Heading' },
+        description: { type: 'textarea', label: 'Description' },
+        layout: {
+          type: 'radio',
+          label: 'Layout',
+          options: [
+            { label: 'Expanded', value: 'expanded' },
+            { label: 'Compact', value: 'compact' },
+          ],
+        },
+      },
+      render: SubscribeBlock,
     },
   },
 };
