@@ -89,6 +89,7 @@ describe('Multi-tenant types', () => {
         setup_complete: false,
         default_property_id: null,
         map_display_config: null,
+        communications_enabled: false,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
       };

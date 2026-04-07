@@ -1,4 +1,5 @@
 import type { TypeLayout } from '@/lib/layout/types';
+import type { CommunicationTopic, UserSubscription, Notification as AppNotification, NotificationSend } from '@/lib/communications/types';
 
 // ======================
 // Enums / Union types
@@ -143,6 +144,7 @@ export interface Org {
   created_at: string;
   updated_at: string;
   map_display_config: unknown | null;
+  communications_enabled: boolean;
 }
 
 export interface RolePermissions {
@@ -223,6 +225,7 @@ export interface Property {
   updated_at: string;
   deleted_at: string | null;
   map_display_config: unknown | null;
+  communications_enabled: boolean;
 }
 
 export interface PropertyMembership {
@@ -545,6 +548,30 @@ export interface Database {
         Row: CustomDomain;
         Insert: Omit<CustomDomain, 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Omit<CustomDomain, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      communication_topics: {
+        Row: CommunicationTopic;
+        Insert: Omit<CommunicationTopic, 'id' | 'created_at'>;
+        Update: Partial<Omit<CommunicationTopic, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      user_subscriptions: {
+        Row: UserSubscription;
+        Insert: Omit<UserSubscription, 'id' | 'created_at'>;
+        Update: Partial<Omit<UserSubscription, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      notifications: {
+        Row: AppNotification;
+        Insert: Omit<AppNotification, 'id' | 'created_at'>;
+        Update: Partial<Omit<AppNotification, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      notification_sends: {
+        Row: NotificationSend;
+        Insert: Omit<NotificationSend, 'id'>;
+        Update: Partial<Omit<NotificationSend, 'id'>>;
         Relationships: [];
       };
     };

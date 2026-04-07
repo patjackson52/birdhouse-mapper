@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { AvatarMenu } from '@/components/layout/AvatarMenu';
+import { NotificationBell } from '@/components/communications/NotificationBell';
 
 interface AuthActionsProps {
   linkColor?: string;
@@ -34,6 +35,7 @@ export function AuthActions({ linkColor }: AuthActionsProps) {
 
   return (
     <div className="flex items-center gap-2">
+      <NotificationBell linkColor={linkColor} />
       <Link
         href="/org"
         className="p-1.5 rounded-lg hover:bg-black/10 transition-colors"

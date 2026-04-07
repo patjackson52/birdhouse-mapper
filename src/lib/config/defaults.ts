@@ -29,4 +29,5 @@ export const DEFAULT_CONFIG: SiteConfig = {
   puckRootDraft: null,
   puckPageMeta: null,
   mapDisplayConfig: resolveMapDisplayConfig(null, null),
+  communicationsEnabled: false,
 };
