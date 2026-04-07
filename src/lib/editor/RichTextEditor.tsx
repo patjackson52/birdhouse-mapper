@@ -7,6 +7,14 @@ import { uploadToVault } from '@/lib/vault/actions';
 import VaultPicker from '@/components/vault/VaultPicker';
 import type { VaultItem } from '@/lib/vault/types';
 import type { RichTextEditorProps } from './types';
+import type { Editor } from '@tiptap/core';
+
+const LINE_HEIGHT_OPTIONS = [
+  { value: '1', label: 'Compact' },
+  { value: '1.15', label: 'Normal' },
+  { value: '1.5', label: 'Relaxed' },
+  { value: '2', label: 'Double' },
+] as const;
 
 export default function RichTextEditor({ content, onChange, orgId, editable = true }: RichTextEditorProps) {
   const [showVaultPicker, setShowVaultPicker] = useState(false);
@@ -194,6 +202,7 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
           >
             &ldquo;
           </ToolbarButton>
+          <LineHeightDropdown editor={editor} />
 
           <div className="w-px bg-sage-light mx-1" />
 
@@ -235,6 +244,62 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
           defaultUploadCategory="photo"
           defaultUploadVisibility="public"
         />
+      )}
+    </div>
+  );
+}
+
+function LineHeightDropdown({ editor }: { editor: Editor }) {
+  const [open, setOpen] = useState(false);
+
+  const currentLineHeight = editor.getAttributes('paragraph').lineHeight
+    || editor.getAttributes('heading').lineHeight
+    || null;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        title="Line Spacing"
+        className={`px-2 py-1 rounded text-sm transition-colors ${
+          currentLineHeight
+            ? 'bg-sage text-white'
+            : 'text-forest-dark/70 hover:bg-sage-light hover:text-forest-dark'
+        }`}
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <line x1="5" y1="3" x2="14" y2="3" />
+          <line x1="5" y1="8" x2="14" y2="8" />
+          <line x1="5" y1="13" x2="14" y2="13" />
+          <polyline points="2,5 2,1 2,5" />
+          <path d="M2 1L3.5 3M2 1L0.5 3" />
+          <polyline points="2,11 2,15 2,11" />
+          <path d="M2 15L3.5 13M2 15L0.5 13" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white border border-sage-light rounded-lg shadow-lg z-50 py-1 min-w-[140px]">
+          {LINE_HEIGHT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-sage-light transition-colors ${
+                currentLineHeight === opt.value ? 'bg-sage/10 text-forest-dark font-medium' : 'text-forest-dark/70'
+              }`}
+              onClick={() => {
+                if (currentLineHeight === opt.value) {
+                  editor.chain().focus().unsetLineHeight().run();
+                } else {
+                  editor.chain().focus().setLineHeight(opt.value).run();
+                }
+                setOpen(false);
+              }}
+            >
+              {opt.value} — {opt.label}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
