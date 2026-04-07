@@ -4,6 +4,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import { VaultImage } from './VaultImageExtension';
+import { LineHeight } from './LineHeightExtension';
 
 export function getEditorExtensions(placeholder?: string) {
   return [
@@ -19,6 +20,7 @@ export function getEditorExtensions(placeholder?: string) {
       autolink: true,
     }),
     VaultImage,
+    LineHeight,
     Placeholder.configure({
       placeholder: placeholder ?? 'Start writing…',
     }),
