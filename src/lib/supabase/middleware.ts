@@ -121,6 +121,17 @@ export async function updateSession(request: NextRequest) {
     supabaseResponse.headers.set('x-preview', 'true');
   }
 
+  // Flag admin routes so root layout can skip Puck chrome
+  const isAdminContext =
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/org') ||
+    /^\/p\/[^/]+\/admin/.test(pathname) ||
+    pathname.startsWith('/account') ||
+    pathname.startsWith('/setup');
+  if (isAdminContext) {
+    supabaseResponse.headers.set('x-is-admin-route', 'true');
+  }
+
   // --- QR code redirect handler ---
   if (pathname.startsWith('/go/')) {
     const slug = pathname.slice(4); // strip "/go/"
