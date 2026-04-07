@@ -36,6 +36,37 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // Process pending topic subscriptions from the subscribe flow
+      const subscribeTopics = requestUrl.searchParams.get('subscribe_topics');
+      if (subscribeTopics) {
+        try {
+          const topicIds: string[] = JSON.parse(subscribeTopics);
+          if (Array.isArray(topicIds) && topicIds.length > 0) {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const rows = topicIds.map((topic_id) => ({
+                user_id: user.id,
+                topic_id,
+                email_enabled: true,
+                in_app_enabled: true,
+              }));
+              await supabase
+                .from('user_subscriptions')
+                .upsert(rows, { onConflict: 'user_id,topic_id' });
+
+              // Set cookie to suppress the subscribe prompt
+              cookieStore.set('fm_prompt_subscribed', '1', {
+                maxAge: 60 * 60 * 24 * 365, // 1 year
+                path: '/',
+                sameSite: 'lax',
+              });
+            }
+          }
+        } catch {
+          // Ignore parse errors — don't block the auth flow
+        }
+      }
+
       if (context === 'platform') {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
