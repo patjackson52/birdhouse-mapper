@@ -185,7 +185,7 @@ describe('Sync Engine — Inbound (syncPropertyData)', () => {
     expect(customFieldsGte).toHaveLength(0);
   });
 
-  it('applies timestamp filter for tables with created_at (e.g. item_types)', async () => {
+  it('applies timestamp filter for tables with updated_at (e.g. item_types)', async () => {
     const queryCalls: { table: string; method: string; args: any[] }[] = [];
 
     const supabase = {
@@ -203,10 +203,10 @@ describe('Sync Engine — Inbound (syncPropertyData)', () => {
 
     await syncPropertyData(db, supabase, 'prop-1', 'org-1');
 
-    // item_types SHOULD have a .gte('created_at', ...) call
+    // item_types SHOULD have a .gte('updated_at', ...) call (now has updated_at column)
     const itemTypesGte = queryCalls.filter(c => c.table === 'item_types' && c.method === 'gte');
     expect(itemTypesGte).toHaveLength(1);
-    expect(itemTypesGte[0].args[0]).toBe('created_at');
+    expect(itemTypesGte[0].args[0]).toBe('updated_at');
 
     // items SHOULD have a .gte('updated_at', ...) call (has updated_at)
     const itemsGte = queryCalls.filter(c => c.table === 'items' && c.method === 'gte');

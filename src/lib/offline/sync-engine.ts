@@ -121,7 +121,7 @@ async function executeMutation(
 // Tables that have an `updated_at` column for delta sync.
 // Tables not listed here only have `created_at` — we use that instead.
 const TABLES_WITH_UPDATED_AT = new Set([
-  'items', 'properties', 'orgs', 'roles', 'org_memberships', 'entities', 'entity_types',
+  'items', 'item_types', 'properties', 'orgs', 'roles', 'org_memberships', 'entities', 'entity_types',
 ]);
 
 // Tables that have no timestamp column at all — always do a full sync.
