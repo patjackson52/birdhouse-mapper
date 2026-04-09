@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { deriveFormFields } from '../form-derivation';
 import type { TypeLayout } from '../types';
+import type { TypeLayoutV2 } from '../types-v2';
 import type { CustomField } from '@/lib/types';
 
 describe('deriveFormFields', () => {
@@ -95,5 +96,64 @@ describe('deriveFormFields', () => {
     expect(result.sections).toHaveLength(1);
     expect(result.sections[0].text).toBe('Details');
     expect(result.sections[0].beforeFieldIndex).toBe(0);
+  });
+
+  it('returns null descriptionPosition for v1 layouts', () => {
+    const layout: TypeLayout = {
+      version: 1,
+      blocks: [
+        { id: 'b1', type: 'field_display', config: { fieldId: 'f1', size: 'normal', showLabel: true } },
+      ],
+      spacing: 'comfortable',
+      peekBlockCount: 1,
+    };
+    const result = deriveFormFields(layout, fields);
+    expect(result.descriptionPosition).toBeNull();
+  });
+
+  it('extracts description position from v2 layout', () => {
+    const layout: TypeLayoutV2 = {
+      version: 2,
+      blocks: [
+        { id: 'b1', type: 'field_display', config: { fieldId: 'f1', size: 'normal', showLabel: true } },
+        { id: 'b2', type: 'description', config: { showLabel: true } },
+        { id: 'b3', type: 'field_display', config: { fieldId: 'f2', size: 'normal', showLabel: true } },
+      ],
+      spacing: 'comfortable',
+      peekBlockCount: 2,
+    };
+    const result = deriveFormFields(layout, fields);
+    expect(result.descriptionPosition).toBe(1);
+    expect(result.fields).toHaveLength(2);
+  });
+
+  it('handles v2 layout with description at end', () => {
+    const layout: TypeLayoutV2 = {
+      version: 2,
+      blocks: [
+        { id: 'b1', type: 'status_badge', config: {} },
+        { id: 'b2', type: 'field_display', config: { fieldId: 'f1', size: 'normal', showLabel: true } },
+        { id: 'b3', type: 'description', config: { showLabel: true } },
+        { id: 'b4', type: 'action_buttons', config: {} },
+      ],
+      spacing: 'comfortable',
+      peekBlockCount: 2,
+    };
+    const result = deriveFormFields(layout, fields);
+    expect(result.descriptionPosition).toBe(1);
+    expect(result.fields).toHaveLength(1);
+  });
+
+  it('handles v2 layout without description block', () => {
+    const layout: TypeLayoutV2 = {
+      version: 2,
+      blocks: [
+        { id: 'b1', type: 'field_display', config: { fieldId: 'f1', size: 'normal', showLabel: true } },
+      ],
+      spacing: 'comfortable',
+      peekBlockCount: 1,
+    };
+    const result = deriveFormFields(layout, fields);
+    expect(result.descriptionPosition).toBeNull();
   });
 });

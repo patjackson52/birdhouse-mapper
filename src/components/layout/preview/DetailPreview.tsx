@@ -1,11 +1,12 @@
 'use client';
 
 import type { TypeLayout } from '@/lib/layout/types';
+import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
 import type { ItemWithDetails, CustomField } from '@/lib/types';
-import LayoutRenderer from '../LayoutRenderer';
+import LayoutRendererDispatch from '../LayoutRendererDispatch';
 
 interface Props {
-  layout: TypeLayout;
+  layout: TypeLayout | TypeLayoutV2;
   mockItem: ItemWithDetails;
   customFields: CustomField[];
   itemTypeIcon: string;
@@ -32,7 +33,7 @@ export default function DetailPreview({ layout, mockItem, customFields, itemType
           </div>
 
           {/* Layout content */}
-          <LayoutRenderer
+          <LayoutRendererDispatch
             layout={layout}
             item={mockItem}
             mode="preview"

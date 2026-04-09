@@ -1,7 +1,6 @@
 import type { CustomField } from '@/lib/types';
-import type { LayoutBlock, LayoutNode, FieldDisplayConfig, TextLabelConfig } from './types';
-import { isLayoutRow } from './types';
-import type { TypeLayout } from './types';
+import type { FieldDisplayConfig, TextLabelConfig, TypeLayout } from './types';
+import type { TypeLayoutV2 } from './types-v2';
 
 export interface FormSection {
   text: string;
@@ -18,38 +17,47 @@ export interface DerivedFormLayout {
   rows: FormRow[];
   sections: FormSection[];
   photoPosition: number | null;
+  descriptionPosition: number | null;
 }
 
-export function deriveFormFields(layout: TypeLayout, customFields: CustomField[]): DerivedFormLayout {
+interface NodeLike {
+  type: string;
+  config: unknown;
+  children?: NodeLike[];
+}
+
+export function deriveFormFields(layout: TypeLayout | TypeLayoutV2, customFields: CustomField[]): DerivedFormLayout {
   const fieldMap = new Map<string, CustomField>(customFields.map((f) => [f.id, f]));
 
   const fields: CustomField[] = [];
   const rows: FormRow[] = [];
   const sections: FormSection[] = [];
   let photoPosition: number | null = null;
-
-  // formElementIndex tracks position among form elements (fields + photo)
+  let descriptionPosition: number | null = null;
   let formElementIndex = 0;
 
-  function processNode(node: LayoutNode): void {
-    if (isLayoutRow(node)) {
-      const rowFieldIds: string[] = [];
+  function processRow(children: NodeLike[]): void {
+    const rowFieldIds: string[] = [];
 
-      for (const child of node.children) {
-        if (child.type === 'field_display') {
-          const field = fieldMap.get((child.config as FieldDisplayConfig).fieldId);
-          if (field) {
-            fields.push(field);
-            rowFieldIds.push(field.id);
-            formElementIndex++;
-          }
+    for (const child of children) {
+      if (child.type === 'field_display') {
+        const field = fieldMap.get((child.config as FieldDisplayConfig).fieldId);
+        if (field) {
+          fields.push(field);
+          rowFieldIds.push(field.id);
+          formElementIndex++;
         }
-        // Non-field children inside rows are ignored
       }
+    }
 
-      if (rowFieldIds.length >= 2) {
-        rows.push({ fieldIds: rowFieldIds });
-      }
+    if (rowFieldIds.length >= 2) {
+      rows.push({ fieldIds: rowFieldIds });
+    }
+  }
+
+  function processNode(node: NodeLike): void {
+    if (node.type === 'row' && node.children) {
+      processRow(node.children);
       return;
     }
 
@@ -79,20 +87,20 @@ export function deriveFormFields(layout: TypeLayout, customFields: CustomField[]
         break;
       }
 
-      // Explicitly skip these — handled as fixed form elements or display-only
-      case 'status_badge':
-      case 'entity_list':
-      case 'timeline':
-      case 'map_snippet':
-      case 'action_buttons':
-      case 'divider':
+      case 'description': {
+        descriptionPosition = formElementIndex;
+        formElementIndex++;
+        break;
+      }
+
+      default:
         break;
     }
   }
 
   for (const node of layout.blocks) {
-    processNode(node);
+    processNode(node as NodeLike);
   }
 
-  return { fields, rows, sections, photoPosition };
+  return { fields, rows, sections, photoPosition, descriptionPosition };
 }

@@ -3,7 +3,9 @@
 import { createClient } from '@/lib/supabase/server';
 import { getTenantContext } from '@/lib/tenant/server';
 import { typeLayoutSchema } from '@/lib/layout/schemas';
+import { typeLayoutV2Schema } from '@/lib/layout/schemas-v2';
 import type { TypeLayout } from '@/lib/layout/types';
+import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
 
 interface NewField {
   name: string;
@@ -15,7 +17,7 @@ interface NewField {
 
 interface SaveTypeWithLayoutInput {
   itemTypeId: string;
-  layout: TypeLayout;
+  layout: TypeLayout | TypeLayoutV2;
   newFields: NewField[];
 }
 
@@ -28,7 +30,10 @@ export async function saveTypeWithLayout(input: SaveTypeWithLayoutInput) {
   if (!tenant.orgId) return { error: 'No org context' };
 
   // Validate layout
-  const parsed = typeLayoutSchema.safeParse(input.layout);
+  const isV2 = (input.layout as any).version === 2;
+  const parsed = isV2
+    ? typeLayoutV2Schema.safeParse(input.layout)
+    : typeLayoutSchema.safeParse(input.layout);
   if (!parsed.success) {
     return { error: `Invalid layout: ${parsed.error.issues[0]?.message ?? 'validation failed'}` };
   }
