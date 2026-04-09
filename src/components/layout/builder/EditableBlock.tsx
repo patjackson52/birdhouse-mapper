@@ -44,7 +44,7 @@ export default function EditableBlock({
         e.stopPropagation();
         onSelect(blockId);
       }}
-      className={`group relative rounded-lg transition-all duration-150 border-2 ${
+      className={`group relative flex flex-col rounded-lg transition-all duration-150 border-2 ${
         isDragging
           ? 'opacity-25 border-transparent'
           : isSelected
