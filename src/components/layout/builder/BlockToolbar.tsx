@@ -1,12 +1,14 @@
 'use client';
 
 import { GripVertical, Settings, Trash2 } from 'lucide-react';
+import type { DraggableAttributes } from '@dnd-kit/core';
+import type { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
 
 interface BlockToolbarProps {
   onConfig: () => void;
   onDelete: () => void;
-  dragListeners?: Record<string, unknown>;
-  dragAttributes?: Record<string, unknown>;
+  dragListeners?: SyntheticListenerMap;
+  dragAttributes?: DraggableAttributes;
 }
 
 export default function BlockToolbar({
