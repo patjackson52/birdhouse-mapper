@@ -17,7 +17,7 @@ describe('DropZone', () => {
     );
     const zone = container.firstChild as HTMLElement;
     expect(zone).toBeTruthy();
-    expect(zone.style.height).toBe('8px');
+    expect(zone.style.height).toBe('4px');
   });
 
   it('renders with expanded height when isOver is true', async () => {
