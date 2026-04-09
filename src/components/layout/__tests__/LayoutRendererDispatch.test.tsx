@@ -14,7 +14,7 @@ import LayoutRendererDispatch from '../LayoutRendererDispatch';
 const baseProps = {
   item: {
     id: 'item-1', name: 'Test', description: null, latitude: 0, longitude: 0,
-    item_type_id: 't1', custom_field_values: {}, status: 'active',
+    item_type_id: 't1', custom_field_values: {}, status: 'active' as const,
     created_at: '', updated_at: '', created_by: null, org_id: 'o1', property_id: 'p1',
     item_type: { id: 't1', name: 'T', icon: '', color: '', sort_order: 0, layout: null, created_at: '', org_id: 'o1' },
     updates: [], photos: [], custom_fields: [], entities: [],

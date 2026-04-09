@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { migrateV1toV2 } from '../migration';
 import { typeLayoutV2Schema } from '../schemas-v2';
 import type { TypeLayout } from '../types';
+import type { LayoutBlockV2 } from '../types-v2';
 
 describe('migrateV1toV2', () => {
   it('sets version to 2', () => {
@@ -42,11 +43,11 @@ describe('migrateV1toV2', () => {
       peekBlockCount: 1,
     };
     const v2 = migrateV1toV2(v1);
-    const block = v2.blocks[0];
+    const block = v2.blocks[0] as LayoutBlockV2;
     expect(block.id).toBe('fd1');
     expect(block.type).toBe('field_display');
     expect(block.config).toEqual({ fieldId: 'f1', size: 'large', showLabel: false });
-    expect('hideWhenEmpty' in block && block.hideWhenEmpty).toBe(true);
+    expect(block.hideWhenEmpty).toBe(true);
   });
 
   it('does not add permissions to blocks', () => {

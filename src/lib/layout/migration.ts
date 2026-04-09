@@ -1,4 +1,4 @@
-import type { TypeLayout, LayoutNode, LayoutRow } from './types';
+import type { TypeLayout, LayoutNode, LayoutBlock, LayoutRow } from './types';
 import { isLayoutRow } from './types';
 import type { TypeLayoutV2, LayoutNodeV2, LayoutBlockV2, LayoutRowV2, FractionalWidth } from './types-v2';
 
@@ -30,7 +30,7 @@ function snapToFraction(percentage: number): FractionalWidth {
   return closest;
 }
 
-function migrateBlock(block: LayoutNode, width?: FractionalWidth): LayoutBlockV2 {
+function migrateBlock(block: LayoutBlock, width?: FractionalWidth): LayoutBlockV2 {
   const result: LayoutBlockV2 = {
     id: block.id,
     type: block.type as LayoutBlockV2['type'],
@@ -72,7 +72,7 @@ export function migrateV1toV2(layout: TypeLayout): TypeLayoutV2 {
     if (isLayoutRow(node)) {
       return migrateRow(node);
     }
-    return migrateBlock(node);
+    return migrateBlock(node as LayoutBlock);
   });
 
   return {
