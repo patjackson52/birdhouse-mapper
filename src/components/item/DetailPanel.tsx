@@ -10,7 +10,7 @@ import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 import Link from 'next/link';
 import PhotoViewer from '@/components/ui/PhotoViewer';
-import LayoutRenderer from '@/components/layout/LayoutRenderer';
+import LayoutRendererDispatch from '@/components/layout/LayoutRendererDispatch';
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
@@ -72,7 +72,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
           </button>
         )}
       </div>
-      <LayoutRenderer
+      <LayoutRendererDispatch
         layout={layout}
         item={item}
         mode="live"
