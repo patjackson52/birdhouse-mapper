@@ -1,5 +1,6 @@
 // src/hooks/__tests__/useLayoutHistory.test.ts
 import { renderHook, act } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { useLayoutHistory } from '../useLayoutHistory';
 import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
 

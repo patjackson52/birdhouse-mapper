@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import EditableBlock from '../EditableBlock';
 
 const mockUseDraggable = vi.fn(() => ({
@@ -11,7 +11,7 @@ const mockUseDraggable = vi.fn(() => ({
 
 vi.mock('@dnd-kit/core', () => ({
   useDroppable: vi.fn(() => ({ setNodeRef: vi.fn(), isOver: false })),
-  useDraggable: (...args: unknown[]) => mockUseDraggable(...args),
+  useDraggable: () => mockUseDraggable(),
 }));
 
 describe('EditableBlock', () => {
