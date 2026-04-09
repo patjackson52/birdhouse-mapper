@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { TypeLayout } from '@/lib/layout/types';
 import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
 import type { CustomField } from '@/lib/types';
@@ -12,87 +13,76 @@ interface Props {
 }
 
 export default function FormPreview({ layout, customFields, itemTypeName }: Props) {
-  const derived = deriveFormFields(layout, customFields);
+  const derived = useMemo(() => deriveFormFields(layout, customFields), [layout, customFields]);
 
-  // Build a list of form elements (fields + description) in layout order
-  const formElements: React.ReactNode[] = [];
-  let fieldIndex = 0;
+  const formElements = useMemo(() => {
+    const elements: React.ReactNode[] = [];
+    const renderedFieldIndices = new Set<number>();
 
-  // Track which field indices we've rendered (for row grouping)
-  const renderedFieldIndices = new Set<number>();
+    // Pre-build lookup maps to avoid O(n²) searches
+    const sectionsByIndex = new Map(derived.sections.map((s) => [s.beforeFieldIndex, s]));
+    const fieldIndexById = new Map(derived.fields.map((f, i) => [f.id, i]));
+    const rowByLeadFieldId = new Map(derived.rows.map((r) => [r.fieldIds[0], r]));
+    const fieldsInRows = new Set(derived.rows.flatMap((r) => r.fieldIds));
 
-  for (let i = 0; i <= derived.fields.length; i++) {
-    // Insert section header if one exists at this position
-    const section = derived.sections.find((s) => s.beforeFieldIndex === i);
-    if (section) {
-      formElements.push(
-        <p key={`section-${i}`} className="text-sm font-semibold text-forest-dark mt-2">{section.text}</p>
-      );
-    }
-
-    // Insert description if it appears at this position
-    if (derived.descriptionPosition === i) {
-      formElements.push(
-        <div key="description">
-          <label className="label">Description</label>
-          <textarea
-            className="input-field"
-            rows={3}
-            placeholder="Enter description..."
-            disabled
-          />
-        </div>
-      );
-    }
-
-    // Render field at this index (if not already rendered as part of a row)
-    if (i < derived.fields.length && !renderedFieldIndices.has(i)) {
-      const field = derived.fields[i];
-      const isInRow = derived.rows.some((r) => r.fieldIds.includes(field.id));
-      const row = derived.rows.find((r) => r.fieldIds[0] === field.id);
-
-      if (row) {
-        // Render the whole row
-        const rowFields = row.fieldIds
-          .map((id) => derived.fields.find((f) => f.id === id))
-          .filter(Boolean) as CustomField[];
-
-        // Mark all row fields as rendered
-        for (const rf of rowFields) {
-          const rfIdx = derived.fields.findIndex((f) => f.id === rf.id);
-          if (rfIdx !== -1) renderedFieldIndices.add(rfIdx);
-        }
-
-        formElements.push(
-          <div key={`row-${field.id}`} className="grid grid-cols-2 gap-3">
-            {rowFields.map((rf) => (
-              <div key={rf.id}>
-                <label className="label">
-                  {rf.name} {rf.required && <span className="text-red-500">*</span>}
-                </label>
-                {renderFieldInput(rf)}
-              </div>
-            ))}
-          </div>
+    for (let i = 0; i <= derived.fields.length; i++) {
+      const section = sectionsByIndex.get(i);
+      if (section) {
+        elements.push(
+          <p key={`section-${i}`} className="text-sm font-semibold text-forest-dark mt-2">{section.text}</p>
         );
-      } else if (!isInRow) {
-        renderedFieldIndices.add(i);
-        formElements.push(
-          <div key={field.id}>
-            <label className="label">
-              {field.name} {field.required && <span className="text-red-500">*</span>}
-            </label>
-            {renderFieldInput(field)}
+      }
+
+      if (derived.descriptionPosition === i) {
+        elements.push(
+          <div key="description">
+            <label className="label">Description</label>
+            <textarea className="input-field" rows={3} placeholder="Enter description..." disabled />
           </div>
         );
       }
-    }
-  }
 
-  // Handle description at end (after all fields)
-  if (derived.descriptionPosition !== null && derived.descriptionPosition >= derived.fields.length) {
-    // Already handled in the loop above
-  }
+      if (i < derived.fields.length && !renderedFieldIndices.has(i)) {
+        const field = derived.fields[i];
+        const row = rowByLeadFieldId.get(field.id);
+
+        if (row) {
+          const rowFields = row.fieldIds
+            .map((id) => {
+              const idx = fieldIndexById.get(id);
+              if (idx !== undefined) renderedFieldIndices.add(idx);
+              return derived.fields[idx!];
+            })
+            .filter(Boolean);
+
+          elements.push(
+            <div key={`row-${field.id}`} className="grid grid-cols-2 gap-3">
+              {rowFields.map((rf) => (
+                <div key={rf.id}>
+                  <label className="label">
+                    {rf.name} {rf.required && <span className="text-red-500">*</span>}
+                  </label>
+                  {renderFieldInput(rf)}
+                </div>
+              ))}
+            </div>
+          );
+        } else if (!fieldsInRows.has(field.id)) {
+          renderedFieldIndices.add(i);
+          elements.push(
+            <div key={field.id}>
+              <label className="label">
+                {field.name} {field.required && <span className="text-red-500">*</span>}
+              </label>
+              {renderFieldInput(field)}
+            </div>
+          );
+        }
+      }
+    }
+
+    return elements;
+  }, [derived]);
 
   return (
     <div className="bg-gray-100 rounded-xl p-3">
@@ -101,13 +91,11 @@ export default function FormPreview({ layout, customFields, itemTypeName }: Prop
           Add {itemTypeName}
         </h3>
 
-        {/* Fixed: Name */}
         <div>
           <label className="label">Name <span className="text-red-500">*</span></label>
           <input type="text" className="input-field" placeholder={`e.g., ${itemTypeName} #1`} disabled />
         </div>
 
-        {/* Fixed: Location */}
         <div>
           <label className="label">Location <span className="text-red-500">*</span></label>
           <div className="h-24 bg-sage-light/50 rounded-lg flex items-center justify-center text-xs text-sage">
@@ -115,10 +103,8 @@ export default function FormPreview({ layout, customFields, itemTypeName }: Prop
           </div>
         </div>
 
-        {/* Layout-derived fields, sections, and description */}
         {formElements}
 
-        {/* Photo uploader placeholder */}
         <div>
           <label className="label">Photos</label>
           <div className="h-16 border-2 border-dashed border-sage-light rounded-lg flex items-center justify-center text-xs text-sage">
@@ -126,7 +112,6 @@ export default function FormPreview({ layout, customFields, itemTypeName }: Prop
           </div>
         </div>
 
-        {/* Fixed: Submit */}
         <div className="flex gap-2 pt-2">
           <button className="btn-primary flex-1 opacity-60 cursor-default">Save</button>
           <button className="btn-secondary flex-1 opacity-60 cursor-default">Cancel</button>

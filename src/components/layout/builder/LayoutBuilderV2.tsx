@@ -106,7 +106,7 @@ export default function LayoutBuilderV2({ itemType, initialLayout, customFields,
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const allFields: CustomField[] = [
+  const allFields = useMemo<CustomField[]>(() => [
     ...customFields,
     ...pendingFields.map((f, i) => ({
       id: f.tempId,
@@ -118,9 +118,9 @@ export default function LayoutBuilderV2({ itemType, initialLayout, customFields,
       sort_order: customFields.length + i,
       org_id: itemType.org_id,
     })),
-  ];
+  ], [customFields, pendingFields, itemType.id, itemType.org_id]);
 
-  const mockItem = generateMockItem(itemType, allFields);
+  const mockItem = useMemo(() => generateMockItem(itemType, allFields), [itemType, allFields]);
 
   const disabledTypes = useMemo(() => {
     const set = new Set<string>();
@@ -349,23 +349,20 @@ export default function LayoutBuilderV2({ itemType, initialLayout, customFields,
   }, []);
 
   const handlePermissionsChange = useCallback((nodeId: string, permissions: BlockPermissions | undefined) => {
+    function applyPermissions<T extends LayoutNodeV2>(n: T): T {
+      return permissions ? { ...n, permissions } : { ...n, permissions: undefined };
+    }
+
     setLayout((prev) => ({
       ...prev,
       blocks: prev.blocks.map((node) => {
-        if (node.id === nodeId) {
-          const { permissions: _, ...rest } = node as any;
-          return permissions ? { ...rest, permissions } : rest;
-        }
+        if (node.id === nodeId) return applyPermissions(node);
         if (isLayoutRowV2(node)) {
           return {
             ...node,
-            children: node.children.map((child) => {
-              if (child.id === nodeId) {
-                const { permissions: _, ...rest } = child;
-                return permissions ? { ...rest, permissions } : rest;
-              }
-              return child;
-            }),
+            children: node.children.map((child) =>
+              child.id === nodeId ? applyPermissions(child) : child
+            ),
           };
         }
         return node;
