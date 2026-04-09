@@ -13,7 +13,7 @@ import ItemTypeEditor from '@/components/admin/ItemTypeEditor';
 // LayoutBuilder depends on @dnd-kit/sortable which may not be installed yet.
 // Dynamically import it to avoid build failures.
 import dynamic from 'next/dynamic';
-const LayoutBuilder = dynamic(() => import('@/components/layout/builder/LayoutBuilder'), { ssr: false });
+const LayoutBuilderV2 = dynamic(() => import('@/components/layout/builder/LayoutBuilderV2'), { ssr: false });
 import { saveTypeWithLayout } from '@/app/admin/properties/[slug]/types/layout-actions';
 
 export default function OrgTypesPage() {
@@ -206,7 +206,7 @@ export default function OrgTypesPage() {
                   ))}
                 </div>
                 {activeTab === 'layout' && (
-                  <LayoutBuilder
+                  <LayoutBuilderV2
                     itemType={type}
                     initialLayout={type.layout}
                     customFields={customFields.filter((f) => f.item_type_id === type.id)}
