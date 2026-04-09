@@ -10,10 +10,10 @@ import { createClient } from '@/lib/supabase/client';
 import type { ItemType, CustomField, EntityType } from '@/lib/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ItemTypeEditor from '@/components/admin/ItemTypeEditor';
-// LayoutBuilder depends on @dnd-kit/sortable which may not be installed yet.
-// Dynamically import it to avoid build failures.
+// LayoutEditor depends on @dnd-kit which requires browser APIs.
+// Dynamically import it to avoid SSR failures.
 import dynamic from 'next/dynamic';
-const LayoutBuilderV2 = dynamic(() => import('@/components/layout/builder/LayoutBuilderV2'), { ssr: false });
+const LayoutEditor = dynamic(() => import('@/components/layout/builder/LayoutEditor'), { ssr: false });
 import { saveTypeWithLayout } from '@/app/admin/properties/[slug]/types/layout-actions';
 
 export default function OrgTypesPage() {
@@ -206,7 +206,7 @@ export default function OrgTypesPage() {
                   ))}
                 </div>
                 {activeTab === 'layout' && (
-                  <LayoutBuilderV2
+                  <LayoutEditor
                     itemType={type}
                     initialLayout={type.layout}
                     customFields={customFields.filter((f) => f.item_type_id === type.id)}
