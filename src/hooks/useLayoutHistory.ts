@@ -14,6 +14,7 @@ export function useLayoutHistory(initialLayout: TypeLayoutV2) {
 
   const update = useCallback((next: TypeLayoutV2) => {
     setLayout((current) => {
+      if (current === next) return current;
       pastRef.current = [...pastRef.current.slice(-(MAX_HISTORY - 1)), current];
       futureRef.current = [];
       return next;
