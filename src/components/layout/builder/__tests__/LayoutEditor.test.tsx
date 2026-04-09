@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import LayoutEditor from '../LayoutEditor';
 import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
+import type { ItemType } from '@/lib/types';
 
 vi.mock('@dnd-kit/core', () => ({
   DndContext: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -40,7 +41,7 @@ const mockLayout: TypeLayoutV2 = {
 };
 
 const defaultProps = {
-  itemType: { id: 't1', name: 'Bird', icon: '🐦', color: '#4a7c59', sort_order: 0, layout: mockLayout, created_at: '', org_id: 'o1' },
+  itemType: { id: 't1', name: 'Bird', icon: '🐦', color: '#4a7c59', sort_order: 0, layout: null, created_at: '', org_id: 'o1' } as ItemType,
   initialLayout: mockLayout,
   customFields: [],
   entityTypes: [],
