@@ -68,7 +68,7 @@ describe('SideDropZone', () => {
   });
 
   it('shows highlight when hovered', () => {
-    mockUseDroppable.mockReturnValueOnce({ setNodeRef: vi.fn(), isOver: true } as ReturnType<typeof dndCore.useDroppable>);
+    mockUseDroppable.mockReturnValueOnce({ setNodeRef: vi.fn(), isOver: true } as unknown as ReturnType<typeof dndCore.useDroppable>);
     const { container } = render(
       <SideDropZone id="side-left-b1" side="left" parentBlockId="b1" parentBlockIndex={0} isInRow={false} disabled={false} />
     );

@@ -102,7 +102,7 @@ function renderBlock(
   );
 }
 
-function renderBlockContent(
+export function renderBlockContent(
   block: LayoutBlockV2,
   index: number,
   props: LayoutRendererV2Props
