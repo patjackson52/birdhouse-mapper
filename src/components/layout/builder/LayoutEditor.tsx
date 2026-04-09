@@ -104,7 +104,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     [],
   );
 
-  const { layout, update, undo, redo, canUndo, canRedo } = useLayoutHistory(initialLayoutV2);
+  const { layout, update, undo, redo, canUndo, canRedo, hasUnsavedChanges } = useLayoutHistory(initialLayoutV2);
 
   const [pendingFields, setPendingFields] = useState<{ name: string; field_type: string; options: string[]; required: boolean; tempId: string }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -676,8 +676,11 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
               Cancel
             </button>
             <span className="text-sm font-semibold text-forest-dark">{itemType.name} Layout</span>
-            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-4 py-1.5">
+            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm px-4 py-1.5 relative">
               {saving ? 'Saving...' : 'Done'}
+              {hasUnsavedChanges && !saving && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
+              )}
             </button>
           </div>
 
@@ -773,8 +776,11 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
           <div className="flex items-center gap-2">
             {undoRedoButtons}
             <button onClick={onCancel} className="btn-secondary text-sm">Cancel</button>
-            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm">
+            <button onClick={handleSave} disabled={saving} className="btn-primary text-sm relative">
               {saving ? 'Saving...' : 'Save Layout'}
+              {hasUnsavedChanges && !saving && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
+              )}
             </button>
           </div>
         </div>
