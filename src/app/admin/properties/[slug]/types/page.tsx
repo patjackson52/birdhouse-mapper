@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { ItemType, CustomField, EntityType } from '@/lib/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ItemTypeEditor from '@/components/admin/ItemTypeEditor';
-import LayoutBuilderV2 from '@/components/layout/builder/LayoutBuilderV2';
+import LayoutEditor from '@/components/layout/builder/LayoutEditor';
 import { saveTypeWithLayout } from './layout-actions';
 
 export default function TypesPage() {
@@ -206,7 +206,7 @@ export default function TypesPage() {
                   ))}
                 </div>
                 {activeTab === 'layout' && (
-                  <LayoutBuilderV2
+                  <LayoutEditor
                     itemType={type}
                     initialLayout={type.layout}
                     customFields={customFields.filter((f) => f.item_type_id === type.id)}

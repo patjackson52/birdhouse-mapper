@@ -9,7 +9,7 @@ interface DropZoneProps {
   disabled?: boolean;
 }
 
-const COLLAPSED_SIZE = '8px';
+const COLLAPSED_SIZE = '4px';
 const EXPANDED_SIZE = '80px';
 
 export default function DropZone({ id, data, direction, disabled = false }: DropZoneProps) {

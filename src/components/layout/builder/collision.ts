@@ -16,17 +16,32 @@ export const rowAwareCollision: CollisionDetection = ({
   const activeData = active?.data?.current as Record<string, unknown> | undefined;
   const isDraggingRow = activeData?.isRow === true;
 
-  // Separate row-internal and top-level zones
+  // Separate zones into three categories
+  const sideZones: DroppableContainer[] = [];
   const rowZones: DroppableContainer[] = [];
   const topLevelZones: DroppableContainer[] = [];
 
   for (const container of droppableContainers) {
     const data = container.data?.current as Record<string, unknown> | undefined;
     if (!data) continue;
-    if (data.zone === 'row') {
+    if (data.zone === 'side') {
+      sideZones.push(container);
+    } else if (data.zone === 'row') {
       rowZones.push(container);
     } else if (data.zone === 'top-level') {
       topLevelZones.push(container);
+    }
+  }
+
+  // Highest priority: check if pointer is inside any side zone rect
+  if (!isDraggingRow) {
+    for (const container of sideZones) {
+      const rect = droppableRects.get(container.id);
+      if (!rect) continue;
+
+      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+        return [{ id: container.id, data: { droppableContainer: container, value: 0 } }];
+      }
     }
   }
 
