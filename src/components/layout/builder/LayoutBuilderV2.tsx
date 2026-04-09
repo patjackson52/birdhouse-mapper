@@ -434,7 +434,7 @@ export default function LayoutBuilderV2({ itemType, initialLayout, customFields,
   );
 
   const formPreviewContent = (
-    <FormPreview layout={layout as any} customFields={allFields} itemTypeName={itemType.name} />
+    <FormPreview layout={layout} customFields={allFields} itemTypeName={itemType.name} />
   );
 
   const dndWrapped = (content: React.ReactNode) => (

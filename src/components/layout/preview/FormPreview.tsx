@@ -1,17 +1,98 @@
 'use client';
 
 import type { TypeLayout } from '@/lib/layout/types';
+import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
 import type { CustomField } from '@/lib/types';
 import { deriveFormFields } from '@/lib/layout/form-derivation';
 
 interface Props {
-  layout: TypeLayout;
+  layout: TypeLayout | TypeLayoutV2;
   customFields: CustomField[];
   itemTypeName: string;
 }
 
 export default function FormPreview({ layout, customFields, itemTypeName }: Props) {
   const derived = deriveFormFields(layout, customFields);
+
+  // Build a list of form elements (fields + description) in layout order
+  const formElements: React.ReactNode[] = [];
+  let fieldIndex = 0;
+
+  // Track which field indices we've rendered (for row grouping)
+  const renderedFieldIndices = new Set<number>();
+
+  for (let i = 0; i <= derived.fields.length; i++) {
+    // Insert section header if one exists at this position
+    const section = derived.sections.find((s) => s.beforeFieldIndex === i);
+    if (section) {
+      formElements.push(
+        <p key={`section-${i}`} className="text-sm font-semibold text-forest-dark mt-2">{section.text}</p>
+      );
+    }
+
+    // Insert description if it appears at this position
+    if (derived.descriptionPosition === i) {
+      formElements.push(
+        <div key="description">
+          <label className="label">Description</label>
+          <textarea
+            className="input-field"
+            rows={3}
+            placeholder="Enter description..."
+            disabled
+          />
+        </div>
+      );
+    }
+
+    // Render field at this index (if not already rendered as part of a row)
+    if (i < derived.fields.length && !renderedFieldIndices.has(i)) {
+      const field = derived.fields[i];
+      const isInRow = derived.rows.some((r) => r.fieldIds.includes(field.id));
+      const row = derived.rows.find((r) => r.fieldIds[0] === field.id);
+
+      if (row) {
+        // Render the whole row
+        const rowFields = row.fieldIds
+          .map((id) => derived.fields.find((f) => f.id === id))
+          .filter(Boolean) as CustomField[];
+
+        // Mark all row fields as rendered
+        for (const rf of rowFields) {
+          const rfIdx = derived.fields.findIndex((f) => f.id === rf.id);
+          if (rfIdx !== -1) renderedFieldIndices.add(rfIdx);
+        }
+
+        formElements.push(
+          <div key={`row-${field.id}`} className="grid grid-cols-2 gap-3">
+            {rowFields.map((rf) => (
+              <div key={rf.id}>
+                <label className="label">
+                  {rf.name} {rf.required && <span className="text-red-500">*</span>}
+                </label>
+                {renderFieldInput(rf)}
+              </div>
+            ))}
+          </div>
+        );
+      } else if (!isInRow) {
+        renderedFieldIndices.add(i);
+        formElements.push(
+          <div key={field.id}>
+            <label className="label">
+              {field.name} {field.required && <span className="text-red-500">*</span>}
+            </label>
+            {renderFieldInput(field)}
+          </div>
+        );
+      }
+    }
+  }
+
+  // Handle description at end (after all fields)
+  if (derived.descriptionPosition !== null && derived.descriptionPosition >= derived.fields.length) {
+    // Already handled in the loop above
+  }
 
   return (
     <div className="bg-gray-100 rounded-xl p-3">
@@ -34,44 +115,8 @@ export default function FormPreview({ layout, customFields, itemTypeName }: Prop
           </div>
         </div>
 
-        {/* Layout-derived fields with sections */}
-        {derived.fields.map((field, index) => {
-          const section = derived.sections.find((s) => s.beforeFieldIndex === index);
-          const isInRow = derived.rows.some((r) => r.fieldIds.includes(field.id));
-
-          // Check if this is the start of a row
-          const row = derived.rows.find((r) => r.fieldIds[0] === field.id);
-          const rowFields = row ? row.fieldIds.map((id) => derived.fields.find((f) => f.id === id)).filter(Boolean) : null;
-
-          if (isInRow && !row) return null; // Will be rendered as part of the row
-
-          return (
-            <div key={field.id}>
-              {section && (
-                <p className="text-sm font-semibold text-forest-dark mt-2">{section.text}</p>
-              )}
-              {rowFields ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {rowFields.map((rf) => rf && (
-                    <div key={rf.id}>
-                      <label className="label">
-                        {rf.name} {rf.required && <span className="text-red-500">*</span>}
-                      </label>
-                      {renderFieldInput(rf)}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div>
-                  <label className="label">
-                    {field.name} {field.required && <span className="text-red-500">*</span>}
-                  </label>
-                  {renderFieldInput(field)}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {/* Layout-derived fields, sections, and description */}
+        {formElements}
 
         {/* Photo uploader placeholder */}
         <div>
