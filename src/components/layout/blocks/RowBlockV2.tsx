@@ -35,15 +35,23 @@ export default function RowBlockV2({ row, children, containerWidth }: RowBlockV2
     );
   }
 
+  // Use CSS gap for spacing. Children widths must account for gap via calc()
+  // to prevent wrapping. Pre-compute each child's share of total gap space.
+  const gapPx = { tight: 8, normal: 12, loose: 16 }[row.gap];
+  const childCount = children.length;
+  const totalGaps = childCount > 1 ? childCount - 1 : 0;
+  const gapOffsetPerChild = totalGaps > 0 ? (totalGaps * gapPx) / childCount : 0;
+
   return (
     <div
-      className={`${gapClasses[row.gap]}`}
-      style={{ display: 'flex', flexWrap: 'wrap' }}
+      className={gapClasses[row.gap]}
+      style={{ display: 'flex' }}
     >
       {children.map((child, i) => {
         const blockWidth = row.children[i]?.width;
-        const flex = blockWidth
-          ? `0 0 ${widthToCSS[blockWidth]}`
+        const basis = blockWidth ? widthToCSS[blockWidth] : undefined;
+        const flex = basis
+          ? `0 0 calc(${basis} - ${gapOffsetPerChild}px)`
           : '1 1 0%';
 
         return (

@@ -24,15 +24,16 @@ describe('RowBlockV2', () => {
     expect(rowEl.style.display).toBe('flex');
   });
 
-  it('applies correct flex-basis from child widths', () => {
+  it('applies correct flex-basis from child widths accounting for gap', () => {
     const { container } = render(
       <RowBlockV2 row={baseRow}>
         {[<div key="a">A</div>, <div key="b">B</div>]}
       </RowBlockV2>
     );
     const children = container.firstElementChild!.children;
-    expect((children[0] as HTMLElement).style.flex).toBe('0 0 33.333%');
-    expect((children[1] as HTMLElement).style.flex).toBe('0 0 66.667%');
+    // gap=normal → 12px, 2 children, 1 gap → each subtracts (1 * 12 / 2) = 6px
+    expect((children[0] as HTMLElement).style.flex).toBe('0 0 calc(33.333% - 6px)');
+    expect((children[1] as HTMLElement).style.flex).toBe('0 0 calc(66.667% - 6px)');
   });
 
   it('applies gap class based on row gap', () => {
