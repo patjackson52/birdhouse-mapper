@@ -31,6 +31,34 @@ export interface LayoutRendererProps {
   onBlockSelect?: (blockId: string | null) => void;
 }
 
+function EditBlockWrapper({
+  id,
+  selectedBlockId,
+  onBlockSelect,
+  children,
+}: {
+  id: string;
+  selectedBlockId?: string;
+  onBlockSelect?: (blockId: string | null) => void;
+  children: React.ReactNode;
+}) {
+  const isSelected = selectedBlockId === id;
+  return (
+    <div
+      data-testid={`edit-block-${id}`}
+      className={`cursor-pointer rounded transition-all ${
+        isSelected ? 'ring-2 ring-forest/40' : 'hover:ring-1 hover:ring-sage-light'
+      }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onBlockSelect?.(isSelected ? null : id);
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 function renderBlock(
   node: LayoutNode,
   index: number,
@@ -49,21 +77,15 @@ function renderBlock(
     );
 
     if (mode === 'edit') {
-      const isSelected = selectedBlockId === node.id;
       return (
-        <div
+        <EditBlockWrapper
           key={node.id}
-          data-testid={`edit-block-${node.id}`}
-          className={`cursor-pointer rounded transition-all ${
-            isSelected ? 'ring-2 ring-forest/40' : 'hover:ring-1 hover:ring-sage-light'
-          }`}
-          onClick={(e) => {
-            e.stopPropagation();
-            onBlockSelect?.(isSelected ? null : node.id);
-          }}
+          id={node.id}
+          selectedBlockId={selectedBlockId}
+          onBlockSelect={onBlockSelect}
         >
           {rowContent}
-        </div>
+        </EditBlockWrapper>
       );
     }
 
@@ -91,21 +113,15 @@ function renderBlock(
   );
 
   if (mode === 'edit') {
-    const isSelected = selectedBlockId === block.id;
     return (
-      <div
+      <EditBlockWrapper
         key={block.id}
-        data-testid={`edit-block-${block.id}`}
-        className={`cursor-pointer rounded transition-all ${
-          isSelected ? 'ring-2 ring-forest/40' : 'hover:ring-1 hover:ring-sage-light'
-        }`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onBlockSelect?.(isSelected ? null : block.id);
-        }}
+        id={block.id}
+        selectedBlockId={selectedBlockId}
+        onBlockSelect={onBlockSelect}
       >
         {blockContent}
-      </div>
+      </EditBlockWrapper>
     );
   }
 
