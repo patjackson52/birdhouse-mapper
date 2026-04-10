@@ -301,6 +301,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   }, []);
 
   const handleDeleteBlock = useCallback((blockId: string) => {
+    setSelectedBlockId((prev) => prev === blockId ? null : prev);
     setLayout((prev) => ({
       ...prev,
       blocks: prev.blocks.filter((b) => b.id !== blockId),
@@ -341,6 +342,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   }, []);
 
   const handleRemoveFromRow = useCallback((rowId: string, blockId: string) => {
+    setSelectedBlockId((prev) => prev === blockId ? null : prev);
     setLayout((prev) => ({
       ...prev,
       blocks: prev.blocks.flatMap((node) => {
