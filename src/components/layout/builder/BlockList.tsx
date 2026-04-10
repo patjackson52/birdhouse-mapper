@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -19,6 +19,8 @@ interface Props {
   entityTypes: EntityType[];
   peekBlockCount: number;
   activeType: 'block' | 'row' | null;
+  selectedBlockId?: string | null;
+  onBlockSelect?: (blockId: string | null) => void;
   onConfigChange: (blockId: string, config: BlockConfig) => void;
   onDeleteBlock: (blockId: string) => void;
   onCreateField: (field: { name: string; field_type: string; options: string[]; required: boolean }) => void;
@@ -33,6 +35,8 @@ export default function BlockList({
   entityTypes,
   peekBlockCount,
   activeType,
+  selectedBlockId,
+  onBlockSelect,
   onConfigChange,
   onDeleteBlock,
   onCreateField,
@@ -40,7 +44,22 @@ export default function BlockList({
   onRowChange,
   onRemoveFromRow,
 }: Props) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [internalExpandedId, setInternalExpandedId] = useState<string | null>(null);
+
+  // Use external selection if provided, otherwise fall back to internal state
+  const expandedId = selectedBlockId !== undefined ? selectedBlockId : internalExpandedId;
+  const handleToggle = onBlockSelect ?? setInternalExpandedId;
+
+  const blockRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  useEffect(() => {
+    if (selectedBlockId) {
+      const el = blockRefs.current.get(selectedBlockId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [selectedBlockId]);
 
   const fieldMap = useMemo(() => new Map(customFields.map((f) => [f.id, f])), [customFields]);
   const nodeIds = nodes.map((n) => n.id);
@@ -69,7 +88,7 @@ export default function BlockList({
                 entityTypes={entityTypes}
                 fieldMap={fieldMap}
                 expandedId={expandedId}
-                onToggleExpand={(id) => setExpandedId(expandedId === id ? null : id)}
+                onToggleExpand={(id) => handleToggle(expandedId === id ? null : id)}
                 onConfigChange={onConfigChange}
                 onDeleteBlock={onDeleteBlock}
                 onCreateField={onCreateField}
@@ -79,6 +98,10 @@ export default function BlockList({
               />
             ) : (
               <BlockListItem
+                ref={(el: HTMLDivElement | null) => {
+                  if (el) blockRefs.current.set(node.id, el);
+                  else blockRefs.current.delete(node.id);
+                }}
                 block={node}
                 customFields={customFields}
                 entityTypes={entityTypes}
@@ -91,7 +114,7 @@ export default function BlockList({
                 onDelete={onDeleteBlock}
                 onCreateField={onCreateField}
                 isExpanded={expandedId === node.id}
-                onToggleExpand={() => setExpandedId(expandedId === node.id ? null : node.id)}
+                onToggleExpand={() => handleToggle(expandedId === node.id ? null : node.id)}
               />
             )}
             <DropZone
