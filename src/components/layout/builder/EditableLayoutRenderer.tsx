@@ -18,8 +18,6 @@ interface EditableLayoutRendererProps {
   selectedBlockId: string | null;
   isDragActive: boolean;
   onSelect: (blockId: string) => void;
-  onOpenConfig: (blockId: string) => void;
-  onDelete: (blockId: string) => void;
 }
 
 export default function EditableLayoutRenderer({
@@ -29,8 +27,6 @@ export default function EditableLayoutRenderer({
   selectedBlockId,
   isDragActive,
   onSelect,
-  onOpenConfig,
-  onDelete,
 }: EditableLayoutRendererProps) {
   const spacing = SPACING[layout.spacing];
 
@@ -57,8 +53,6 @@ export default function EditableLayoutRenderer({
       isDragDisabled={false}
       rowChildCount={rowChildCount}
       onSelect={onSelect}
-      onOpenConfig={onOpenConfig}
-      onDelete={onDelete}
     >
       <BlockErrorBoundary blockType={block.type}>
         {renderBlockContent(block, index, rendererProps)}
@@ -86,8 +80,6 @@ export default function EditableLayoutRenderer({
               selectedBlockId={selectedBlockId}
               isDragActive={isDragActive}
               onSelect={onSelect}
-              onOpenConfig={onOpenConfig}
-              onDelete={onDelete}
               renderBlock={renderEditableBlock}
             />
           ) : (

@@ -23,8 +23,6 @@ describe('EditableBlock', () => {
     isDragDisabled: false,
     rowChildCount: 0,
     onSelect: vi.fn(),
-    onOpenConfig: vi.fn(),
-    onDelete: vi.fn(),
     children: <div data-testid="block-content">Content</div>,
   };
 
@@ -74,15 +72,10 @@ describe('EditableBlock', () => {
     expect(wrapper?.className).toContain('opacity-25');
   });
 
-  it('shows BlockToolbar when selected', () => {
-    render(<EditableBlock {...defaultProps} isSelected={true} />);
-    expect(screen.getByLabelText('Configure block')).toBeInTheDocument();
-    expect(screen.getByLabelText('Delete block')).toBeInTheDocument();
-  });
-
-  it('does not show BlockToolbar when not selected', () => {
-    render(<EditableBlock {...defaultProps} isSelected={false} />);
-    expect(screen.queryByLabelText('Configure block')).not.toBeInTheDocument();
+  it('applies touch-none for long-press drag', () => {
+    const { container } = render(<EditableBlock {...defaultProps} />);
+    const wrapper = container.querySelector('[data-block-id]');
+    expect(wrapper?.className).toContain('touch-none');
   });
 
   it('includes side drop zones', () => {
