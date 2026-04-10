@@ -19,6 +19,7 @@ vi.mock('@dnd-kit/core', () => ({
   KeyboardSensor: vi.fn(),
   PointerSensor: vi.fn(),
   TouchSensor: vi.fn(),
+  useDndMonitor: vi.fn(),
 }));
 
 vi.mock('@dnd-kit/sortable', () => ({
