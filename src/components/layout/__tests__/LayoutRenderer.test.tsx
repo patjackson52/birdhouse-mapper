@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { TypeLayout, LayoutNode } from '@/lib/layout/types';
 import type { ItemWithDetails, CustomField } from '@/lib/types';
 
@@ -361,5 +362,111 @@ describe('LayoutRenderer', () => {
     expect(block.getAttribute('data-can-edit')).toBe('false');
     expect(block.getAttribute('data-can-add-update')).toBe('false');
     expect(block.getAttribute('data-is-authenticated')).toBe('false');
+  });
+
+  it('wraps blocks in clickable containers in edit mode', () => {
+    const onBlockSelect = vi.fn();
+    const layout = makeLayout([
+      makeBlock('status_badge', 'b1'),
+      makeBlock('text_label', 'b2'),
+    ]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="edit"
+        context="preview"
+        customFields={[]}
+        onBlockSelect={onBlockSelect}
+      />
+    );
+
+    const wrappers = screen.getAllByTestId(/^edit-block-/);
+    expect(wrappers).toHaveLength(2);
+    expect(wrappers[0].dataset.testid).toBe('edit-block-b1');
+    expect(wrappers[1].dataset.testid).toBe('edit-block-b2');
+  });
+
+  it('calls onBlockSelect when a block is clicked in edit mode', async () => {
+    const user = userEvent.setup();
+    const onBlockSelect = vi.fn();
+    const layout = makeLayout([makeBlock('status_badge', 'b1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="edit"
+        context="preview"
+        customFields={[]}
+        onBlockSelect={onBlockSelect}
+      />
+    );
+
+    await user.click(screen.getByTestId('edit-block-b1'));
+    expect(onBlockSelect).toHaveBeenCalledWith('b1');
+  });
+
+  it('calls onBlockSelect(null) when clicking the already-selected block', async () => {
+    const user = userEvent.setup();
+    const onBlockSelect = vi.fn();
+    const layout = makeLayout([makeBlock('status_badge', 'b1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="edit"
+        context="preview"
+        customFields={[]}
+        selectedBlockId="b1"
+        onBlockSelect={onBlockSelect}
+      />
+    );
+
+    await user.click(screen.getByTestId('edit-block-b1'));
+    expect(onBlockSelect).toHaveBeenCalledWith(null);
+  });
+
+  it('applies highlight ring to the selected block', () => {
+    const layout = makeLayout([
+      makeBlock('status_badge', 'b1'),
+      makeBlock('text_label', 'b2'),
+    ]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="edit"
+        context="preview"
+        customFields={[]}
+        selectedBlockId="b1"
+        onBlockSelect={vi.fn()}
+      />
+    );
+
+    const selected = screen.getByTestId('edit-block-b1');
+    expect(selected.className).toContain('ring-2');
+
+    const unselected = screen.getByTestId('edit-block-b2');
+    expect(unselected.className).not.toContain('ring-2');
+  });
+
+  it('does not wrap blocks in clickable containers in preview mode', () => {
+    const layout = makeLayout([makeBlock('status_badge', 'b1')]);
+
+    render(
+      <LayoutRenderer
+        layout={layout}
+        item={baseItem}
+        mode="preview"
+        context="preview"
+        customFields={[]}
+      />
+    );
+
+    expect(screen.queryByTestId('edit-block-b1')).toBeNull();
   });
 });
