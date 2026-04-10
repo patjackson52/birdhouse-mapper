@@ -134,6 +134,17 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     return () => window.removeEventListener('resize', check);
   }, []);
 
+  // Auto-scroll selected block into view on mobile
+  useEffect(() => {
+    if (!selectedBlockId || !isMobile) return;
+    const el = document.querySelector(`[data-block-id="${selectedBlockId}"]`);
+    if (el) {
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
+  }, [selectedBlockId, isMobile]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -643,18 +654,16 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
   const previewContent = previewTab === 'detail' ? detailPreview : formPreviewContent;
 
-  // Config drawer (shown on top of everything)
-  const configDrawer = (
-    <ConfigDrawer
-      block={selectedBlock}
-      customFields={allFields}
-      entityTypes={entityTypes}
-      onConfigChange={handleConfigChange}
-      onDelete={handleDeleteBlock}
-      onClose={() => setSelectedBlockId(null)}
-      onCreateField={handleCreateField}
-    />
-  );
+  // Config drawer (shown on top of everything on desktop, inline on mobile)
+  const configDrawerProps = {
+    block: selectedBlock,
+    customFields: allFields,
+    entityTypes,
+    onConfigChange: handleConfigChange,
+    onDelete: handleDeleteBlock,
+    onClose: () => setSelectedBlockId(null),
+    onCreateField: handleCreateField,
+  };
 
   // --- Mobile layout ---
   if (isMobile) {
@@ -730,16 +739,16 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
             />
           )}
 
-          {/* Spacing picker strip (edit mode) */}
-          {isEditing && (
+          {/* Spacing picker strip (edit mode, hidden when config drawer is open) */}
+          {isEditing && !selectedBlock && (
             <div className="px-4 py-2 border-t border-sage-light flex-shrink-0">
               <SpacingPicker value={layout.spacing} onChange={handleSpacingChange} />
             </div>
           )}
-        </div>
 
-        {/* Config drawer */}
-        {configDrawer}
+          {/* Config drawer — inline, pushes content up */}
+          <ConfigDrawer {...configDrawerProps} isMobile />
+        </div>
 
         <DragOverlay>
           {activeNode ? (
@@ -828,8 +837,8 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
         </div>
       </div>
 
-      {/* Config drawer */}
-      {configDrawer}
+      {/* Config drawer — desktop overlay */}
+      <ConfigDrawer {...configDrawerProps} />
 
       <DragOverlay>
         {activeNode ? (
