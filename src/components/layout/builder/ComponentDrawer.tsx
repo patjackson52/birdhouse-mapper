@@ -132,10 +132,14 @@ export default function ComponentDrawer({ isMobile, disabledTypes, onQuickAdd }:
             className={`fixed inset-0 z-40 bg-black/20 transition-opacity ${isPaletteDragging ? 'opacity-0 pointer-events-none' : ''}`}
             onClick={() => setIsOpen(false)}
           />
-          <div className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[50vh] overflow-y-auto transition-opacity ${isPaletteDragging ? 'opacity-0 pointer-events-none' : ''}`}
+          <div className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-[0_-4px_16px_rgba(0,0,0,0.08)] max-h-[50vh] overflow-y-auto transition-opacity ${isPaletteDragging ? 'opacity-0 pointer-events-none' : ''}`}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
-            <div className="flex items-center justify-between px-4 py-3 border-b border-sage-light">
+            {/* Drag handle */}
+            <div className="flex justify-center py-2.5">
+              <div className="w-9 h-1.5 bg-gray-300 rounded-full" />
+            </div>
+            <div className="flex items-center justify-between px-4 pb-3 border-b border-sage-light">
               <span className="font-medium text-forest-dark">Add Component</span>
               <button onClick={() => setIsOpen(false)} aria-label="Close drawer">
                 <X size={20} className="text-sage" />

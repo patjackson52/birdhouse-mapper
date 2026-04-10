@@ -80,13 +80,13 @@ export default function ConfigDrawer({
     <>
       {/* Drag handle */}
       <div
-        className="flex justify-center pt-2 pb-1 cursor-ns-resize touch-none"
+        className="flex justify-center py-2.5 cursor-ns-resize touch-none"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
-        <div className="w-10 h-1 bg-sage-light rounded-full" />
+        <div className="w-9 h-1.5 bg-gray-300 rounded-full" />
       </div>
 
       {/* Header */}
@@ -148,7 +148,7 @@ export default function ConfigDrawer({
   if (isMobile) {
     return (
       <div
-        className="flex flex-col border-t border-sage-light bg-white flex-shrink-0"
+        className="flex flex-col bg-white flex-shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.08)]"
         style={{ height: drawerHeight, paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         {drawerContent}
