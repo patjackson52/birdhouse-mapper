@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useDraggable } from '@dnd-kit/core';
+import { useDraggable, useDndMonitor } from '@dnd-kit/core';
 import { Plus, X } from 'lucide-react';
 import type { BlockTypeV2 } from '@/lib/layout/types-v2';
 
@@ -60,12 +60,12 @@ function DraggableChip({
         }
       }}
       aria-label={`${isMobile ? 'Tap to add' : 'Drag to add'} ${item.label}`}
-      className={`flex items-center gap-2 rounded-lg border border-sage-light bg-white text-sm font-medium text-forest-dark transition-colors select-none ${
+      className={`flex items-center gap-2 rounded-lg border border-sage-light bg-white text-sm font-medium text-forest-dark transition-colors select-none touch-none ${
         disabled
           ? 'opacity-40 cursor-not-allowed'
           : isMobile
             ? 'active:bg-sage-light/50 min-h-[44px] px-3 py-2'
-            : 'hover:bg-sage-light/50 cursor-grab active:cursor-grabbing touch-none px-3 py-2.5 w-full'
+            : 'hover:bg-sage-light/50 cursor-grab active:cursor-grabbing px-3 py-2.5 w-full'
       } ${isDragging ? 'opacity-40' : ''}`}
     >
       <span>{item.icon}</span>
@@ -76,6 +76,24 @@ function DraggableChip({
 
 export default function ComponentDrawer({ isMobile, disabledTypes, onQuickAdd }: Props) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPaletteDragging, setIsPaletteDragging] = useState(false);
+
+  useDndMonitor({
+    onDragStart(event) {
+      if (event.active.data.current?.source === 'palette') {
+        setIsPaletteDragging(true);
+      }
+    },
+    onDragEnd() {
+      if (isPaletteDragging) {
+        setIsPaletteDragging(false);
+        setIsOpen(false);
+      }
+    },
+    onDragCancel() {
+      setIsPaletteDragging(false);
+    },
+  });
 
   if (!isMobile) {
     // Desktop: vertical sidebar
@@ -111,10 +129,10 @@ export default function ComponentDrawer({ isMobile, disabledTypes, onQuickAdd }:
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/20"
+            className={`fixed inset-0 z-40 bg-black/20 transition-opacity ${isPaletteDragging ? 'opacity-0 pointer-events-none' : ''}`}
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[50vh] overflow-y-auto"
+          <div className={`fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[50vh] overflow-y-auto transition-opacity ${isPaletteDragging ? 'opacity-0 pointer-events-none' : ''}`}
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             <div className="flex items-center justify-between px-4 py-3 border-b border-sage-light">
