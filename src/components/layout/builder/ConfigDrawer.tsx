@@ -139,7 +139,7 @@ export default function ConfigDrawer({
       </div>
 
       {/* Config content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
+      <div className="px-4 py-3">
         <BlockConfigPanel
           block={block as any}
           customFields={customFields}
@@ -187,22 +187,23 @@ export default function ConfigDrawer({
   if (isMobile) {
     // Visible height = content height minus how far user dragged down
     const visibleHeight = Math.max(0, contentHeight - dragOffset);
+    // Use auto height until first measurement to avoid 0-height flash
+    const hasBeenMeasured = contentHeight > 0;
 
     return (
       <div
         className="flex flex-col bg-white flex-shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] overflow-hidden"
         style={{
-          height: visibleHeight,
+          height: hasBeenMeasured ? visibleHeight : 'auto',
+          maxHeight: '70vh',
           transition: isSnapping ? 'height 250ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
           paddingBottom: 'env(safe-area-inset-bottom)',
           opacity: isDismissing ? 0 : 1,
         }}
       >
-        {/* Hidden measurer — always renders full content to get natural height */}
         <div
           ref={contentRef}
           className="flex flex-col"
-          style={{ minHeight: 0, height: '100%' }}
         >
           {drawerInner}
         </div>
