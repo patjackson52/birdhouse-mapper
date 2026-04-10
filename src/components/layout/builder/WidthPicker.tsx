@@ -13,6 +13,7 @@ const OPTIONS: { value: FractionalWidth; label: string }[] = [
   { value: '1/2', label: '1/2' },
   { value: '2/3', label: '2/3' },
   { value: '3/4', label: '3/4' },
+  { value: 'full', label: 'Full' },
 ];
 
 export default function WidthPicker({ value, onChange }: Props) {

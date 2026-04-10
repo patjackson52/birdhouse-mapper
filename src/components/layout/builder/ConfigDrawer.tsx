@@ -2,15 +2,18 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { X, Trash2 } from 'lucide-react';
-import type { LayoutBlockV2, BlockConfigV2 } from '@/lib/layout/types-v2';
+import type { LayoutBlockV2, BlockConfigV2, FractionalWidth, BlockAlign, BlockPermissions } from '@/lib/layout/types-v2';
 import type { CustomField, EntityType } from '@/lib/types';
-import BlockConfigPanel from './BlockConfigPanel';
+import BlockConfigPanelV2 from './BlockConfigPanelV2';
 
 interface ConfigDrawerProps {
   block: LayoutBlockV2 | null;
   customFields: CustomField[];
   entityTypes: EntityType[];
   onConfigChange: (blockId: string, config: BlockConfigV2) => void;
+  onWidthChange: (blockId: string, width: FractionalWidth) => void;
+  onAlignChange: (blockId: string, align: BlockAlign) => void;
+  onPermissionsChange: (blockId: string, permissions: BlockPermissions | undefined) => void;
   onDelete: (blockId: string) => void;
   onClose: () => void;
   onCreateField: (field: { name: string; field_type: string; options: string[]; required: boolean }) => void;
@@ -35,6 +38,9 @@ export default function ConfigDrawer({
   customFields,
   entityTypes,
   onConfigChange,
+  onWidthChange,
+  onAlignChange,
+  onPermissionsChange,
   onDelete,
   onClose,
   onCreateField,
@@ -140,11 +146,14 @@ export default function ConfigDrawer({
 
       {/* Config content */}
       <div className="px-4 py-3">
-        <BlockConfigPanel
-          block={block as any}
+        <BlockConfigPanelV2
+          block={block}
           customFields={customFields}
           entityTypes={entityTypes}
-          onConfigChange={(id, config) => onConfigChange(id, config as BlockConfigV2)}
+          onConfigChange={onConfigChange}
+          onWidthChange={onWidthChange}
+          onAlignChange={onAlignChange}
+          onPermissionsChange={onPermissionsChange}
           onCreateField={onCreateField}
         />
       </div>

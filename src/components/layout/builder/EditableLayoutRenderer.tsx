@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { TypeLayoutV2, LayoutNodeV2, LayoutBlockV2 } from '@/lib/layout/types-v2';
+import type { TypeLayoutV2, LayoutNodeV2, LayoutBlockV2, BlockAlign } from '@/lib/layout/types-v2';
 import { isLayoutRowV2 } from '@/lib/layout/types-v2';
 import type { ItemWithDetails, CustomField } from '@/lib/types';
 import { SPACING } from '@/lib/layout/spacing';
@@ -10,6 +10,20 @@ import BlockErrorBoundary from '../BlockErrorBoundary';
 import EditableBlock from './EditableBlock';
 import EditableRow from './EditableRow';
 import DropZone from './DropZone';
+
+const WIDTH_TO_CSS: Record<string, string> = {
+  '1/4': '25%',
+  '1/3': '33.333%',
+  '1/2': '50%',
+  '2/3': '66.667%',
+  '3/4': '75%',
+};
+
+const ALIGN_TO_JUSTIFY: Record<BlockAlign, string> = {
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+};
 
 interface EditableLayoutRendererProps {
   layout: TypeLayoutV2;
@@ -82,9 +96,29 @@ export default function EditableLayoutRenderer({
               onSelect={onSelect}
               renderBlock={renderEditableBlock}
             />
-          ) : (
-            renderEditableBlock(node as LayoutBlockV2, index, false, 0)
-          )}
+          ) : (() => {
+            const block = node as LayoutBlockV2;
+            const editableBlock = renderEditableBlock(block, index, false, 0);
+
+            if (block.width && block.width !== 'full') {
+              const maxWidth = WIDTH_TO_CSS[block.width];
+              const justify = ALIGN_TO_JUSTIFY[block.align ?? 'start'];
+              return (
+                <div
+                  data-block-width={block.width}
+                  style={{
+                    display: 'flex',
+                    justifyContent: justify,
+                  }}
+                >
+                  <div style={{ width: '100%', maxWidth }}>
+                    {editableBlock}
+                  </div>
+                </div>
+              );
+            }
+            return editableBlock;
+          })()}
 
           {/* Drop zone after each block */}
           {isDragActive && (

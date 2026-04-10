@@ -18,6 +18,8 @@ export type { SpacingPreset } from './types';
 
 export type FractionalWidth = '1/4' | '1/3' | '1/2' | '2/3' | '3/4' | 'full';
 
+export type BlockAlign = 'start' | 'center' | 'end';
+
 export interface BlockPermissions {
   requiredRole?: 'viewer' | 'editor' | 'admin';
 }
@@ -56,6 +58,7 @@ export interface LayoutBlockV2 {
   type: BlockTypeV2;
   config: BlockConfigV2;
   width?: FractionalWidth;
+  align?: BlockAlign;
   hideWhenEmpty?: boolean;
   permissions?: BlockPermissions;
 }

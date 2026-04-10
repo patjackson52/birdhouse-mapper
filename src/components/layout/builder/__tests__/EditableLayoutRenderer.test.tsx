@@ -39,6 +39,34 @@ const mockItem = { id: '1', name: 'Test', status: 'active' } as unknown as ItemW
 const mockFields: CustomField[] = [];
 
 describe('EditableLayoutRenderer', () => {
+  it('wraps top-level block with width in alignment container', () => {
+    const layoutWithWidth: TypeLayoutV2 = {
+      version: 2,
+      blocks: [
+        { id: 'b1', type: 'status_badge', config: {}, width: '1/2', align: 'start' },
+      ],
+      spacing: 'comfortable',
+      peekBlockCount: 3,
+    };
+
+    const { container } = render(
+      <EditableLayoutRenderer
+        layout={layoutWithWidth}
+        item={mockItem}
+        customFields={mockFields}
+        selectedBlockId={null}
+        isDragActive={false}
+        onSelect={vi.fn()}
+      />
+    );
+
+    const widthWrapper = container.querySelector('[data-block-width="1/2"]');
+    expect(widthWrapper).toBeInTheDocument();
+
+    const innerDiv = widthWrapper?.querySelector('div');
+    expect(innerDiv).toHaveStyle({ maxWidth: '50%' });
+  });
+
   it('renders blocks wrapped in editable containers', () => {
     const { container } = render(
       <EditableLayoutRenderer

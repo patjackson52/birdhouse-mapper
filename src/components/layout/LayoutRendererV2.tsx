@@ -1,6 +1,6 @@
 'use client';
 
-import type { TypeLayoutV2, LayoutNodeV2, LayoutBlockV2, BlockPermissions } from '@/lib/layout/types-v2';
+import type { TypeLayoutV2, LayoutNodeV2, LayoutBlockV2, BlockPermissions, BlockAlign } from '@/lib/layout/types-v2';
 import type { ItemWithDetails, CustomField } from '@/lib/types';
 import { isLayoutRowV2 } from '@/lib/layout/types-v2';
 import { SPACING } from '@/lib/layout/spacing';
@@ -32,6 +32,20 @@ export interface LayoutRendererV2Props {
   isAuthenticated?: boolean;
 }
 
+const WIDTH_TO_CSS: Record<string, string> = {
+  '1/4': '25%',
+  '1/3': '33.333%',
+  '1/2': '50%',
+  '2/3': '66.667%',
+  '3/4': '75%',
+};
+
+const ALIGN_TO_JUSTIFY: Record<string, string> = {
+  start: 'flex-start',
+  center: 'center',
+  end: 'flex-end',
+};
+
 /**
  * Map layout model roles to numeric levels for comparison.
  * Layout model uses 'viewer' | 'editor' | 'admin' (simplified).
@@ -58,7 +72,8 @@ function renderBlock(
   node: LayoutNodeV2,
   index: number,
   props: LayoutRendererV2Props,
-  userBaseRole: string
+  userBaseRole: string,
+  isTopLevel = false,
 ): React.ReactNode {
   const { item, mode, context, customFields } = props;
 
@@ -69,7 +84,7 @@ function renderBlock(
 
   if (isLayoutRowV2(node)) {
     const children = node.children.map((child, childIndex) =>
-      renderBlock(child, childIndex, props, userBaseRole)
+      renderBlock(child, childIndex, props, userBaseRole, false)
     );
     return (
       <BlockErrorBoundary key={node.id} blockType="row">
@@ -95,11 +110,35 @@ function renderBlock(
   const rendered = renderBlockContent(block, index, props);
   if (rendered === null) return null;
 
-  return (
+  let content: React.ReactNode = (
     <BlockErrorBoundary key={block.id} blockType={block.type}>
       {rendered}
     </BlockErrorBoundary>
   );
+
+  // Wrap top-level blocks that have a non-full width
+  if (isTopLevel && block.width && block.width !== 'full') {
+    const maxWidth = WIDTH_TO_CSS[block.width];
+    const justify = ALIGN_TO_JUSTIFY[(block.align as string) ?? 'start'];
+
+    content = (
+      <div
+        key={block.id}
+        data-block-width={block.width}
+        style={{
+          display: 'flex',
+          maxWidth,
+          justifyContent: justify,
+        }}
+      >
+        <div style={{ width: '100%', maxWidth }}>
+          {content}
+        </div>
+      </div>
+    );
+  }
+
+  return content;
 }
 
 export function renderBlockContent(
@@ -219,7 +258,7 @@ export default function LayoutRendererV2(props: LayoutRendererV2Props) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: spacing.blockGap }}>
-      {nodes.map((node, index) => renderBlock(node, index, props, userBaseRole))}
+      {nodes.map((node, index) => renderBlock(node, index, props, userBaseRole, true))}
     </div>
   );
 }
