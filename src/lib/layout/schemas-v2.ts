@@ -47,6 +47,7 @@ const emptyConfigSchema = z.object({});
 
 const v2CommonFields = {
   width: fractionalWidthSchema.optional(),
+  align: z.enum(['start', 'center', 'end']).optional(),
   hideWhenEmpty: z.boolean().optional(),
   permissions: blockPermissionsSchema.optional(),
 };
