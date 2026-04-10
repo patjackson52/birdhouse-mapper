@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { runParcelLookup } from '@/lib/geo/parcel-lookup';
 import { createGeoLayer, assignLayerToProperties, setPropertyBoundary } from '@/app/admin/geo-layers/actions';
 import type { CountyGISConfig, ParcelCandidate, ParcelLookupResult } from '@/lib/geo/types';
@@ -26,7 +26,8 @@ export async function lookupParcel(input: {
   };
 
   const registrySave = async (config: Omit<CountyGISConfig, 'id' | 'last_verified_at'>) => {
-    await supabase.from('county_gis_registry').upsert(
+    const serviceClient = createServiceClient();
+    await serviceClient.from('county_gis_registry').upsert(
       {
         fips: config.fips,
         county_name: config.county_name,
