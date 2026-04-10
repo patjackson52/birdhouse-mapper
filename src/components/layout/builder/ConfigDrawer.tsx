@@ -30,9 +30,6 @@ const BLOCK_LABELS: Record<string, string> = {
   action_buttons: 'Actions',
 };
 
-const MIN_HEIGHT = 120;
-const DEFAULT_HEIGHT = 260;
-
 export default function ConfigDrawer({
   block,
   customFields,
@@ -44,53 +41,95 @@ export default function ConfigDrawer({
   isMobile = false,
 }: ConfigDrawerProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [drawerHeight, setDrawerHeight] = useState(DEFAULT_HEIGHT);
-  const dragStartY = useRef(0);
-  const dragStartHeight = useRef(0);
-  const isDraggingHandle = useRef(false);
 
-  // Reset delete confirm when block changes
+  // --- Mobile snap-point drawer state ---
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [contentHeight, setContentHeight] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0); // px the drawer is dragged down from open position
+  const [isSnapping, setIsSnapping] = useState(false);
+  const [isDismissing, setIsDismissing] = useState(false);
+  const dragStartY = useRef(0);
+  const dragStartOffset = useRef(0);
+  const isDragging = useRef(false);
+
+  // Measure content height when block changes
   useEffect(() => {
+    if (!block || !isMobile) return;
+    // Reset state for new block
+    setDragOffset(0);
+    setIsDismissing(false);
     setShowDeleteConfirm(false);
-  }, [block?.id]);
+
+    const measure = () => {
+      if (contentRef.current) {
+        const maxH = window.innerHeight * 0.7;
+        setContentHeight(Math.min(contentRef.current.scrollHeight, maxH));
+      }
+    };
+    // Measure after render
+    requestAnimationFrame(measure);
+  }, [block?.id, block?.type, isMobile]);
+
+  // Re-measure when delete confirm toggled (changes content size)
+  useEffect(() => {
+    if (!isMobile || !contentRef.current) return;
+    requestAnimationFrame(() => {
+      if (contentRef.current) {
+        const maxH = window.innerHeight * 0.7;
+        setContentHeight(Math.min(contentRef.current.scrollHeight, maxH));
+      }
+    });
+  }, [showDeleteConfirm, isMobile]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.preventDefault();
-    isDraggingHandle.current = true;
+    isDragging.current = true;
     dragStartY.current = e.clientY;
-    dragStartHeight.current = drawerHeight;
+    dragStartOffset.current = dragOffset;
+    setIsSnapping(false);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [drawerHeight]);
+  }, [dragOffset]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDraggingHandle.current) return;
-    const delta = dragStartY.current - e.clientY;
-    const maxHeight = window.innerHeight * 0.7;
-    const newHeight = Math.min(maxHeight, Math.max(MIN_HEIGHT, dragStartHeight.current + delta));
-    setDrawerHeight(newHeight);
+    if (!isDragging.current) return;
+    const delta = e.clientY - dragStartY.current;
+    // Can drag down (positive) freely, but cannot drag above content (negative clamped to 0)
+    const newOffset = Math.max(0, dragStartOffset.current + delta);
+    setDragOffset(newOffset);
   }, []);
 
   const handlePointerUp = useCallback(() => {
-    isDraggingHandle.current = false;
-  }, []);
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    setIsSnapping(true);
+
+    // If dragged below 50% of content height → dismiss, otherwise snap to open
+    if (dragOffset > contentHeight * 0.5) {
+      setIsDismissing(true);
+      setDragOffset(contentHeight);
+      setTimeout(onClose, 250);
+    } else {
+      setDragOffset(0);
+    }
+  }, [dragOffset, contentHeight, onClose]);
 
   if (!block) return null;
 
-  const drawerContent = (
+  const drawerInner = (
     <>
       {/* Drag handle */}
       <div
-        className="flex justify-center pt-2 pb-1 cursor-ns-resize touch-none"
+        className="flex justify-center py-2.5 cursor-ns-resize touch-none flex-shrink-0"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
       >
-        <div className="w-10 h-1 bg-sage-light rounded-full" />
+        <div className="w-9 h-1.5 bg-gray-300 rounded-full" />
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-sage-light">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-sage-light flex-shrink-0">
         <span className="font-medium text-forest-dark">
           {BLOCK_LABELS[block.type] ?? block.type}
         </span>
@@ -144,14 +183,29 @@ export default function ConfigDrawer({
     </>
   );
 
-  // Mobile: inline drawer at bottom of flex layout, pushes content up
+  // Mobile: inline drawer with snap-point behavior
   if (isMobile) {
+    // Visible height = content height minus how far user dragged down
+    const visibleHeight = Math.max(0, contentHeight - dragOffset);
+
     return (
       <div
-        className="flex flex-col border-t border-sage-light bg-white flex-shrink-0"
-        style={{ height: drawerHeight, paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="flex flex-col bg-white flex-shrink-0 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] overflow-hidden"
+        style={{
+          height: visibleHeight,
+          transition: isSnapping ? 'height 250ms cubic-bezier(0.32, 0.72, 0, 1)' : 'none',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          opacity: isDismissing ? 0 : 1,
+        }}
       >
-        {drawerContent}
+        {/* Hidden measurer — always renders full content to get natural height */}
+        <div
+          ref={contentRef}
+          className="flex flex-col"
+          style={{ minHeight: 0, height: '100%' }}
+        >
+          {drawerInner}
+        </div>
       </div>
     );
   }
@@ -170,7 +224,7 @@ export default function ConfigDrawer({
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl max-h-[50vh] flex flex-col mx-auto max-w-[480px]"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
-        {drawerContent}
+        {drawerInner}
       </div>
     </>
   );
