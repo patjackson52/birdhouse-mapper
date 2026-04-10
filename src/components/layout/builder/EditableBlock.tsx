@@ -2,7 +2,6 @@
 
 import { useDraggable } from '@dnd-kit/core';
 import SideDropZone from './SideDropZone';
-import BlockToolbar from './BlockToolbar';
 
 interface EditableBlockProps {
   blockId: string;
@@ -12,8 +11,6 @@ interface EditableBlockProps {
   isDragDisabled: boolean;
   rowChildCount: number;
   onSelect: (blockId: string) => void;
-  onOpenConfig: (blockId: string) => void;
-  onDelete: (blockId: string) => void;
   children: React.ReactNode;
 }
 
@@ -25,8 +22,6 @@ export default function EditableBlock({
   isDragDisabled,
   rowChildCount,
   onSelect,
-  onOpenConfig,
-  onDelete,
   children,
 }: EditableBlockProps) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -40,11 +35,13 @@ export default function EditableBlock({
     <div
       data-block-id={blockId}
       ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       onClick={(e) => {
         e.stopPropagation();
         onSelect(blockId);
       }}
-      className={`group relative flex flex-col rounded-lg transition-all duration-150 border-2 ${
+      className={`group relative flex flex-col rounded-lg transition-all duration-150 border-2 touch-none ${
         isDragging
           ? 'opacity-25 border-transparent'
           : isSelected
@@ -52,16 +49,6 @@ export default function EditableBlock({
             : 'border-transparent hover:border-dashed hover:border-sage/40'
       }`}
     >
-      {/* Floating toolbar — shown when selected */}
-      {isSelected && !isDragging && (
-        <BlockToolbar
-          onConfig={() => onOpenConfig(blockId)}
-          onDelete={() => onDelete(blockId)}
-          dragListeners={listeners}
-          dragAttributes={attributes}
-        />
-      )}
-
       {/* Side drop zones for auto-row creation */}
       <SideDropZone
         id={`side-left-${blockId}`}

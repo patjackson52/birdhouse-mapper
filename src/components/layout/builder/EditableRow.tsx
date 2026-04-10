@@ -10,8 +10,6 @@ interface EditableRowProps {
   selectedBlockId: string | null;
   isDragActive: boolean;
   onSelect: (blockId: string) => void;
-  onOpenConfig: (blockId: string) => void;
-  onDelete: (blockId: string) => void;
   renderBlock: (block: LayoutBlockV2, index: number, isInRow: boolean, rowChildCount: number) => React.ReactNode;
 }
 
@@ -21,8 +19,6 @@ export default function EditableRow({
   selectedBlockId,
   isDragActive,
   onSelect,
-  onOpenConfig,
-  onDelete,
   renderBlock,
 }: EditableRowProps) {
   const { attributes, listeners, setNodeRef: dragRef, isDragging } = useDraggable({

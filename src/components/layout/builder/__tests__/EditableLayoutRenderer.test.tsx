@@ -48,8 +48,6 @@ describe('EditableLayoutRenderer', () => {
         selectedBlockId={null}
         isDragActive={false}
         onSelect={vi.fn()}
-        onOpenConfig={vi.fn()}
-        onDelete={vi.fn()}
       />
     );
     expect(screen.getByTestId('block-status_badge')).toBeInTheDocument();
@@ -67,8 +65,6 @@ describe('EditableLayoutRenderer', () => {
         selectedBlockId={null}
         isDragActive={true}
         onSelect={vi.fn()}
-        onOpenConfig={vi.fn()}
-        onDelete={vi.fn()}
       />
     );
     // 2 blocks = 3 drop zones (before, between, after)
