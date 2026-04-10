@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, forwardRef, useCallback } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { LayoutBlock } from '@/lib/layout/types';
@@ -33,27 +33,32 @@ interface Props {
   onToggleExpand: () => void;
 }
 
-export default function BlockListItem({
-  block,
-  customFields,
-  entityTypes,
-  fieldName,
-  onConfigChange,
-  onDelete,
-  onCreateField,
-  isExpanded,
-  onToggleExpand,
-}: Props) {
+const BlockListItem = forwardRef<HTMLDivElement, Props>(function BlockListItem(
+  { block, customFields, entityTypes, fieldName, onConfigChange, onDelete, onCreateField, isExpanded, onToggleExpand },
+  externalRef
+) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const {
     attributes,
     listeners,
-    setNodeRef,
+    setNodeRef: setSortableRef,
     transform,
     transition,
     isDragging,
   } = useSortable({ id: block.id });
+
+  const mergedRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      setSortableRef(node);
+      if (typeof externalRef === 'function') {
+        externalRef(node);
+      } else if (externalRef) {
+        externalRef.current = node;
+      }
+    },
+    [setSortableRef, externalRef]
+  );
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -67,7 +72,7 @@ export default function BlockListItem({
 
   return (
     <div
-      ref={setNodeRef}
+      ref={mergedRef}
       style={style}
       className="border border-sage-light rounded-lg bg-white cursor-grab active:cursor-grabbing touch-none"
       {...attributes}
@@ -120,4 +125,6 @@ export default function BlockListItem({
       )}
     </div>
   );
-}
+});
+
+export default BlockListItem;

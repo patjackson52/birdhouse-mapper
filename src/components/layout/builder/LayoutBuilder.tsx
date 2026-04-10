@@ -23,7 +23,6 @@ import BlockPalette from './BlockPalette';
 import BlockList from './BlockList';
 import SpacingPicker from './SpacingPicker';
 import LayoutRenderer from '../LayoutRenderer';
-import FormPreview from '../preview/FormPreview';
 import DragOverlayContent from './DragOverlayContent';
 import { rowAwareCollision } from './collision';
 
@@ -36,7 +35,6 @@ interface Props {
   onCancel: () => void;
 }
 
-type PreviewTab = 'detail' | 'form';
 
 function getDefaultConfig(type: BlockType): BlockConfig {
   switch (type) {
@@ -84,8 +82,9 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   const [pendingFields, setPendingFields] = useState<{ name: string; field_type: string; options: string[]; required: boolean; tempId: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [activeTab, setActiveTab] = useState<'build' | 'detail' | 'form'>('build');
-  const [previewTab, setPreviewTab] = useState<PreviewTab>('detail');
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [rightPanelMode, setRightPanelMode] = useState<'edit' | 'preview'>('edit');
+  const [activeTab, setActiveTab] = useState<'build' | 'edit' | 'preview'>('build');
   const [activeNode, setActiveNode] = useState<LayoutNode | null>(null);
   const [activeType, setActiveType] = useState<'block' | 'row' | null>(null);
 
@@ -101,6 +100,20 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
+
+  const handleRightPanelModeChange = useCallback((mode: 'edit' | 'preview') => {
+    setRightPanelMode(mode);
+    if (mode === 'preview') {
+      setSelectedBlockId(null);
+    }
+  }, []);
+
+  const handleBlockSelectFromPreview = useCallback((blockId: string | null) => {
+    setSelectedBlockId(blockId);
+    if (isMobile && blockId) {
+      setActiveTab('build');
+    }
+  }, [isMobile]);
 
   const allFields: CustomField[] = [
     ...customFields,
@@ -288,6 +301,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   }, []);
 
   const handleDeleteBlock = useCallback((blockId: string) => {
+    setSelectedBlockId((prev) => prev === blockId ? null : prev);
     setLayout((prev) => ({
       ...prev,
       blocks: prev.blocks.filter((b) => b.id !== blockId),
@@ -328,6 +342,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
   }, []);
 
   const handleRemoveFromRow = useCallback((rowId: string, blockId: string) => {
+    setSelectedBlockId((prev) => prev === blockId ? null : prev);
     setLayout((prev) => ({
       ...prev,
       blocks: prev.blocks.flatMap((node) => {
@@ -359,6 +374,8 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
         entityTypes={entityTypes}
         peekBlockCount={layout.peekBlockCount}
         activeType={activeType}
+        selectedBlockId={selectedBlockId}
+        onBlockSelect={setSelectedBlockId}
         onConfigChange={handleConfigChange}
         onDeleteBlock={handleDeleteBlock}
         onCreateField={handleCreateField}
@@ -369,26 +386,36 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
     </div>
   );
 
-  const detailPreview = (
+  const unifiedPreview = (
     <div className="bg-gray-100 rounded-xl p-3">
-      <div className="bg-white rounded-xl shadow-lg p-4 max-h-[70vh] overflow-y-auto">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="text-xl">{itemType.icon}</span>
-          <h2 className="font-heading font-semibold text-forest-dark text-xl">{mockItem.name}</h2>
+      <div className="bg-white rounded-t-2xl shadow-lg">
+        {/* Handle */}
+        <div className="flex justify-center py-3">
+          <div className="w-10 h-1 rounded-full bg-gray-300" />
         </div>
-        <LayoutRenderer
-          layout={layout}
-          item={mockItem}
-          mode="preview"
-          context="preview"
-          customFields={allFields}
-        />
+
+        <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">{itemType.icon}</span>
+            <h2 className="font-heading font-semibold text-forest-dark text-xl">
+              {mockItem.name}
+            </h2>
+          </div>
+
+          {/* Layout content */}
+          <LayoutRenderer
+            layout={layout}
+            item={mockItem}
+            mode={rightPanelMode}
+            context="preview"
+            customFields={allFields}
+            selectedBlockId={selectedBlockId ?? undefined}
+            onBlockSelect={handleBlockSelectFromPreview}
+          />
+        </div>
       </div>
     </div>
-  );
-
-  const formPreviewContent = (
-    <FormPreview layout={layout} customFields={allFields} itemTypeName={itemType.name} />
   );
 
   const dndWrapped = (content: React.ReactNode) => (
@@ -424,26 +451,34 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
           </button>
         </div>
 
+        {/* Tab toggle */}
         <div className="flex border-b border-sage-light">
-          {(['build', 'detail', 'form'] as const).map((tab) => (
+          {(['build', 'edit', 'preview'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                if (tab === 'edit') setRightPanelMode('edit');
+                if (tab === 'preview') {
+                  setRightPanelMode('preview');
+                  setSelectedBlockId(null);
+                }
+              }}
               className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
                 activeTab === tab
                   ? 'text-forest border-b-2 border-forest'
                   : 'text-sage'
               }`}
             >
-              {tab === 'build' ? 'Build' : tab === 'detail' ? 'Detail' : 'Form'}
+              {tab === 'build' ? 'Build' : tab === 'edit' ? 'Edit' : 'Preview'}
             </button>
           ))}
         </div>
 
+        {/* Tab content */}
         <div className="flex-1 overflow-y-auto p-4">
           {activeTab === 'build' && dndWrapped(buildContent)}
-          {activeTab === 'detail' && detailPreview}
-          {activeTab === 'form' && formPreviewContent}
+          {(activeTab === 'edit' || activeTab === 'preview') && unifiedPreview}
         </div>
       </div>
     );
@@ -464,21 +499,22 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
         {dndWrapped(buildContent)}
       </div>
 
+      {/* Preview panel */}
       <div className="flex-[2] overflow-y-auto">
         <div className="flex gap-1 mb-3">
-          {(['detail', 'form'] as const).map((tab) => (
+          {(['edit', 'preview'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setPreviewTab(tab)}
+              onClick={() => handleRightPanelModeChange(tab)}
               className={`px-3 py-1.5 rounded-md text-sm font-medium ${
-                previewTab === tab ? 'bg-forest text-white' : 'bg-sage-light text-forest-dark'
+                rightPanelMode === tab ? 'bg-forest text-white' : 'bg-sage-light text-forest-dark'
               }`}
             >
-              {tab === 'detail' ? 'Detail Preview' : 'Form Preview'}
+              {tab === 'edit' ? 'Edit' : 'Preview'}
             </button>
           ))}
         </div>
-        {previewTab === 'detail' ? detailPreview : formPreviewContent}
+        {unifiedPreview}
       </div>
     </div>
   );

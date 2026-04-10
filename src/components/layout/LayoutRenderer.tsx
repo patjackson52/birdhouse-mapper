@@ -20,13 +20,43 @@ import type { EntityDisplay } from './blocks/EntityListBlock';
 export interface LayoutRendererProps {
   layout: TypeLayout;
   item: ItemWithDetails;
-  mode: 'live' | 'preview';
+  mode: 'live' | 'preview' | 'edit';
   context: 'bottom-sheet' | 'side-panel' | 'preview';
   sheetState?: 'peek' | 'half' | 'full';
   customFields: CustomField[];
   canEdit?: boolean;
   canAddUpdate?: boolean;
   isAuthenticated?: boolean;
+  selectedBlockId?: string;
+  onBlockSelect?: (blockId: string | null) => void;
+}
+
+function EditBlockWrapper({
+  id,
+  selectedBlockId,
+  onBlockSelect,
+  children,
+}: {
+  id: string;
+  selectedBlockId?: string;
+  onBlockSelect?: (blockId: string | null) => void;
+  children: React.ReactNode;
+}) {
+  const isSelected = selectedBlockId === id;
+  return (
+    <div
+      data-testid={`edit-block-${id}`}
+      className={`cursor-pointer rounded transition-all ${
+        isSelected ? 'ring-2 ring-forest/40' : 'hover:ring-1 hover:ring-sage-light'
+      }`}
+      onClick={(e) => {
+        e.stopPropagation();
+        onBlockSelect?.(isSelected ? null : id);
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 function renderBlock(
@@ -34,17 +64,32 @@ function renderBlock(
   index: number,
   props: LayoutRendererProps
 ): React.ReactNode {
-  const { item, mode, context, customFields } = props;
+  const { item, mode, context, customFields, selectedBlockId, onBlockSelect } = props;
 
   if (isLayoutRow(node)) {
     const children = node.children.map((child, childIndex) =>
       renderBlock(child, childIndex, props)
     );
-    return (
+    const rowContent = (
       <BlockErrorBoundary key={node.id} blockType="row">
         <RowBlock row={node}>{children as React.ReactNode[]}</RowBlock>
       </BlockErrorBoundary>
     );
+
+    if (mode === 'edit') {
+      return (
+        <EditBlockWrapper
+          key={node.id}
+          id={node.id}
+          selectedBlockId={selectedBlockId}
+          onBlockSelect={onBlockSelect}
+        >
+          {rowContent}
+        </EditBlockWrapper>
+      );
+    }
+
+    return rowContent;
   }
 
   const block = node as LayoutBlock;
@@ -61,11 +106,26 @@ function renderBlock(
   const rendered = renderBlockContent(block, index, props);
   if (rendered === null) return null;
 
-  return (
+  const blockContent = (
     <BlockErrorBoundary key={block.id} blockType={block.type}>
       {rendered}
     </BlockErrorBoundary>
   );
+
+  if (mode === 'edit') {
+    return (
+      <EditBlockWrapper
+        key={block.id}
+        id={block.id}
+        selectedBlockId={selectedBlockId}
+        onBlockSelect={onBlockSelect}
+      >
+        {blockContent}
+      </EditBlockWrapper>
+    );
+  }
+
+  return blockContent;
 }
 
 function renderBlockContent(
@@ -116,7 +176,7 @@ function renderBlockContent(
           canEdit={props.canEdit ?? false}
           canAddUpdate={props.canAddUpdate ?? false}
           isAuthenticated={props.isAuthenticated ?? false}
-          mode={mode}
+          mode={mode === 'edit' ? 'preview' : mode}
         />
       );
     }
