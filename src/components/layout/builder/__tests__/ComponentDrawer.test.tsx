@@ -9,6 +9,7 @@ vi.mock('@dnd-kit/core', () => ({
     setNodeRef: vi.fn(),
     isDragging: false,
   })),
+  useDndMonitor: vi.fn(),
 }));
 
 describe('ComponentDrawer', () => {
