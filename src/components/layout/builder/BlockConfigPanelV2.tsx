@@ -6,6 +6,7 @@ import type {
   BlockConfigV2,
   FractionalWidth,
   BlockPermissions,
+  BlockAlign,
   DescriptionConfig,
 } from '@/lib/layout/types-v2';
 import type {
@@ -18,15 +19,16 @@ import type {
 import type { CustomField, EntityType } from '@/lib/types';
 import InlineFieldCreator from './InlineFieldCreator';
 import WidthPicker from './WidthPicker';
+import AlignPicker from './AlignPicker';
 import PermissionsConfig from './PermissionsConfig';
 
 interface Props {
   block: LayoutBlockV2;
   customFields: CustomField[];
   entityTypes: EntityType[];
-  isInRow: boolean;
   onConfigChange: (blockId: string, config: BlockConfigV2) => void;
-  onWidthChange?: (blockId: string, width: FractionalWidth) => void;
+  onWidthChange: (blockId: string, width: FractionalWidth) => void;
+  onAlignChange: (blockId: string, align: BlockAlign) => void;
   onPermissionsChange: (blockId: string, permissions: BlockPermissions | undefined) => void;
   onCreateField: (field: { name: string; field_type: string; options: string[]; required: boolean }) => void;
 }
@@ -35,9 +37,9 @@ export default function BlockConfigPanelV2({
   block,
   customFields,
   entityTypes,
-  isInRow,
   onConfigChange,
   onWidthChange,
+  onAlignChange,
   onPermissionsChange,
   onCreateField,
 }: Props) {
@@ -284,11 +286,17 @@ export default function BlockConfigPanelV2({
   return (
     <div>
       {renderConfig()}
-      {isInRow && onWidthChange && (
-        <div className="border-t border-sage-light/50 pt-2 mt-3">
-          <WidthPicker
-            value={block.width}
-            onChange={(width) => onWidthChange(block.id, width)}
+      <div className="border-t border-sage-light/50 pt-2 mt-3">
+        <WidthPicker
+          value={block.width}
+          onChange={(width) => onWidthChange(block.id, width)}
+        />
+      </div>
+      {block.width && block.width !== 'full' && (
+        <div className="pt-2">
+          <AlignPicker
+            value={block.align}
+            onChange={(align) => onAlignChange(block.id, align)}
           />
         </div>
       )}

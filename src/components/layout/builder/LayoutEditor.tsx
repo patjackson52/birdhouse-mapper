@@ -26,6 +26,7 @@ import type {
   SpacingPreset,
   FractionalWidth,
   BlockPermissions,
+  BlockAlign,
 } from '@/lib/layout/types-v2';
 import { isLayoutRowV2 } from '@/lib/layout/types-v2';
 import type { CustomField, EntityType, ItemType } from '@/lib/types';
@@ -370,8 +371,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
       if (topIdx !== -1 && topIdx < targetIndex) {
         adjustedIndex--;
       }
-      // Strip width when placing at top-level
-      const node = isLayoutRowV2(movingNode) ? movingNode : { ...movingNode as LayoutBlockV2, width: undefined };
+      const node = isLayoutRowV2(movingNode) ? movingNode : (movingNode as LayoutBlockV2);
       blocks.splice(Math.min(adjustedIndex, blocks.length), 0, node);
       update({ ...layout, blocks });
       return;
@@ -552,11 +552,34 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     update({
       ...layout,
       blocks: layout.blocks.map((node) => {
+        if (node.id === blockId && !isLayoutRowV2(node)) {
+          return { ...node, width: width === 'full' ? undefined : width };
+        }
         if (isLayoutRowV2(node)) {
           return {
             ...node,
             children: node.children.map((child) =>
               child.id === blockId ? { ...child, width } : child,
+            ),
+          };
+        }
+        return node;
+      }),
+    });
+  }, [layout, update]);
+
+  const handleAlignChange = useCallback((blockId: string, align: BlockAlign) => {
+    update({
+      ...layout,
+      blocks: layout.blocks.map((node) => {
+        if (node.id === blockId && !isLayoutRowV2(node)) {
+          return { ...node, align: align === 'start' ? undefined : align };
+        }
+        if (isLayoutRowV2(node)) {
+          return {
+            ...node,
+            children: node.children.map((child) =>
+              child.id === blockId ? { ...child, align: align === 'start' ? undefined : align } : child,
             ),
           };
         }
@@ -660,6 +683,9 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     customFields: allFields,
     entityTypes,
     onConfigChange: handleConfigChange,
+    onWidthChange: handleWidthChange,
+    onAlignChange: handleAlignChange,
+    onPermissionsChange: handlePermissionsChange,
     onDelete: handleDeleteBlock,
     onClose: () => setSelectedBlockId(null),
     onCreateField: handleCreateField,
