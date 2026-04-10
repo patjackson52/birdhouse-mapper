@@ -396,4 +396,108 @@ describe('LayoutRendererV2', () => {
 
     expect(screen.getByTestId('block-status_badge')).toBeDefined();
   });
+
+  it('applies max-width to top-level block with width set', () => {
+    const layout = makeLayout([
+      { ...makeBlock('status_badge', 'b1'), width: '1/2' } as LayoutNodeV2,
+    ]);
+
+    const { container } = render(
+      <LayoutRendererV2
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    const wrapper = container.querySelector('[data-block-width]');
+    expect(wrapper).not.toBeNull();
+    expect(wrapper!.getAttribute('data-block-width')).toBe('1/2');
+    expect((wrapper as HTMLElement).style.maxWidth).toBe('50%');
+  });
+
+  it('applies center alignment to top-level block with align=center', () => {
+    const layout = makeLayout([
+      { ...makeBlock('status_badge', 'b1'), width: '1/3', align: 'center' } as LayoutNodeV2,
+    ]);
+
+    const { container } = render(
+      <LayoutRendererV2
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    const wrapper = container.querySelector('[data-block-width]');
+    expect(wrapper).not.toBeNull();
+    expect((wrapper as HTMLElement).style.justifyContent).toBe('center');
+  });
+
+  it('applies end alignment to top-level block with align=end', () => {
+    const layout = makeLayout([
+      { ...makeBlock('status_badge', 'b1'), width: '1/4', align: 'end' } as LayoutNodeV2,
+    ]);
+
+    const { container } = render(
+      <LayoutRendererV2
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    const wrapper = container.querySelector('[data-block-width]');
+    expect((wrapper as HTMLElement).style.justifyContent).toBe('flex-end');
+  });
+
+  it('does not apply width wrapper when width is full', () => {
+    const layout = makeLayout([
+      { ...makeBlock('status_badge', 'b1'), width: 'full' } as LayoutNodeV2,
+    ]);
+
+    const { container } = render(
+      <LayoutRendererV2
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    expect(container.querySelector('[data-block-width]')).toBeNull();
+  });
+
+  it('does not apply width wrapper to blocks inside rows', () => {
+    const layout = makeLayout([
+      {
+        id: 'row-1',
+        type: 'row',
+        gap: 'normal',
+        children: [
+          { ...makeBlock('status_badge', 'b1'), width: '1/2' } as any,
+          makeBlock('divider', 'b2') as any,
+        ],
+      },
+    ]);
+
+    const { container } = render(
+      <LayoutRendererV2
+        layout={layout}
+        item={baseItem}
+        mode="live"
+        context="side-panel"
+        customFields={[]}
+      />
+    );
+
+    expect(container.querySelector('[data-block-width]')).toBeNull();
+  });
 });
