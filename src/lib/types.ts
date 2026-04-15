@@ -11,11 +11,11 @@ export type FieldType = 'text' | 'number' | 'dropdown' | 'date';
 
 export type UserRole = 'admin' | 'editor';
 
-export type BaseRole = 'platform_admin' | 'org_admin' | 'org_staff' | 'contributor' | 'viewer' | 'public';
+export type BaseRole = 'platform_admin' | 'org_admin' | 'org_staff' | 'contributor' | 'viewer' | 'public' | 'public_contributor';
 
 export type TemporaryAccessGrantStatus = 'active' | 'expired' | 'revoked' | 'used';
 
-export type OrgMembershipStatus = 'invited' | 'active' | 'suspended' | 'revoked';
+export type OrgMembershipStatus = 'invited' | 'active' | 'suspended' | 'revoked' | 'banned';
 
 export type SubscriptionTier = 'free' | 'community' | 'pro' | 'municipal';
 
@@ -145,6 +145,8 @@ export interface Org {
   updated_at: string;
   map_display_config: unknown | null;
   communications_enabled: boolean;
+  allow_public_contributions: boolean;
+  moderation_mode: 'auto_approve' | 'manual_review';
 }
 
 export interface RolePermissions {
