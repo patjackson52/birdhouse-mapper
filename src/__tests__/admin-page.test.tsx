@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AdminPage from '@/app/admin/page';
 import { AdminShell } from '@/app/admin/AdminShell';
 
@@ -44,6 +45,10 @@ const dataResult = (d: any) => {
   return r;
 };
 
+vi.mock('@/app/admin/moderation/actions', () => ({
+  getPendingItems: vi.fn(() => Promise.resolve({ items: [] })),
+}));
+
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => ({
     from: (table: string) => {
@@ -72,6 +77,11 @@ vi.mock('@/lib/supabase/client', () => ({
   }),
 }));
 
+function renderWithQuery(ui: React.ReactElement) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe('AdminShell (mobile layout)', () => {
   const defaultProps = {
     orgId: 'org-1',
@@ -82,14 +92,14 @@ describe('AdminShell (mobile layout)', () => {
   };
 
   it('renders hamburger button on mobile (md:hidden present)', () => {
-    render(<AdminShell {...defaultProps} />);
+    renderWithQuery(<AdminShell {...defaultProps} />);
     const hamburger = screen.getByLabelText('Open menu');
     expect(hamburger).toBeInTheDocument();
     expect(hamburger.className).toContain('md:hidden');
   });
 
   it('sidebar nav is wrapped in hidden md:block container (hidden on mobile)', () => {
-    render(<AdminShell {...defaultProps} />);
+    renderWithQuery(<AdminShell {...defaultProps} />);
     // The nav rendered in the desktop layout should be inside a hidden md:block wrapper
     const nav = screen.getAllByRole('navigation')[0];
     expect(nav.parentElement?.className).toContain('hidden');
@@ -97,7 +107,7 @@ describe('AdminShell (mobile layout)', () => {
   });
 
   it('sidebar nav is present in the DOM for desktop', () => {
-    render(<AdminShell {...defaultProps} />);
+    renderWithQuery(<AdminShell {...defaultProps} />);
     const navElements = screen.getAllByRole('navigation');
     expect(navElements.length).toBeGreaterThan(0);
   });

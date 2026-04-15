@@ -1,17 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { moderateImage, moderateText } from '../moderate';
 
 let fetchResponse: { ok: boolean; json: () => Promise<unknown> };
 
 vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(fetchResponse)));
 
-// Set API key before importing
-process.env.OPENAI_API_KEY = 'test-key';
-
-// Must import after stubbing fetch
-const { moderateImage, moderateText } = await import('../moderate');
-
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.OPENAI_API_KEY = 'test-key';
 });
 
 describe('moderateText', () => {
