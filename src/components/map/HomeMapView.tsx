@@ -16,6 +16,7 @@ import type {
 import { useOfflineStore } from "@/lib/offline/provider";
 import DetailPanel from "@/components/item/DetailPanel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import PublicContributeButton from "@/components/map/PublicContributeButton";
 import { usePermissions } from "@/lib/permissions/hooks";
 import { useConfig } from "@/lib/config/client";
 import { getPropertyGeoLayersPublic, getGeoLayerPublic } from "@/app/admin/geo-layers/actions";
@@ -65,6 +66,8 @@ function HomeMapViewContent() {
   const offlineStore = useOfflineStore();
 
   const [sheetState, setSheetState] = useState<SheetState | null>(null);
+  const [allowPublicContributions, setAllowPublicContributions] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
 
   const [geoLayers, setGeoLayers] = useState<GeoLayerSummary[]>([]);
   const [visibleGeoLayerIds, setVisibleGeoLayerIds] = useState<Set<string>>(new Set());
@@ -78,14 +81,14 @@ function HomeMapViewContent() {
       try {
         // Resolve orgId from the properties table in IndexedDB
         const property = await offlineStore.db.properties.get(propertyId);
-        const orgId = property?.org_id;
+        const resolvedOrgId = property?.org_id;
 
         // If no property in IndexedDB yet and we're online, sync first to bootstrap
         if (!property && offlineStore.isOnline) {
           try {
             const { createClient } = await import("@/lib/supabase/client");
             const supabase = createClient();
-            // Get the property from Supabase to find orgId
+            // Get the property from Supabase to find resolvedOrgId
             const { data: propData } = await supabase.from('properties').select('*').eq('id', propertyId).single();
             if (propData) {
               await offlineStore.db.properties.put({ ...propData, _synced_at: new Date().toISOString() });
@@ -102,6 +105,16 @@ function HomeMapViewContent() {
                 setItemTypes(typeData);
                 setCustomFields(fieldData);
               }
+              // Fetch org public-contribution settings
+              if (propData.org_id) {
+                setOrgId(propData.org_id);
+                const { data: orgSettings } = await supabase
+                  .from('orgs')
+                  .select('allow_public_contributions')
+                  .eq('id', propData.org_id)
+                  .single();
+                setAllowPublicContributions(orgSettings?.allow_public_contributions ?? false);
+              }
             }
             const { data: { user } } = await supabase.auth.getUser();
             setIsAuthenticated(!!user);
@@ -115,31 +128,42 @@ function HomeMapViewContent() {
         // Read from IndexedDB (cached data available)
         const [itemData, typeData, fieldData] = await Promise.all([
           offlineStore.getItems(propertyId),
-          orgId ? offlineStore.getItemTypes(orgId) : Promise.resolve([]),
-          orgId ? offlineStore.getCustomFields(orgId) : Promise.resolve([]),
+          resolvedOrgId ? offlineStore.getItemTypes(resolvedOrgId) : Promise.resolve([]),
+          resolvedOrgId ? offlineStore.getCustomFields(resolvedOrgId) : Promise.resolve([]),
         ]);
 
         setItems(itemData);
         setItemTypes(typeData);
         setCustomFields(fieldData);
 
-        // Check authentication via cached session
+        // Check authentication via cached session, and load org contribution settings
         try {
           const { createClient } = await import("@/lib/supabase/client");
           const supabase = createClient();
           const { data: { user } } = await supabase.auth.getUser();
           setIsAuthenticated(!!user);
+
+          // Fetch org public-contribution settings
+          if (resolvedOrgId) {
+            setOrgId(resolvedOrgId);
+            const { data: orgSettings } = await supabase
+              .from('orgs')
+              .select('allow_public_contributions')
+              .eq('id', resolvedOrgId)
+              .single();
+            setAllowPublicContributions(orgSettings?.allow_public_contributions ?? false);
+          }
         } catch {
           setIsAuthenticated(false);
         }
 
         // Trigger background sync and refresh data when done
-        if (orgId && offlineStore.isOnline) {
-          offlineStore.syncProperty(propertyId, orgId).then(async () => {
+        if (resolvedOrgId && offlineStore.isOnline) {
+          offlineStore.syncProperty(propertyId, resolvedOrgId).then(async () => {
             const [freshItems, freshTypes, freshFields] = await Promise.all([
               offlineStore.getItems(propertyId),
-              offlineStore.getItemTypes(orgId!),
-              offlineStore.getCustomFields(orgId!),
+              offlineStore.getItemTypes(resolvedOrgId!),
+              offlineStore.getCustomFields(resolvedOrgId!),
             ]);
             setItems(freshItems);
             setItemTypes(freshTypes);
@@ -312,6 +336,11 @@ function HomeMapViewContent() {
         canAddUpdate={permissions.updates.create}
         onSheetStateChange={setSheetState}
       />
+
+      {/* Public photo submission button */}
+      {allowPublicContributions && orgId && (
+        <PublicContributeButton orgId={orgId} />
+      )}
     </div>
   );
 }
