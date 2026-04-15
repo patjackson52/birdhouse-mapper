@@ -1,3 +1,5 @@
+import type { ModerationStatus, ModerationScores } from '@/lib/moderation/types';
+
 export type VaultCategory = 'photo' | 'document' | 'branding' | 'geospatial';
 export type VaultVisibility = 'public' | 'private';
 
@@ -17,6 +19,10 @@ export interface VaultItem {
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  moderation_status: ModerationStatus;
+  moderation_scores: ModerationScores | null;
+  rejection_reason: string | null;
+  moderated_at: string | null;
 }
 
 export interface VaultQuota {
@@ -33,4 +39,6 @@ export interface UploadToVaultInput {
   isAiContext?: boolean;
   aiPriority?: number;
   metadata?: Record<string, unknown>;
+  moderateAsPublicContribution?: boolean;
+  orgModerationMode?: 'auto_approve' | 'manual_review';
 }

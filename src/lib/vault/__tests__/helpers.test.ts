@@ -44,6 +44,10 @@ function makeItem(overrides: Partial<VaultItem> = {}): VaultItem {
     metadata: {},
     created_at: '2026-04-01T00:00:00Z',
     updated_at: '2026-04-01T00:00:00Z',
+    moderation_status: 'approved',
+    moderation_scores: null,
+    rejection_reason: null,
+    moderated_at: null,
     ...overrides,
   };
 }
