@@ -1,8 +1,9 @@
 'use client';
 
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, useEditorState } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { PasteFormatDialog } from './PasteFormatDialog';
+import { ImageToolbar } from './ImageBubbleMenu';
 import { getEditorExtensions } from './extensions';
 import { uploadToVault } from '@/lib/vault/actions';
 import VaultPicker from '@/components/vault/VaultPicker';
@@ -19,6 +20,7 @@ const LINE_HEIGHT_OPTIONS = [
 
 export default function RichTextEditor({ content, onChange, orgId, editable = true }: RichTextEditorProps) {
   const [showVaultPicker, setShowVaultPicker] = useState(false);
+  const [showRowImagePicker, setShowRowImagePicker] = useState(false);
   const [pendingPaste, setPendingPaste] = useState<{ html: string; plain: string } | null>(null);
 
   const editor = useEditor({
@@ -69,6 +71,12 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
         return false;
       },
     },
+  });
+
+  // Track whether an image is currently active so ImageToolbar re-renders on selection change
+  const imageActive = useEditorState({
+    editor,
+    selector: (ctx) => ctx.editor?.isActive('vaultImage') ?? false,
   });
 
   const handleImageUpload = useCallback(
@@ -132,6 +140,18 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
     setShowVaultPicker(false);
   }
 
+  function handleRowVaultSelect(items: VaultItem[]) {
+    if (!editor || items.length === 0) return;
+    const item = items[0];
+
+    const url = item.storage_bucket === 'vault-public'
+      ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/vault-public/${item.storage_path}`
+      : item.storage_path;
+
+    editor.chain().focus().setImage({ src: url, alt: item.file_name }).run();
+    setShowRowImagePicker(false);
+  }
+
   function handleKeepPaste() {
     if (!editor || !pendingPaste) return;
     editor.commands.insertContent(pendingPaste.html);
@@ -163,111 +183,121 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
   return (
     <div className="border border-sage-light rounded-lg overflow-clip bg-white">
       {editable && (
-        <div className="sticky top-0 z-10 flex flex-wrap gap-1 px-3 py-2 border-b border-sage-light bg-parchment">
-          <ToolbarButton
-            active={editor.isActive('bold')}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-            title="Bold"
-          >
-            <strong>B</strong>
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('italic')}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-            title="Italic"
-          >
-            <em>I</em>
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('underline')}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-            title="Underline"
-          >
-            <span className="underline">U</span>
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('strike')}
-            onClick={() => editor.chain().focus().toggleStrike().run()}
-            title="Strikethrough"
-          >
-            <span className="line-through">S</span>
-          </ToolbarButton>
+        <div className="sticky top-0 z-10 border-b border-sage-light">
+          <div className="flex flex-wrap gap-1 px-3 py-2 bg-parchment">
+            <ToolbarButton
+              active={editor.isActive('bold')}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+              title="Bold"
+            >
+              <strong>B</strong>
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('italic')}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+              title="Italic"
+            >
+              <em>I</em>
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('underline')}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+              title="Underline"
+            >
+              <span className="underline">U</span>
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('strike')}
+              onClick={() => editor.chain().focus().toggleStrike().run()}
+              title="Strikethrough"
+            >
+              <span className="line-through">S</span>
+            </ToolbarButton>
 
-          <div className="w-px bg-sage-light mx-1" />
+            <div className="w-px bg-sage-light mx-1" />
 
-          <ToolbarButton
-            active={editor.isActive('heading', { level: 2 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            title="Heading 2"
-          >
-            H2
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('heading', { level: 3 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            title="Heading 3"
-          >
-            H3
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('heading', { level: 4 })}
-            onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-            title="Heading 4"
-          >
-            H4
-          </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('heading', { level: 2 })}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+              title="Heading 2"
+            >
+              H2
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('heading', { level: 3 })}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+              title="Heading 3"
+            >
+              H3
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('heading', { level: 4 })}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+              title="Heading 4"
+            >
+              H4
+            </ToolbarButton>
 
-          <div className="w-px bg-sage-light mx-1" />
+            <div className="w-px bg-sage-light mx-1" />
 
-          <ToolbarButton
-            active={editor.isActive('bulletList')}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-            title="Bullet List"
-          >
-            •
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('orderedList')}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-            title="Ordered List"
-          >
-            1.
-          </ToolbarButton>
-          <ToolbarButton
-            active={editor.isActive('blockquote')}
-            onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            title="Blockquote"
-          >
-            &ldquo;
-          </ToolbarButton>
-          <LineHeightDropdown editor={editor} />
+            <ToolbarButton
+              active={editor.isActive('bulletList')}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+              title="Bullet List"
+            >
+              •
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('orderedList')}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+              title="Ordered List"
+            >
+              1.
+            </ToolbarButton>
+            <ToolbarButton
+              active={editor.isActive('blockquote')}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+              title="Blockquote"
+            >
+              &ldquo;
+            </ToolbarButton>
+            <LineHeightDropdown editor={editor} />
 
-          <div className="w-px bg-sage-light mx-1" />
+            <div className="w-px bg-sage-light mx-1" />
 
-          <ToolbarButton
-            active={false}
-            onClick={() => {
-              const url = window.prompt('Enter URL:');
-              if (url) editor.chain().focus().setLink({ href: url }).run();
-            }}
-            title="Add Link"
-          >
-            🔗
-          </ToolbarButton>
-          <ToolbarButton
-            active={false}
-            onClick={() => editor.chain().focus().setHorizontalRule().run()}
-            title="Horizontal Rule"
-          >
-            —
-          </ToolbarButton>
-          <ToolbarButton
-            active={false}
-            onClick={() => setShowVaultPicker(true)}
-            title="Insert Image"
-          >
-            🖼
-          </ToolbarButton>
+            <ToolbarButton
+              active={false}
+              onClick={() => {
+                const url = window.prompt('Enter URL:');
+                if (url) editor.chain().focus().setLink({ href: url }).run();
+              }}
+              title="Add Link"
+            >
+              🔗
+            </ToolbarButton>
+            <ToolbarButton
+              active={false}
+              onClick={() => editor.chain().focus().setHorizontalRule().run()}
+              title="Horizontal Rule"
+            >
+              —
+            </ToolbarButton>
+            <ToolbarButton
+              active={false}
+              onClick={() => setShowVaultPicker(true)}
+              title="Insert Image"
+            >
+              🖼
+            </ToolbarButton>
+          </div>
+
+          {/* Contextual image toolbar — shown when a vaultImage is selected */}
+          {imageActive && (
+            <ImageToolbar
+              editor={editor}
+              onAddImageToRow={() => setShowRowImagePicker(true)}
+            />
+          )}
         </div>
       )}
 
@@ -285,6 +315,17 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
           categoryFilter={['photo']}
           onSelect={handleVaultSelect}
           onClose={() => setShowVaultPicker(false)}
+          defaultUploadCategory="photo"
+          defaultUploadVisibility="public"
+        />
+      )}
+
+      {showRowImagePicker && (
+        <VaultPicker
+          orgId={orgId}
+          categoryFilter={['photo']}
+          onSelect={handleRowVaultSelect}
+          onClose={() => setShowRowImagePicker(false)}
           defaultUploadCategory="photo"
           defaultUploadVisibility="public"
         />
