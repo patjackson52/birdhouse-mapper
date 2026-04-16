@@ -7,6 +7,7 @@ import { useConfig } from '@/lib/config/client';
 import { storePhotoBlob } from '@/lib/offline/photo-store';
 import { enqueueMutation } from '@/lib/offline/mutations';
 import type { Item, ItemType, UpdateType, EntityType, UpdateTypeField } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
 import { useUserLocation } from '@/lib/location/provider';
@@ -347,7 +348,7 @@ export default function UpdateForm() {
 
       {entityTypes.map((et) => (
         <div key={et.id}>
-          <label className="label">{et.icon} {et.name}</label>
+          <label className="label"><IconRenderer icon={et.icon} size={14} /> {et.name}</label>
           <EntitySelect
             entityTypeId={et.id}
             entityTypeName={et.name}

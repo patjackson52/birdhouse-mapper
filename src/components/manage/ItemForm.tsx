@@ -8,6 +8,8 @@ import { useConfig } from '@/lib/config/client';
 import { storePhotoBlob } from '@/lib/offline/photo-store';
 import { enqueueMutation } from '@/lib/offline/mutations';
 import type { ItemStatus, ItemType, CustomField, EntityType } from '@/lib/types';
+import { iconDisplayName } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
 
@@ -192,7 +194,7 @@ export default function ItemForm() {
             <option value="">Select type...</option>
             {itemTypes.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.icon} {t.name}
+                {iconDisplayName(t.icon)} {t.name}
               </option>
             ))}
           </select>
@@ -326,7 +328,7 @@ export default function ItemForm() {
 
       {entityTypes.map((et) => (
         <div key={et.id}>
-          <label className="label">{et.icon} {et.name}</label>
+          <label className="label"><IconRenderer icon={et.icon} size={14} /> {et.name}</label>
           <EntitySelect
             entityTypeId={et.id}
             entityTypeName={et.name}
