@@ -40,7 +40,10 @@ import EditableLayoutRenderer from './EditableLayoutRenderer';
 import ConfigDrawer from './ConfigDrawer';
 import DragOverlayContent from './DragOverlayContent';
 import LayoutRendererDispatch from '../LayoutRendererDispatch';
+import FormPreview from '../preview/FormPreview';
 import { rowAwareCollision } from './collision';
+
+type ViewMode = 'edit' | 'detail' | 'form';
 
 interface Props {
   itemType: ItemType;
@@ -107,12 +110,14 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
   const [pendingFields, setPendingFields] = useState<{ name: string; field_type: string; options: string[]; required: boolean; tempId: string }[]>([]);
   const [saving, setSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [isMobile, setIsMobile] = useState(false);
+  const isEditing = viewMode === 'edit';
 
   // DnD overlay state
   const [activeNode, setActiveNode] = useState<LayoutNodeV2 | null>(null);
   const [activeType, setActiveType] = useState<'block' | 'row' | null>(null);
+  const [isFromPalette, setIsFromPalette] = useState(false);
   const isDragActive = activeNode !== null;
 
   // Block selection / config drawer
@@ -200,8 +205,8 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
   }, [layout.blocks]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -233,6 +238,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
       const tempNode: LayoutNodeV2 = createBlock(paletteType);
       setActiveNode(tempNode);
       setActiveType('block');
+      setIsFromPalette(true);
       return;
     }
 
@@ -446,6 +452,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     const { active, over } = event;
     setActiveNode(null);
     setActiveType(null);
+    setIsFromPalette(false);
 
     if (!over) return;
 
@@ -616,24 +623,21 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     </>
   );
 
-  const editToggle = (
+  const viewToggle = (
     <div className="flex rounded-md border border-sage-light overflow-hidden text-sm">
-      <button
-        onClick={() => setIsEditing(true)}
-        className={`px-3 py-1.5 font-medium transition-colors ${isEditing ? 'bg-forest text-white' : 'bg-white text-forest-dark hover:bg-sage-light/50'}`}
-      >
-        Edit
-      </button>
-      <button
-        onClick={() => { setIsEditing(false); setSelectedBlockId(null); }}
-        className={`px-3 py-1.5 font-medium transition-colors ${!isEditing ? 'bg-forest text-white' : 'bg-white text-forest-dark hover:bg-sage-light/50'}`}
-      >
-        Preview
-      </button>
+      {(['edit', 'detail', 'form'] as const).map((mode) => (
+        <button
+          key={mode}
+          onClick={() => { setViewMode(mode); if (mode !== 'edit') setSelectedBlockId(null); }}
+          className={`px-3 py-1.5 font-medium transition-colors ${viewMode === mode ? 'bg-forest text-white' : 'bg-white text-forest-dark hover:bg-sage-light/50'}`}
+        >
+          {mode === 'edit' ? 'Edit' : mode === 'detail' ? 'Preview' : 'Form'}
+        </button>
+      ))}
     </div>
   );
 
-  const previewView = (
+  const detailCardView = (
     <div className="bg-gray-100 rounded-xl p-3">
       <div className="bg-white rounded-t-2xl shadow-lg">
         {/* Handle */}
@@ -647,17 +651,32 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
             <span className="text-xl">{itemType.icon}</span>
             <h2 className="font-heading font-semibold text-forest-dark text-xl">{mockItem.name}</h2>
           </div>
-          <LayoutRendererDispatch
-            layout={layout}
-            item={mockItem}
-            mode="preview"
-            context="preview"
-            customFields={allFields}
-          />
+          {isEditing ? (
+            <EditableLayoutRenderer
+              layout={layout}
+              item={mockItem}
+              customFields={allFields}
+              selectedBlockId={selectedBlockId}
+              isDragActive={isDragActive}
+              onSelect={handleSelectBlock}
+            />
+          ) : (
+            <LayoutRendererDispatch
+              layout={layout}
+              item={mockItem}
+              mode="preview"
+              context="preview"
+              customFields={allFields}
+            />
+          )}
         </div>
       </div>
     </div>
   );
+
+  const currentView = viewMode === 'form'
+    ? <FormPreview layout={layout} customFields={allFields} itemTypeName={itemType.name} />
+    : detailCardView;
 
   // Config drawer (shown on top of everything on desktop, inline on mobile)
   const configDrawerProps = {
@@ -699,7 +718,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
           {/* Mobile toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-sage-light flex-shrink-0">
-            {editToggle}
+            {viewToggle}
             <div className="flex items-center gap-1">
               {undoRedoButtons}
             </div>
@@ -707,18 +726,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {isEditing ? (
-              <EditableLayoutRenderer
-                layout={layout}
-                item={mockItem}
-                customFields={allFields}
-                selectedBlockId={selectedBlockId}
-                isDragActive={isDragActive}
-                onSelect={handleSelectBlock}
-              />
-            ) : (
-              previewView
-            )}
+            {currentView}
           </div>
 
           {/* Mobile FAB + component drawer */}
@@ -748,6 +756,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
               customFields={allFields}
               mockItem={mockItem}
               version={2}
+              isFromPalette={isFromPalette}
             />
           ) : null}
         </DragOverlay>
@@ -781,7 +790,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
         {/* Desktop toolbar */}
         <div className="flex items-center gap-4 mb-4">
-          {editToggle}
+          {viewToggle}
           {isEditing && (
             <div className="flex-1 max-w-xs">
               <SpacingPicker value={layout.spacing} onChange={handleSpacingChange} />
@@ -805,18 +814,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
           {/* Centered preview card */}
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[480px]">
-              {isEditing ? (
-                <EditableLayoutRenderer
-                  layout={layout}
-                  item={mockItem}
-                  customFields={allFields}
-                  selectedBlockId={selectedBlockId}
-                  isDragActive={isDragActive}
-                  onSelect={handleSelectBlock}
-                />
-              ) : (
-                previewView
-              )}
+              {currentView}
             </div>
           </div>
         </div>
