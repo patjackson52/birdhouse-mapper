@@ -5,6 +5,7 @@ import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { EntityType } from '@/lib/types';
+import { iconDisplayName } from '@/lib/types';
 
 export default function PropertyAdminLayout({ children }: { children: React.ReactNode }) {
   const params = useParams();
@@ -42,7 +43,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
     { label: 'Types', href: `${base}/types` },
     { label: 'Entity Types', href: `${base}/entity-types` },
     ...entityTypes.map((et) => ({
-      label: `${et.icon} ${et.name}`,
+      label: `${iconDisplayName(et.icon)} ${et.name}`,
       href: `${base}/entities/${et.id}`,
     })),
     { label: 'Knowledge', href: '/admin/knowledge' },
