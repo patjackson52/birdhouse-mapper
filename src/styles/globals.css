@@ -128,3 +128,69 @@
 .location-dot-pulse {
   animation: locationPulse 3s ease-in-out infinite;
 }
+
+/* ── Image layouts ─────────────────────────────────────────────────────── */
+.image-figure {
+  display: block;
+  margin: 1rem 0;
+}
+
+.image-figure[data-layout="float-left"] {
+  float: left;
+  margin: 0 1rem 1rem 0;
+  max-width: 40%;
+}
+
+.image-figure[data-layout="float-right"] {
+  float: right;
+  margin: 0 0 1rem 1rem;
+  max-width: 40%;
+}
+
+.image-figure[data-layout="centered"] {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 80%;
+}
+
+.image-figure[data-layout="full-width"] {
+  width: 100%;
+  max-width: 100%;
+}
+
+.image-figure figcaption {
+  text-align: center;
+  font-size: 0.8em;
+  color: var(--color-muted);
+  margin-top: 0.4em;
+  font-style: italic;
+}
+
+/* Image rows */
+.image-row {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.image-row .image-figure {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.image-row .image-figure img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+/* Clearfix after floated images */
+.ProseMirror::after,
+.knowledge-body::after {
+  content: '';
+  display: table;
+  clear: both;
+}
