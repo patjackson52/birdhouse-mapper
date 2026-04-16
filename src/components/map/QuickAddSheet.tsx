@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { ItemStatus, ItemType } from '@/lib/types';
+import { iconDisplayName } from '@/lib/types';
 import { useUserLocation } from '@/lib/location/provider';
 import BottomSheet from '@/components/ui/BottomSheet';
 
@@ -163,7 +164,7 @@ export default function QuickAddSheet({ open, onClose, defaultLocation }: QuickA
                   <option value="">Select type…</option>
                   {itemTypes.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.icon} {t.name}
+                      {iconDisplayName(t.icon)} {t.name}
                     </option>
                   ))}
                 </select>
