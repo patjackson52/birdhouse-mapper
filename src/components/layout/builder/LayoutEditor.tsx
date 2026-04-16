@@ -40,7 +40,10 @@ import EditableLayoutRenderer from './EditableLayoutRenderer';
 import ConfigDrawer from './ConfigDrawer';
 import DragOverlayContent from './DragOverlayContent';
 import LayoutRendererDispatch from '../LayoutRendererDispatch';
+import FormPreview from '../preview/FormPreview';
 import { rowAwareCollision } from './collision';
+
+type ViewMode = 'edit' | 'detail' | 'form';
 
 interface Props {
   itemType: ItemType;
@@ -107,8 +110,9 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
   const [pendingFields, setPendingFields] = useState<{ name: string; field_type: string; options: string[]; required: boolean; tempId: string }[]>([]);
   const [saving, setSaving] = useState(false);
-  const [isEditing, setIsEditing] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('edit');
   const [isMobile, setIsMobile] = useState(false);
+  const isEditing = viewMode === 'edit';
 
   // DnD overlay state
   const [activeNode, setActiveNode] = useState<LayoutNodeV2 | null>(null);
@@ -616,24 +620,21 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     </>
   );
 
-  const editToggle = (
+  const viewToggle = (
     <div className="flex rounded-md border border-sage-light overflow-hidden text-sm">
-      <button
-        onClick={() => setIsEditing(true)}
-        className={`px-3 py-1.5 font-medium transition-colors ${isEditing ? 'bg-forest text-white' : 'bg-white text-forest-dark hover:bg-sage-light/50'}`}
-      >
-        Edit
-      </button>
-      <button
-        onClick={() => { setIsEditing(false); setSelectedBlockId(null); }}
-        className={`px-3 py-1.5 font-medium transition-colors ${!isEditing ? 'bg-forest text-white' : 'bg-white text-forest-dark hover:bg-sage-light/50'}`}
-      >
-        Preview
-      </button>
+      {(['edit', 'detail', 'form'] as const).map((mode) => (
+        <button
+          key={mode}
+          onClick={() => { setViewMode(mode); if (mode !== 'edit') setSelectedBlockId(null); }}
+          className={`px-3 py-1.5 font-medium transition-colors ${viewMode === mode ? 'bg-forest text-white' : 'bg-white text-forest-dark hover:bg-sage-light/50'}`}
+        >
+          {mode === 'edit' ? 'Edit' : mode === 'detail' ? 'Preview' : 'Form'}
+        </button>
+      ))}
     </div>
   );
 
-  const cardView = (
+  const detailCardView = (
     <div className="bg-gray-100 rounded-xl p-3">
       <div className="bg-white rounded-t-2xl shadow-lg">
         {/* Handle */}
@@ -669,6 +670,10 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
       </div>
     </div>
   );
+
+  const currentView = viewMode === 'form'
+    ? <FormPreview layout={layout} customFields={allFields} itemTypeName={itemType.name} />
+    : detailCardView;
 
   // Config drawer (shown on top of everything on desktop, inline on mobile)
   const configDrawerProps = {
@@ -710,7 +715,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
           {/* Mobile toolbar */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-sage-light flex-shrink-0">
-            {editToggle}
+            {viewToggle}
             <div className="flex items-center gap-1">
               {undoRedoButtons}
             </div>
@@ -718,7 +723,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {cardView}
+            {currentView}
           </div>
 
           {/* Mobile FAB + component drawer */}
@@ -781,7 +786,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
         {/* Desktop toolbar */}
         <div className="flex items-center gap-4 mb-4">
-          {editToggle}
+          {viewToggle}
           {isEditing && (
             <div className="flex-1 max-w-xs">
               <SpacingPicker value={layout.spacing} onChange={handleSpacingChange} />
@@ -805,7 +810,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
           {/* Centered preview card */}
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[480px]">
-              {cardView}
+              {currentView}
             </div>
           </div>
         </div>
