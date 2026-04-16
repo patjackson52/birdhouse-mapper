@@ -258,8 +258,7 @@
 
 /* Responsive: tablet */
 @media (max-width: 768px) {
-  .image-grid[style*="--grid-cols: 4"],
-  .image-grid[style*="--grid-cols:4"] {
+  .image-grid[data-columns="4"] {
     --grid-cols: 2 !important;
   }
 }

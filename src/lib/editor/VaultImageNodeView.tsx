@@ -33,10 +33,10 @@ export function VaultImageNodeView({ node, updateAttributes, editor, selected }:
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      setDragging(true);
 
       const editorEl = editor.view.dom.closest('.ProseMirror')?.parentElement;
       if (!editorEl) return;
+      setDragging(true);
       const containerWidth = editorEl.clientWidth;
 
       function onMouseMove(ev: MouseEvent) {
