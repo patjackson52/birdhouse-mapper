@@ -113,6 +113,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
   // DnD overlay state
   const [activeNode, setActiveNode] = useState<LayoutNodeV2 | null>(null);
   const [activeType, setActiveType] = useState<'block' | 'row' | null>(null);
+  const [isFromPalette, setIsFromPalette] = useState(false);
   const isDragActive = activeNode !== null;
 
   // Block selection / config drawer
@@ -200,8 +201,8 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
   }, [layout.blocks]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 5 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
@@ -233,6 +234,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
       const tempNode: LayoutNodeV2 = createBlock(paletteType);
       setActiveNode(tempNode);
       setActiveType('block');
+      setIsFromPalette(true);
       return;
     }
 
@@ -446,6 +448,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     const { active, over } = event;
     setActiveNode(null);
     setActiveType(null);
+    setIsFromPalette(false);
 
     if (!over) return;
 
@@ -748,6 +751,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
               customFields={allFields}
               mockItem={mockItem}
               version={2}
+              isFromPalette={isFromPalette}
             />
           ) : null}
         </DragOverlay>
