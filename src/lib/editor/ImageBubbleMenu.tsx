@@ -37,7 +37,7 @@ export function ImageToolbar({ editor, onAddImageToRow }: ImageToolbarProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-sage-light bg-parchment/80">
+    <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-sage-light bg-parchment">
       {/* Layout buttons */}
       <span className="text-xs text-forest-dark/50 mr-1">Layout:</span>
       {LAYOUT_OPTIONS.map((opt) => (

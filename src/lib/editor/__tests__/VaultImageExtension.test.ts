@@ -15,30 +15,33 @@ function createEditor(content?: string) {
 
 const baseExtensions = [Document, Paragraph, Text, VaultImage];
 
+type NodeWithAttrs = { type: string; attrs?: Record<string, any>; content?: NodeWithAttrs[] };
+
+function findVaultImage(doc: ReturnType<Editor['getJSON']>): NodeWithAttrs | undefined {
+  const topLevel = doc.content as NodeWithAttrs[] | undefined;
+  const direct = topLevel?.find((n) => n.type === 'vaultImage');
+  if (direct) return direct;
+  return topLevel?.[0]?.content?.find((n) => n.type === 'vaultImage');
+}
+
 describe('VaultImageExtension - layout attribute', () => {
   it('defaults layout to "default"', () => {
     const editor = createEditor('<p><img src="a.jpg" /></p>');
-    const json = editor.getJSON();
-    const imgNode = json.content?.find((n) => n.type === 'vaultImage')
-      ?? json.content?.[0].content?.find((n) => n.type === 'vaultImage');
+    const imgNode = findVaultImage(editor.getJSON());
     expect(imgNode?.attrs?.layout).toBe('default');
     editor.destroy();
   });
 
   it('parses float:left style into float-left layout', () => {
     const editor = createEditor('<p><img src="a.jpg" style="float:left" /></p>');
-    const json = editor.getJSON();
-    const imgNode = json.content?.find((n) => n.type === 'vaultImage')
-      ?? json.content?.[0].content?.find((n) => n.type === 'vaultImage');
+    const imgNode = findVaultImage(editor.getJSON());
     expect(imgNode?.attrs?.layout).toBe('float-left');
     editor.destroy();
   });
 
   it('parses float:right style into float-right layout', () => {
     const editor = createEditor('<p><img src="a.jpg" style="float:right" /></p>');
-    const json = editor.getJSON();
-    const imgNode = json.content?.find((n) => n.type === 'vaultImage')
-      ?? json.content?.[0].content?.find((n) => n.type === 'vaultImage');
+    const imgNode = findVaultImage(editor.getJSON());
     expect(imgNode?.attrs?.layout).toBe('float-right');
     editor.destroy();
   });
