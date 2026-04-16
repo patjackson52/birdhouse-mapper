@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { EntityType, EntityTypeField } from '@/lib/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EntityTypeForm from '@/components/admin/EntityTypeForm';
+import { IconRenderer } from '@/components/shared/IconPicker';
 
 interface EntityTypeWithFields extends EntityType {
   entity_type_fields: EntityTypeField[];
@@ -121,7 +122,7 @@ export default function EntityTypesPage() {
         {entityTypes.map((et) => (
           <div key={et.id} className="card flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{et.icon}</span>
+              <IconRenderer icon={et.icon} size={24} />
               <div>
                 <h3 className="font-medium text-forest-dark">{et.name}</h3>
                 <p className="text-xs text-sage">

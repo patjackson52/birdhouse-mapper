@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import type { Entity, EntityType, EntityTypeField } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
+import { IconRenderer } from '@/components/shared/IconPicker';
 
 interface EntityCardProps {
   entity: Entity;
@@ -28,7 +29,7 @@ export default function EntityCard({ entity, entityType, fields, onEdit, onDelet
         {photoUrl ? (
           <img src={photoUrl} alt={entity.name} className="w-full h-full object-cover" />
         ) : (
-          <span className="text-3xl">{entityType.icon}</span>
+          <IconRenderer icon={entityType.icon} size={30} />
         )}
       </div>
 

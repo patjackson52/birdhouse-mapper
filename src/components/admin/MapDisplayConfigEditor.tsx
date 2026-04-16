@@ -3,6 +3,7 @@
 import type { MapDisplayConfig } from '@/lib/config/map-display';
 import type { ItemType, ItemStatus } from '@/lib/types';
 import { statusColors, statusLabels } from '@/lib/utils';
+import { IconRenderer } from '@/components/shared/IconPicker';
 
 interface ControlDef {
   key: keyof NonNullable<MapDisplayConfig['controls']>;
@@ -229,7 +230,7 @@ export default function MapDisplayConfigEditor({ value, onChange, itemTypes, org
                               onChange={() => toggleItemType(type.id)}
                               className="sr-only"
                             />
-                            <span>{type.icon}</span>
+                            <IconRenderer icon={type.icon} size={14} />
                             {type.name}
                           </label>
                         );
