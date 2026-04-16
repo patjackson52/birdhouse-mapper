@@ -20,7 +20,7 @@ const LINE_HEIGHT_OPTIONS = [
 
 export default function RichTextEditor({ content, onChange, orgId, editable = true }: RichTextEditorProps) {
   const [showVaultPicker, setShowVaultPicker] = useState(false);
-  const [showRowImagePicker, setShowRowImagePicker] = useState(false);
+  const [showGridImagePicker, setShowGridImagePicker] = useState(false);
   const [pendingPaste, setPendingPaste] = useState<{ html: string; plain: string } | null>(null);
 
   const editor = useEditor({
@@ -140,7 +140,7 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
     setShowVaultPicker(false);
   }
 
-  function handleRowVaultSelect(items: VaultItem[]) {
+  function handleGridVaultSelect(items: VaultItem[]) {
     if (!editor || items.length === 0) return;
     const item = items[0];
 
@@ -149,7 +149,7 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
       : item.storage_path;
 
     editor.chain().focus().setImage({ src: url, alt: item.file_name }).run();
-    setShowRowImagePicker(false);
+    setShowGridImagePicker(false);
   }
 
   function handleKeepPaste() {
@@ -295,7 +295,7 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
           {imageActive && (
             <ImageToolbar
               editor={editor}
-              onAddImageToRow={() => setShowRowImagePicker(true)}
+              onAddImageToGrid={() => setShowGridImagePicker(true)}
             />
           )}
         </div>
@@ -320,12 +320,12 @@ export default function RichTextEditor({ content, onChange, orgId, editable = tr
         />
       )}
 
-      {showRowImagePicker && (
+      {showGridImagePicker && (
         <VaultPicker
           orgId={orgId}
           categoryFilter={['photo']}
-          onSelect={handleRowVaultSelect}
-          onClose={() => setShowRowImagePicker(false)}
+          onSelect={handleGridVaultSelect}
+          onClose={() => setShowGridImagePicker(false)}
           defaultUploadCategory="photo"
           defaultUploadVisibility="public"
         />

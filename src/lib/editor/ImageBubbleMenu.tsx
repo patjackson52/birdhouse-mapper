@@ -1,12 +1,13 @@
 'use client';
 
 import type { Editor } from '@tiptap/core';
+import { SNAP_POINTS } from './resize-utils';
 
 type ImageLayout = 'default' | 'float-left' | 'float-right' | 'centered' | 'full-width';
 
 interface ImageToolbarProps {
   editor: Editor;
-  onAddImageToRow?: () => void;
+  onAddImageToGrid?: () => void;
 }
 
 const LAYOUT_OPTIONS: { value: ImageLayout; label: string; icon: string }[] = [
@@ -19,14 +20,16 @@ const LAYOUT_OPTIONS: { value: ImageLayout; label: string; icon: string }[] = [
 
 /**
  * Contextual toolbar that appears when a vaultImage node is selected.
- * Shows layout toggles, caption input, and row controls.
+ * Shows layout toggles, width picker, caption input, and grid controls.
  */
-export function ImageToolbar({ editor, onAddImageToRow }: ImageToolbarProps) {
+export function ImageToolbar({ editor, onAddImageToGrid }: ImageToolbarProps) {
   if (!editor.isActive('vaultImage')) return null;
 
-  const isInsideRow = editor.isActive('imageRow');
+  const isInsideGrid = editor.isActive('imageGrid');
   const currentLayout = (editor.getAttributes('vaultImage').layout as ImageLayout) ?? 'default';
   const currentCaption = (editor.getAttributes('vaultImage').caption as string) ?? '';
+  const currentWidth = (editor.getAttributes('vaultImage').widthPercent as number | null);
+  const isFullWidth = currentLayout === 'full-width';
 
   function setLayout(layout: ImageLayout) {
     editor.chain().focus().updateAttributes('vaultImage', { layout }).run();
@@ -34,6 +37,10 @@ export function ImageToolbar({ editor, onAddImageToRow }: ImageToolbarProps) {
 
   function setCaption(caption: string) {
     editor.chain().updateAttributes('vaultImage', { caption: caption || null }).run();
+  }
+
+  function setWidth(widthPercent: number) {
+    editor.chain().focus().updateAttributes('vaultImage', { widthPercent }).run();
   }
 
   return (
@@ -56,6 +63,29 @@ export function ImageToolbar({ editor, onAddImageToRow }: ImageToolbarProps) {
         </button>
       ))}
 
+      {/* Width picker — hidden for full-width layout */}
+      {!isFullWidth && (
+        <>
+          <div className="w-px bg-sage-light mx-1 self-stretch" />
+          <span className="text-xs text-forest-dark/50 mr-1">Width:</span>
+          {SNAP_POINTS.map((pt) => (
+            <button
+              key={pt}
+              type="button"
+              aria-label={`${pt}%`}
+              onClick={() => setWidth(pt)}
+              className={`px-1.5 py-0.5 rounded text-xs transition-colors ${
+                currentWidth === pt
+                  ? 'bg-sage text-white'
+                  : 'text-forest-dark/70 hover:bg-sage-light hover:text-forest-dark'
+              }`}
+            >
+              {pt}%
+            </button>
+          ))}
+        </>
+      )}
+
       <div className="w-px bg-sage-light mx-1 self-stretch" />
 
       {/* Caption input */}
@@ -70,23 +100,44 @@ export function ImageToolbar({ editor, onAddImageToRow }: ImageToolbarProps) {
 
       <div className="w-px bg-sage-light mx-1 self-stretch" />
 
-      {/* Row controls */}
-      {!isInsideRow ? (
+      {/* Grid controls */}
+      {!isInsideGrid ? (
         <button
           type="button"
-          onClick={() => editor.chain().focus().wrapInImageRow().run()}
+          onClick={() => editor.chain().focus().wrapInImageGrid().run()}
           className="px-2 py-1 rounded text-xs bg-sage-light text-forest-dark hover:bg-sage/20 transition-colors"
         >
-          Create Row
+          Create Grid
         </button>
       ) : (
-        <button
-          type="button"
-          onClick={onAddImageToRow}
-          className="px-2 py-1 rounded text-xs bg-sage-light text-forest-dark hover:bg-sage/20 transition-colors"
-        >
-          + Add Image to Row
-        </button>
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-forest-dark/50 mr-1">Cols:</span>
+          {[2, 3, 4].map((n) => (
+            <button
+              key={n}
+              type="button"
+              aria-label={String(n)}
+              onClick={() => editor.chain().focus().setGridColumns(n).run()}
+              className="px-1.5 py-0.5 rounded text-xs text-forest-dark/70 hover:bg-sage-light hover:text-forest-dark transition-colors"
+            >
+              {n}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={onAddImageToGrid}
+            className="px-2 py-1 rounded text-xs bg-sage-light text-forest-dark hover:bg-sage/20 transition-colors"
+          >
+            + Add Image
+          </button>
+          <button
+            type="button"
+            onClick={() => editor.chain().focus().unwrapImageGrid().run()}
+            className="px-2 py-1 rounded text-xs text-red-600/70 hover:bg-red-50 hover:text-red-700 transition-colors"
+          >
+            Unwrap Grid
+          </button>
+        </div>
       )}
     </div>
   );
