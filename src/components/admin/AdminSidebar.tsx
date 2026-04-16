@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export type SidebarItem =
-  | { label: string; href: string }
+  | { label: string; href: string; badge?: number }
   | { type: 'section'; label: string };
 
 interface AdminSidebarProps {
@@ -46,7 +46,7 @@ export function AdminSidebar({ title, items, backLink, onNavClick, hideTitle }: 
           );
         }
 
-        const navItem = item as { label: string; href: string };
+        const navItem = item as { label: string; href: string; badge?: number };
         const isActive =
           pathname === navItem.href ||
           (navItem.href !== '/admin' && navItem.href !== '/org' && pathname.startsWith(navItem.href));
@@ -54,14 +54,19 @@ export function AdminSidebar({ title, items, backLink, onNavClick, hideTitle }: 
           <Link
             key={navItem.href}
             href={navItem.href}
-            className={`block px-4 py-2 text-sm ${
+            className={`flex items-center justify-between px-4 py-2 text-sm ${
               isActive
                 ? 'bg-sage-light/50 text-forest-dark font-semibold border-l-3 border-golden'
                 : 'text-gray-600 hover:bg-sage-light/30'
             }`}
             onClick={onNavClick}
           >
-            {navItem.label}
+            <span>{navItem.label}</span>
+            {navItem.badge != null && navItem.badge > 0 && (
+              <span className="ml-2 min-w-[1.25rem] h-5 px-1 flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold">
+                {navItem.badge > 99 ? '99+' : navItem.badge}
+              </span>
+            )}
           </Link>
         );
       })}

@@ -64,6 +64,8 @@ export default function OrgSettingsPage() {
   const [themeJson, setThemeJson] = useState('');
   const [themeJsonError, setThemeJsonError] = useState('');
   const [mapDisplayConfig, setMapDisplayConfig] = useState<MapDisplayConfig | null>(null);
+  const [allowPublicContributions, setAllowPublicContributions] = useState(false);
+  const [moderationMode, setModerationMode] = useState<'auto_approve' | 'manual_review'>('manual_review');
 
   const { data: settings, isLoading: loading } = useQuery({
     queryKey: ['admin', 'settings'],
@@ -97,6 +99,8 @@ export default function OrgSettingsPage() {
       setPwaName(settings.pwa_name ?? '');
       setThemeJson(settings.theme ? JSON.stringify(settings.theme, null, 2) : '');
       setMapDisplayConfig(settings.map_display_config as MapDisplayConfig | null);
+      setAllowPublicContributions(settings.allow_public_contributions ?? false);
+      setModerationMode(settings.moderation_mode ?? 'manual_review');
     }
   }, [settings]);
 
@@ -129,6 +133,10 @@ export default function OrgSettingsPage() {
     const currentMapConfig = JSON.stringify(settings?.map_display_config ?? null);
     const newMapConfig = JSON.stringify(mapDisplayConfig);
     if (newMapConfig !== currentMapConfig) updates.map_display_config = mapDisplayConfig;
+    if (allowPublicContributions !== (settings?.allow_public_contributions ?? false))
+      updates.allow_public_contributions = allowPublicContributions;
+    if (moderationMode !== (settings?.moderation_mode ?? 'manual_review'))
+      updates.moderation_mode = moderationMode;
 
     setSaving(true);
     setMessage('');
@@ -307,6 +315,66 @@ export default function OrgSettingsPage() {
             onChange={setMapDisplayConfig}
             itemTypes={itemTypes}
           />
+        </section>
+
+        {/* Public Contributions section */}
+        <section className="card space-y-5">
+          <h2 className="font-heading text-lg font-semibold text-forest-dark">
+            Public Contributions
+          </h2>
+          <p className="text-xs text-sage">
+            Allow members of the public to submit new items on the map. Submissions are always reviewed before they appear publicly.
+          </p>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <label htmlFor="allow-public-contributions" className="label mb-0">
+                Allow public contributions
+              </label>
+              <p className="text-xs text-sage mt-0.5">
+                When enabled, non-authenticated visitors can submit items for review.
+              </p>
+            </div>
+            <button
+              type="button"
+              id="allow-public-contributions"
+              role="switch"
+              aria-checked={allowPublicContributions}
+              onClick={() => setAllowPublicContributions((v) => !v)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2 ${
+                allowPublicContributions ? 'bg-forest' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                  allowPublicContributions ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          {allowPublicContributions && (
+            <div>
+              <label htmlFor="moderation-mode" className="label">
+                Review mode
+              </label>
+              <select
+                id="moderation-mode"
+                value={moderationMode}
+                onChange={(e) => setModerationMode(e.target.value as 'auto_approve' | 'manual_review')}
+                className="input-field"
+              >
+                <option value="manual_review">Always require admin approval</option>
+                <option value="auto_approve">Auto-approve after AI safety check</option>
+              </select>
+              <p className="mt-1 text-xs text-sage">
+                {moderationMode === 'manual_review'
+                  ? 'Every submission will be held for an admin to approve or reject before it appears on the map.'
+                  : 'Submissions that pass the AI content-safety check are published automatically. Those that fail are held for admin review.'}
+              </p>
+            </div>
+          )}
         </section>
 
         {/* Subscription section (read-only) */}

@@ -24,6 +24,17 @@ let authUser: { id: string } | null = { id: 'user-123' };
 // Fake inserted item to return from .select().single()
 let fakeInsertedItem: Record<string, unknown> | null = null;
 
+// Moderation mock controls
+let moderateImageResult = { flagged: false, categories: {}, scores: {} };
+let moderateImageError: Error | null = null;
+
+vi.mock('@/lib/moderation/moderate', () => ({
+  moderateImage: vi.fn(() => {
+    if (moderateImageError) return Promise.reject(moderateImageError);
+    return Promise.resolve(moderateImageResult);
+  }),
+}));
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: () => ({
     auth: {
@@ -45,6 +56,13 @@ vi.mock('@/lib/supabase/server', () => ({
           if (removeError) return Promise.resolve({ error: removeError });
           removedFiles.push({ bucket, paths });
           return Promise.resolve({ error: null });
+        }),
+        download: vi.fn((_path: string) => {
+          // Return a fake blob-like object with arrayBuffer
+          const fakeData = {
+            arrayBuffer: () => Promise.resolve(new ArrayBuffer(8)),
+          };
+          return Promise.resolve({ data: fakeData, error: null });
         }),
       }),
     },
@@ -131,6 +149,8 @@ describe('uploadToVault', () => {
     fakeInsertedItem = null;
     authUser = { id: 'user-123' };
     quotaData = { current_storage_bytes: 0, max_storage_bytes: 100 * 1024 * 1024 };
+    moderateImageResult = { flagged: false, categories: {}, scores: {} };
+    moderateImageError = null;
   });
 
   it('uploads a file and inserts a vault_items row', async () => {
@@ -211,6 +231,90 @@ describe('uploadToVault', () => {
     expect((result as { error: string }).error).toContain('Failed to create vault item');
     // Upload happens before the insert, so the file was uploaded
     expect(uploadedFiles).toHaveLength(1);
+  });
+});
+
+describe('uploadToVault — moderation', () => {
+  beforeEach(() => {
+    uploadedFiles = [];
+    removedFiles = [];
+    uploadError = null;
+    removeError = null;
+    insertedRows = [];
+    deletedRows = [];
+    insertError = null;
+    deleteError = null;
+    fakeInsertedItem = null;
+    authUser = { id: 'user-123' };
+    quotaData = { current_storage_bytes: 0, max_storage_bytes: 100 * 1024 * 1024 };
+    moderateImageResult = { flagged: false, categories: {}, scores: {} };
+    moderateImageError = null;
+  });
+
+  it('rejects upload when MIME type is not in allowlist', async () => {
+    const result = await uploadToVault(
+      makeInput({
+        moderateAsPublicContribution: true,
+        file: { name: 'doc.pdf', type: 'application/pdf', size: 1024, base64: '' },
+      })
+    );
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toContain('File type not allowed');
+    expect(uploadedFiles).toHaveLength(0);
+    expect(insertedRows).toHaveLength(0);
+  });
+
+  it('rejects upload when moderation flags content', async () => {
+    moderateImageResult = { flagged: true, categories: {}, scores: {} };
+
+    const result = await uploadToVault(
+      makeInput({
+        moderateAsPublicContribution: true,
+        file: { name: 'photo.jpg', type: 'image/jpeg', size: 1024, base64: Buffer.from('fake').toString('base64') },
+        visibility: 'public',
+      })
+    );
+
+    expect('error' in result).toBe(true);
+    expect((result as { error: string }).error).toContain("content guidelines");
+    // File was uploaded then removed after flagging
+    expect(removedFiles).toHaveLength(1);
+    expect(insertedRows).toHaveLength(0);
+  });
+
+  it('sets moderation_status to flagged_for_review when moderation API fails', async () => {
+    moderateImageError = new Error('OpenAI API timeout');
+
+    const result = await uploadToVault(
+      makeInput({
+        moderateAsPublicContribution: true,
+        file: { name: 'photo.png', type: 'image/png', size: 1024, base64: Buffer.from('fake').toString('base64') },
+        visibility: 'public',
+      })
+    );
+
+    expect('success' in result && result.success).toBe(true);
+    expect(insertedRows).toHaveLength(1);
+    expect(insertedRows[0].payload).toMatchObject({
+      moderation_status: 'flagged_for_review',
+    });
+  });
+
+  it('skips moderation when moderateAsPublicContribution is false', async () => {
+    const result = await uploadToVault(
+      makeInput({
+        moderateAsPublicContribution: false,
+        file: { name: 'photo.jpg', type: 'image/jpeg', size: 1024, base64: Buffer.from('fake').toString('base64') },
+        visibility: 'public',
+      })
+    );
+
+    expect('success' in result && result.success).toBe(true);
+    expect(insertedRows).toHaveLength(1);
+    expect(insertedRows[0].payload).toMatchObject({
+      moderation_status: 'approved',
+    });
   });
 });
 

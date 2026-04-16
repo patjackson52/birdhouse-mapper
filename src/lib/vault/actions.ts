@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { moderateImage } from '@/lib/moderation/moderate';
 import type { VaultItem, VaultQuota, UploadToVaultInput } from './types';
 
 export async function uploadToVault(
@@ -16,6 +17,14 @@ export async function uploadToVault(
     return { error: 'Not authenticated.' };
   }
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+  if (input.moderateAsPublicContribution) {
+    if (!ALLOWED_IMAGE_TYPES.includes(input.file.type)) {
+      return { error: 'File type not allowed. Please upload a JPEG, PNG, WebP, or GIF image.' };
+    }
+  }
+
   const { data: quota } = await supabase
     .from('vault_quotas')
     .select('current_storage_bytes, max_storage_bytes')
@@ -26,7 +35,9 @@ export async function uploadToVault(
     return { error: 'Storage limit reached. Please delete unused files or upgrade your plan.' };
   }
 
-  const bucket = input.visibility === 'public' ? 'vault-public' : 'vault-private';
+  const bucket = input.moderateAsPublicContribution
+    ? 'vault-private'
+    : (input.visibility === 'public' ? 'vault-public' : 'vault-private');
   const itemId = crypto.randomUUID();
   const storagePath = `${input.orgId}/${itemId}/${input.file.name}`;
 
@@ -40,6 +51,29 @@ export async function uploadToVault(
 
   if (uploadError) {
     return { error: `Failed to upload file: ${uploadError.message}` };
+  }
+
+  let moderationStatus: string = 'approved';
+  let moderationScores: Record<string, unknown> | null = null;
+  let rejectionReason: string | null = null;
+  let moderatedAt: string | null = null;
+
+  if (input.moderateAsPublicContribution) {
+    try {
+      const modResult = await moderateImage(input.file.base64, input.file.type);
+      moderationScores = modResult.scores as unknown as Record<string, unknown>;
+      moderatedAt = new Date().toISOString();
+
+      if (modResult.flagged) {
+        await supabase.storage.from(bucket).remove([storagePath]);
+        return { error: "Your photo couldn't be posted because it doesn't meet our content guidelines." };
+      }
+
+      moderationStatus = input.orgModerationMode === 'auto_approve' ? 'approved' : 'pending';
+    } catch {
+      moderationStatus = 'flagged_for_review';
+      moderatedAt = new Date().toISOString();
+    }
   }
 
   const { data: item, error: insertError } = await supabase
@@ -58,12 +92,31 @@ export async function uploadToVault(
       is_ai_context: input.isAiContext ?? false,
       ai_priority: input.aiPriority ?? null,
       metadata: input.metadata ?? {},
+      moderation_status: moderationStatus,
+      moderation_scores: moderationScores,
+      rejection_reason: rejectionReason,
+      moderated_at: moderatedAt,
     })
     .select('*')
     .single();
 
   if (insertError || !item) {
     return { error: `Failed to create vault item: ${insertError?.message ?? 'unknown'}` };
+  }
+
+  if (moderationStatus === 'approved' && input.visibility === 'public' && input.moderateAsPublicContribution) {
+    const { data: fileData } = await supabase.storage.from('vault-private').download(storagePath);
+    if (fileData) {
+      const buffer = Buffer.from(await fileData.arrayBuffer());
+      await supabase.storage.from('vault-public').upload(storagePath, buffer, {
+        contentType: input.file.type || 'application/octet-stream',
+        upsert: false,
+      });
+      await supabase.storage.from('vault-private').remove([storagePath]);
+      await supabase.from('vault_items').update({
+        storage_bucket: 'vault-public',
+      }).eq('id', itemId);
+    }
   }
 
   return { success: true, item: item as VaultItem };

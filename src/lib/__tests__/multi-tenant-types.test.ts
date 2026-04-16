@@ -21,8 +21,9 @@ describe('Multi-tenant types', () => {
         'contributor',
         'viewer',
         'public',
+        'public_contributor',
       ];
-      expect(roles).toHaveLength(6);
+      expect(roles).toHaveLength(7);
     });
 
     it('rejects invalid values at compile time', () => {
@@ -38,13 +39,14 @@ describe('Multi-tenant types', () => {
         'active',
         'suspended',
         'revoked',
+        'banned',
       ];
-      expect(statuses).toHaveLength(4);
+      expect(statuses).toHaveLength(5);
     });
 
     it('rejects invalid values at compile time', () => {
-      // @ts-expect-error - 'banned' is not a valid OrgMembershipStatus
-      const _bad: OrgMembershipStatus = 'banned';
+      // @ts-expect-error - 'inactive' is not a valid OrgMembershipStatus
+      const _bad: OrgMembershipStatus = 'inactive';
     });
   });
 
@@ -92,6 +94,8 @@ describe('Multi-tenant types', () => {
         communications_enabled: false,
         created_at: '2026-01-01T00:00:00Z',
         updated_at: '2026-01-01T00:00:00Z',
+        allow_public_contributions: false,
+        moderation_mode: 'auto_approve',
       };
       expect(org.slug).toBe('test-org');
       expect(org.primary_custom_domain_id).toBeNull();

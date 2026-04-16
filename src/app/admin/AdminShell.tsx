@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { AdminSidebar, type SidebarItem } from '@/components/admin/AdminSidebar';
+import { getPendingItems } from '@/app/admin/moderation/actions';
 
 interface AdminShellProps {
   orgId: string;
@@ -13,10 +15,11 @@ interface AdminShellProps {
   children: React.ReactNode;
 }
 
-const ORG_NAV_ITEMS: SidebarItem[] = [
+const BASE_NAV_ITEMS: SidebarItem[] = [
   { label: 'Dashboard', href: '/admin' },
   { label: 'Properties', href: '/admin/properties' },
   { label: 'Members', href: '/admin/members' },
+  { label: 'Moderation', href: '/admin/moderation' },
   { label: 'Roles', href: '/admin/roles' },
   { type: 'section', label: 'Data' },
   { label: 'Knowledge', href: '/admin/knowledge' },
@@ -40,6 +43,22 @@ export function AdminShell({
   const router = useRouter();
   const [orgName, setOrgName] = useState<string>(orgSlug);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const { data: pendingCount = 0 } = useQuery({
+    queryKey: ['admin', 'moderation', 'pending-count'],
+    queryFn: async () => {
+      const result = await getPendingItems();
+      return result.items?.length ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const orgNavItems: SidebarItem[] = BASE_NAV_ITEMS.map((item) => {
+    if ('href' in item && item.href === '/admin/moderation') {
+      return { ...item, badge: pendingCount };
+    }
+    return item;
+  });
 
   // Detect if we're on a property sub-route — the property layout handles its own sidebar
   const isPropertyRoute =
@@ -119,7 +138,7 @@ export function AdminShell({
           <div className="absolute left-0 top-0 bottom-0 shadow-xl">
             <AdminSidebar
               title={orgName}
-              items={ORG_NAV_ITEMS}
+              items={orgNavItems}
               onNavClick={() => setDrawerOpen(false)}
             />
           </div>
@@ -132,7 +151,7 @@ export function AdminShell({
           <div className="hidden md:block">
             <AdminSidebar
               title={orgName}
-              items={ORG_NAV_ITEMS}
+              items={orgNavItems}
             />
           </div>
         )}
