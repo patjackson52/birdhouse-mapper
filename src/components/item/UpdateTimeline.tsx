@@ -1,5 +1,7 @@
 import type { ItemUpdate, UpdateType as UpdateTypeRecord, Photo, Entity, EntityType, UpdateTypeField } from '@/lib/types';
+import type { IconValue } from '@/lib/types';
 import { formatShortDate } from '@/lib/utils';
+import { IconRenderer } from '@/components/shared/IconPicker';
 
 interface UpdateTimelineProps {
   updates: (ItemUpdate & {
@@ -49,7 +51,7 @@ export default function UpdateTimeline({ updates, updateTypeFields = [] }: Updat
               </p>
             )}
             {update.entities && update.entities.length > 0 && (() => {
-              const grouped = new Map<string, { type: { id: string; name: string; icon: string }; entities: NonNullable<typeof update.entities> }>();
+              const grouped = new Map<string, { type: { id: string; name: string; icon: IconValue }; entities: NonNullable<typeof update.entities> }>();
               for (const e of update.entities) {
                 const key = e.entity_type.id;
                 if (!grouped.has(key)) grouped.set(key, { type: e.entity_type, entities: [] });
@@ -57,7 +59,7 @@ export default function UpdateTimeline({ updates, updateTypeFields = [] }: Updat
               }
               return Array.from(grouped.values()).map(({ type, entities }) => (
                 <div key={type.id} className="flex flex-wrap items-center gap-1 mt-1">
-                  <span className="text-[10px] text-sage">{type.icon}</span>
+                  <span className="text-[10px] text-sage"><IconRenderer icon={type.icon} size={10} /></span>
                   {entities.map((e) => (
                     <span key={e.id} className="inline-flex items-center bg-forest/10 text-forest-dark text-[10px] px-1.5 py-0.5 rounded-full">
                       {e.name}

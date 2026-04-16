@@ -3,6 +3,7 @@ import type { Item, ItemType, CustomField } from "@/lib/types";
 import StatusBadge from "./StatusBadge";
 import { formatShortDate } from "@/lib/utils";
 import { formatDistance } from "@/lib/location/utils";
+import { IconRenderer } from '@/components/shared/IconPicker';
 
 interface ItemCardProps {
   item: Item;
@@ -24,7 +25,7 @@ export default function ItemCard({
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          {itemType && <span className="text-lg">{itemType.icon}</span>}
+          {itemType && <IconRenderer icon={itemType.icon} size={18} />}
           <h3 className="font-heading font-semibold text-forest-dark text-lg">
             {item.name}
           </h3>
