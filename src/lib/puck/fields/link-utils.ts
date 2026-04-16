@@ -5,13 +5,6 @@ export interface LinkValue {
   color?: string;
 }
 
-/** Icon value stored in Puck data */
-export interface IconValue {
-  set: 'lucide' | 'heroicons';
-  name: string;
-  style?: 'outline' | 'solid';
-}
-
 /**
  * Normalize a link field value to a LinkValue object.
  * Handles backwards compatibility: plain strings become { href }.
