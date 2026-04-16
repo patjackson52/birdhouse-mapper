@@ -172,12 +172,12 @@ describe('DividerBlock', () => {
 // =====================
 describe('EntityListBlock', () => {
   const trees = [
-    { id: 'e1', name: 'White Oak', entity_type: { id: 'et1', name: 'Tree', icon: '🌳' } },
-    { id: 'e2', name: 'Red Maple', entity_type: { id: 'et1', name: 'Tree', icon: '🌳' } },
+    { id: 'e1', name: 'White Oak', entity_type: { id: 'et1', name: 'Tree', icon: { set: 'emoji' as const, name: '🌳' } } },
+    { id: 'e2', name: 'Red Maple', entity_type: { id: 'et1', name: 'Tree', icon: { set: 'emoji' as const, name: '🌳' } } },
   ];
 
   const birds = [
-    { id: 'e3', name: 'Robin', entity_type: { id: 'et2', name: 'Bird', icon: '🐦' } },
+    { id: 'e3', name: 'Robin', entity_type: { id: 'et2', name: 'Bird', icon: { set: 'emoji' as const, name: '🐦' } } },
   ];
 
   const allEntities = [...trees, ...birds];

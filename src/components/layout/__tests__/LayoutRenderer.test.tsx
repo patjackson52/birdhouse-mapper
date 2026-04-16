@@ -100,7 +100,7 @@ const baseItem: ItemWithDetails = {
   item_type: {
     id: 'type-1',
     name: 'Birdhouse',
-    icon: '🏠',
+    icon: { set: 'emoji' as const, name: '🏠' },
     color: '#green',
     sort_order: 0,
     layout: null,

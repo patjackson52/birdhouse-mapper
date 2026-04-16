@@ -43,14 +43,14 @@ describe('ItemType structure', () => {
     const type: ItemType = {
       id: 'type-1',
       name: 'Bird Box',
-      icon: '🏠',
+      icon: { set: 'emoji', name: '🏠' },
       color: '#5D7F3A',
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
       org_id: 'org-1',
       layout: null,
     };
-    expect(type.icon).toBe('🏠');
+    expect(type.icon).toEqual({ set: 'emoji', name: '🏠' });
   });
 });
 
@@ -123,7 +123,7 @@ describe('UpdateType structure', () => {
 describe('ItemWithDetails composite type', () => {
   it('assembles a full item with type, updates, photos, and custom fields', () => {
     const itemType: ItemType = {
-      id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
+      id: 'type-1', name: 'Bird Box', icon: { set: 'emoji', name: '🏠' }, color: '#5D7F3A',
       sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1', layout: null,
     };
 
@@ -188,7 +188,7 @@ describe('EntityType structure', () => {
       id: 'et-1',
       org_id: 'org-1',
       name: 'Species',
-      icon: '🐦',
+      icon: { set: 'emoji', name: '🐦' },
       color: '#5D7F3A',
       link_to: ['items', 'updates'],
       sort_order: 0,
@@ -308,7 +308,7 @@ describe('Join table structures', () => {
 describe('ItemWithDetails with entities', () => {
   it('includes entities on item and on updates', () => {
     const entityType: EntityType = {
-      id: 'et-1', org_id: 'org-1', name: 'Species', icon: '🐦', color: '#5D7F3A',
+      id: 'et-1', org_id: 'org-1', name: 'Species', icon: { set: 'emoji', name: '🐦' }, color: '#5D7F3A',
       link_to: ['items', 'updates'], sort_order: 0,
       created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
     };
@@ -322,7 +322,7 @@ describe('ItemWithDetails with entities', () => {
     };
 
     const itemType: ItemType = {
-      id: 'type-1', name: 'Bird Box', icon: '🏠', color: '#5D7F3A',
+      id: 'type-1', name: 'Bird Box', icon: { set: 'emoji', name: '🏠' }, color: '#5D7F3A',
       sort_order: 0, created_at: '2025-01-01T00:00:00Z', org_id: 'org-1', layout: null,
     };
 

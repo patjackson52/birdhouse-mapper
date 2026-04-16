@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { Entity, EntityType, EntityTypeField } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import EntityForm from '@/components/admin/EntityForm';
 import EntityCard from '@/components/admin/EntityCard';
@@ -97,8 +98,8 @@ export default function EntitiesPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-2xl font-semibold text-forest-dark">
-          {entityType.icon} {entityType.name}
+        <h1 className="font-heading text-2xl font-semibold text-forest-dark flex items-center gap-2">
+          <IconRenderer icon={entityType.icon} size={24} /> {entityType.name}
         </h1>
         {!showAdd && !editingEntity && (
           <button onClick={() => setShowAdd(true)} className="btn-primary text-sm">

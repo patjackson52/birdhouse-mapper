@@ -1,5 +1,6 @@
 import type { EntityListConfig } from '@/lib/layout/types';
 import { IconRenderer } from '@/components/shared/IconPicker';
+import type { IconValue } from '@/lib/types';
 
 export interface EntityDisplay {
   id: string;
@@ -7,7 +8,7 @@ export interface EntityDisplay {
   entity_type: {
     id: string;
     name: string;
-    icon: string;
+    icon: IconValue;
   };
 }
 

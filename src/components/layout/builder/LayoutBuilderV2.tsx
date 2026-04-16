@@ -18,6 +18,7 @@ import type { TypeLayout } from '@/lib/layout/types';
 import type { TypeLayoutV2, LayoutNodeV2, LayoutBlockV2, LayoutRowV2, BlockTypeV2, BlockConfigV2, SpacingPreset, FractionalWidth, BlockPermissions } from '@/lib/layout/types-v2';
 import { isLayoutRowV2 } from '@/lib/layout/types-v2';
 import type { CustomField, EntityType, ItemType } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import { generateDefaultLayoutV2 } from '@/lib/layout/defaults-v2';
 import { migrateV1toV2 } from '@/lib/layout/migration';
 import { generateMockItem } from '@/lib/layout/mock-data';
@@ -416,7 +417,7 @@ export default function LayoutBuilderV2({ itemType, initialLayout, customFields,
     <div className="bg-gray-100 rounded-xl p-3">
       <div className="bg-white rounded-xl shadow-lg p-4 max-h-[70vh] overflow-y-auto">
         <div className="flex items-center gap-2 mb-3">
-          <span className="text-xl">{itemType.icon}</span>
+          <IconRenderer icon={itemType.icon} size={24} />
           <h2 className="font-heading font-semibold text-forest-dark text-xl">{mockItem.name}</h2>
         </div>
         <LayoutRendererDispatch

@@ -235,7 +235,7 @@ export default function UpdateForm() {
         >
           {selectedItemType && (
             <span className="text-xl leading-none" aria-hidden="true">
-              {selectedItemType.icon}
+              <IconRenderer icon={selectedItemType.icon} size={24} />
             </span>
           )}
           <div className="flex min-w-0 flex-1 flex-col">

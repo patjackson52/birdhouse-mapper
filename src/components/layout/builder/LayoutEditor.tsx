@@ -30,6 +30,7 @@ import type {
 } from '@/lib/layout/types-v2';
 import { isLayoutRowV2 } from '@/lib/layout/types-v2';
 import type { CustomField, EntityType, ItemType } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import { generateDefaultLayoutV2 } from '@/lib/layout/defaults-v2';
 import { migrateV1toV2 } from '@/lib/layout/migration';
 import { generateMockItem } from '@/lib/layout/mock-data';
@@ -648,7 +649,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
         <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">{itemType.icon}</span>
+            <IconRenderer icon={itemType.icon} size={24} />
             <h2 className="font-heading font-semibold text-forest-dark text-xl">{mockItem.name}</h2>
           </div>
           {isEditing ? (
