@@ -25,6 +25,12 @@ export type CustomDomainStatus = 'pending' | 'verifying' | 'active' | 'failed' |
 export type SslStatus = 'pending' | 'issuing' | 'active' | 'failed' | 'expiring_soon';
 export type DomainType = 'subdomain' | 'apex';
 
+export interface IconValue {
+  set: 'lucide' | 'heroicons' | 'emoji';
+  name: string;
+  style?: 'outline' | 'solid';
+}
+
 // ======================
 // Table interfaces
 // ======================
@@ -48,7 +54,7 @@ export interface Item {
 export interface ItemType {
   id: string;
   name: string;
-  icon: string;
+  icon: IconValue;
   color: string;
   sort_order: number;
   layout: TypeLayout | null;
@@ -266,7 +272,7 @@ export interface EntityType {
   id: string;
   org_id: string;
   name: string;
-  icon: string;
+  icon: IconValue;
   color: string;
   link_to: EntityLinkTarget[];
   sort_order: number;
@@ -411,6 +417,16 @@ export interface ItemWithDetails extends Item {
   photos: Photo[];
   custom_fields: CustomField[];
   entities: (Entity & { entity_type: EntityType })[];
+}
+
+/**
+ * Returns a plain-text display string for an IconValue.
+ * For emoji icons, returns the emoji character.
+ * For library icons, returns the icon name in a readable format.
+ */
+export function iconDisplayName(icon: IconValue): string {
+  if (icon.set === 'emoji') return icon.name;
+  return icon.name.replace(/([A-Z])/g, ' $1').trim();
 }
 
 // ======================
