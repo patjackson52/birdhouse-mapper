@@ -1,5 +1,7 @@
 import Image from '@tiptap/extension-image';
 import { mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { VaultImageNodeView } from './VaultImageNodeView';
 
 type ImageLayout = 'default' | 'float-left' | 'float-right' | 'centered' | 'full-width';
 
@@ -31,16 +33,22 @@ export const VaultImage = Image.extend({
     const {
       'data-layout': layout,
       'data-caption': caption,
+      'data-width-percent': widthPercent,
       ...imgAttrs
     } = HTMLAttributes;
 
     const figureAttrs: Record<string, string> = { class: 'image-figure' };
     if (layout && layout !== 'default') figureAttrs['data-layout'] = layout;
+    if (widthPercent) figureAttrs['data-width-percent'] = widthPercent;
 
     if (caption) {
       return ['figure', figureAttrs, ['img', mergeAttributes(imgAttrs)], ['figcaption', {}, caption]];
     }
     return ['figure', figureAttrs, ['img', mergeAttributes(imgAttrs)]];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(VaultImageNodeView);
   },
 
   addAttributes() {
@@ -77,6 +85,18 @@ export const VaultImage = Image.extend({
         renderHTML: (attributes) => {
           if (!attributes.caption) return {};
           return { 'data-caption': attributes.caption };
+        },
+      },
+      widthPercent: {
+        default: null as number | null,
+        parseHTML: (element) => {
+          const fig = element.closest?.('figure');
+          const raw = fig?.getAttribute('data-width-percent') ?? element.getAttribute('data-width-percent');
+          return raw ? Number(raw) : null;
+        },
+        renderHTML: (attributes) => {
+          if (attributes.widthPercent == null) return {};
+          return { 'data-width-percent': String(attributes.widthPercent) };
         },
       },
     };
