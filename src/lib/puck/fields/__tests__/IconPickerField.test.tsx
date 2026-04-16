@@ -2,25 +2,20 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { IconPickerField } from '../IconPickerField';
 
-// Mock icon catalog
-vi.mock('../../icons/icon-catalog', () => ({
-  searchIcons: vi.fn().mockResolvedValue([
-    { set: 'lucide', name: 'Bird', searchTerms: 'bird' },
-    { set: 'lucide', name: 'MapPin', searchTerms: 'map pin' },
-    { set: 'heroicons', name: 'Star', searchTerms: 'star' },
-  ]),
-  getLucideIcons: vi.fn().mockResolvedValue([
-    { set: 'lucide', name: 'Bird', searchTerms: 'bird' },
-    { set: 'lucide', name: 'MapPin', searchTerms: 'map pin' },
-  ]),
-  getHeroicons: vi.fn().mockResolvedValue([
-    { set: 'heroicons', name: 'Star', searchTerms: 'star' },
-  ]),
-}));
-
-// Mock IconRenderer
-vi.mock('../../icons/IconRenderer', () => ({
-  IconRenderer: ({ icon }: any) => icon ? <span data-testid="icon-preview">{icon.name}</span> : null,
+// Mock the shared IconPicker
+vi.mock('@/components/shared/IconPicker', () => ({
+  IconPicker: ({ value, onChange }: any) => (
+    <div data-testid="icon-picker">
+      {value ? (
+        <>
+          <span>{value.name}</span>
+          <button aria-label="Clear icon" onClick={() => onChange(undefined)}>Clear</button>
+        </>
+      ) : (
+        <span>No icon</span>
+      )}
+    </div>
+  ),
 }));
 
 describe('IconPickerField', () => {
@@ -36,16 +31,10 @@ describe('IconPickerField', () => {
         onChange={vi.fn()}
       />
     );
-    expect(screen.getAllByText('Bird').length).toBeGreaterThan(0);
+    expect(screen.getByText('Bird')).toBeDefined();
   });
 
-  it('opens picker on click', () => {
-    render(<IconPickerField value={undefined} onChange={vi.fn()} />);
-    fireEvent.click(screen.getByText(/no icon/i));
-    expect(screen.getByPlaceholderText(/search icons/i)).toBeDefined();
-  });
-
-  it('shows clear button when value is set', () => {
+  it('delegates clear to onChange(undefined)', () => {
     const onChange = vi.fn();
     render(
       <IconPickerField

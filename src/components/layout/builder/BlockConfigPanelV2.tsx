@@ -17,6 +17,7 @@ import type {
   EntityListConfig,
 } from '@/lib/layout/types';
 import type { CustomField, EntityType } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import InlineFieldCreator from './InlineFieldCreator';
 import WidthPicker from './WidthPicker';
 import AlignPicker from './AlignPicker';
@@ -235,7 +236,7 @@ export default function BlockConfigPanelV2({
                   }}
                   className="rounded"
                 />
-                <span className="text-sm">{et.icon} {et.name}</span>
+                <span className="text-sm flex items-center gap-1"><IconRenderer icon={et.icon} size={14} /> {et.name}</span>
               </label>
             ))}
           </div>

@@ -3,6 +3,7 @@
 import type { LayoutBlock, BlockConfig, FieldDisplayConfig, PhotoGalleryConfig, TimelineConfig, TextLabelConfig, EntityListConfig } from '@/lib/layout/types';
 import type { CustomField, EntityType } from '@/lib/types';
 import InlineFieldCreator from './InlineFieldCreator';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import { useState } from 'react';
 
 interface Props {
@@ -205,7 +206,7 @@ export default function BlockConfigPanel({ block, customFields, entityTypes, onC
                 }}
                 className="rounded"
               />
-              <span className="text-sm">{et.icon} {et.name}</span>
+              <span className="text-sm flex items-center gap-1"><IconRenderer icon={et.icon} size={14} /> {et.name}</span>
             </label>
           ))}
         </div>

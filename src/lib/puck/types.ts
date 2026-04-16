@@ -1,9 +1,11 @@
 import type { Data, Config } from '@puckeditor/core';
-import type { LinkValue, IconValue } from './fields/link-utils';
+import type { LinkValue } from './fields/link-utils';
+import type { IconValue } from '@/lib/types';
 import type { TextSize } from './text-styles';
 
 // Re-export field value types for component use
-export type { LinkValue, IconValue } from './fields/link-utils';
+export type { LinkValue } from './fields/link-utils';
+export type { IconValue } from '@/lib/types';
 
 // ---- Component prop types (page components) ----
 

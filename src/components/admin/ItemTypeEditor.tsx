@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { ItemType } from '@/lib/types';
+import type { ItemType, IconValue } from '@/lib/types';
+import { IconPicker, IconRenderer } from '@/components/shared/IconPicker';
 import CustomFieldEditor from './CustomFieldEditor';
 import UpdateTypeEditor from './UpdateTypeEditor';
 
@@ -10,7 +11,7 @@ interface ItemTypeEditorProps {
   itemCount: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
-  onSave: (updates: { name: string; icon: string; color: string; sort_order: number }) => Promise<void>;
+  onSave: (updates: { name: string; icon: IconValue; color: string; sort_order: number }) => Promise<void>;
   onDelete: () => Promise<void>;
   onMoveUp: () => void;
   onMoveDown: () => void;
@@ -23,7 +24,7 @@ export default function ItemTypeEditor({
   onSave, onDelete, onMoveUp, onMoveDown, isFirst, isLast,
 }: ItemTypeEditorProps) {
   const [name, setName] = useState(itemType.name);
-  const [icon, setIcon] = useState(itemType.icon);
+  const [icon, setIcon] = useState<IconValue>(itemType.icon);
   const [color, setColor] = useState(itemType.color);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -57,7 +58,7 @@ export default function ItemTypeEditor({
     <div className="card">
       {/* Collapsed header */}
       <div className="flex items-center gap-3 cursor-pointer" onClick={onToggleExpand}>
-        <span className="text-xl">{itemType.icon}</span>
+        <IconRenderer icon={itemType.icon} size={20} />
         <span className="font-medium text-forest-dark flex-1">{itemType.name}</span>
         <div className="w-5 h-5 rounded-full border border-sage-light" style={{ backgroundColor: itemType.color }} />
         <span className="text-xs text-sage bg-sage-light px-2 py-0.5 rounded-full">
@@ -106,8 +107,8 @@ export default function ItemTypeEditor({
               <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-field" />
             </div>
             <div>
-              <label className="label">Icon (emoji)</label>
-              <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} className="input-field" />
+              <label className="label">Icon</label>
+              <IconPicker value={icon} onChange={(v) => setIcon(v || { set: 'emoji', name: '📍' })} />
             </div>
             <div>
               <label className="label">Color</label>

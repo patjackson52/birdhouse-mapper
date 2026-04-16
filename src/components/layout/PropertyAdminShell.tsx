@@ -6,6 +6,7 @@ import { AdminSidebar, type SidebarItem } from '@/components/admin/AdminSidebar'
 import { ContextBar } from './ContextBar';
 import { AvatarMenu } from './AvatarMenu';
 import type { EntityType } from '@/lib/types';
+import { iconDisplayName } from '@/lib/types';
 
 interface PropertyAdminShellProps {
   orgId: string;
@@ -73,7 +74,7 @@ export function PropertyAdminShell({
     { label: 'Site Builder', href: `${base}/site-builder/templates` },
     { label: 'QR Codes', href: `${base}/qr-codes` },
     ...entityTypes.map((et) => ({
-      label: `${et.icon} ${et.name}`,
+      label: `${iconDisplayName(et.icon)} ${et.name}`,
       href: `${base}/entities/${et.id}`,
     })),
     { type: 'section', label: 'People' },

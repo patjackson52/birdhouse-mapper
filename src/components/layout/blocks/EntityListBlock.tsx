@@ -1,4 +1,6 @@
 import type { EntityListConfig } from '@/lib/layout/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
+import type { IconValue } from '@/lib/types';
 
 export interface EntityDisplay {
   id: string;
@@ -6,7 +8,7 @@ export interface EntityDisplay {
   entity_type: {
     id: string;
     name: string;
-    icon: string;
+    icon: IconValue;
   };
 }
 
@@ -36,8 +38,8 @@ export default function EntityListBlock({ config, entities }: EntityListBlockPro
     <div className="space-y-2">
       {Array.from(grouped.values()).map(({ type, items }) => (
         <div key={type.id}>
-          <p className="text-xs font-medium text-sage uppercase tracking-wide mb-1">
-            {type.icon} {type.name}
+          <p className="text-xs font-medium text-sage uppercase tracking-wide mb-1 flex items-center gap-1">
+            <IconRenderer icon={type.icon} size={12} /> {type.name}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {items.map((entity) => (

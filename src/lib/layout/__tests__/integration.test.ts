@@ -10,7 +10,7 @@ import type { LayoutBlock, TypeLayout } from '../types';
 const itemType: ItemType = {
   id: 't1',
   name: 'Bird Box',
-  icon: '🏠',
+  icon: { set: 'emoji', name: '🏠' },
   color: '#5D7F3A',
   sort_order: 0,
   created_at: '2026-01-01',

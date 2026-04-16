@@ -17,6 +17,7 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { TypeLayout, LayoutNode, LayoutBlock, LayoutRow, BlockType, BlockConfig, SpacingPreset } from '@/lib/layout/types';
 import { isLayoutRow } from '@/lib/layout/types';
 import type { CustomField, EntityType, ItemType } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import { generateDefaultLayout } from '@/lib/layout/defaults';
 import { generateMockItem } from '@/lib/layout/mock-data';
 import BlockPalette from './BlockPalette';
@@ -397,7 +398,7 @@ export default function LayoutBuilder({ itemType, initialLayout, customFields, e
         <div className="px-4 pb-4 max-h-[70vh] overflow-y-auto">
           {/* Header */}
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">{itemType.icon}</span>
+            <IconRenderer icon={itemType.icon} size={20} />
             <h2 className="font-heading font-semibold text-forest-dark text-xl">
               {mockItem.name}
             </h2>

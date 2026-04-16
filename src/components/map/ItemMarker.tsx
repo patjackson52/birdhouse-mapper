@@ -1,13 +1,14 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import type { Item, ItemType, ItemStatus } from '@/lib/types';
+import type { IconValue } from '@/lib/types';
 import { statusLabels, statusColors } from '@/lib/utils';
+import { iconToHtml, IconRenderer } from '@/components/shared/IconPicker';
 
-function createIcon(item: Item, itemType?: ItemType) {
-  const color = statusColors[item.status] || '#5D7F3A';
-  const emoji = itemType?.icon || '📍';
+function createDivIcon(iconHtml: string, color: string) {
   return L.divIcon({
     className: '',
     iconSize: [32, 40],
@@ -26,7 +27,7 @@ function createIcon(item: Item, itemType?: ItemType) {
         align-items: center;
         justify-content: center;
       ">
-        <span style="transform: rotate(45deg); font-size: 14px; line-height: 1;">${emoji}</span>
+        <span style="transform: rotate(45deg); font-size: 14px; line-height: 1;">${iconHtml}</span>
       </div>
     `,
   });
@@ -39,10 +40,25 @@ interface ItemMarkerProps {
 }
 
 export default function ItemMarker({ item, itemType, onClick }: ItemMarkerProps) {
+  const [iconHtml, setIconHtml] = useState<string>(
+    itemType?.icon?.set === 'emoji' ? itemType.icon.name : '📍'
+  );
+
+  useEffect(() => {
+    if (!itemType?.icon) return;
+    let cancelled = false;
+    iconToHtml(itemType.icon, 14).then((html) => {
+      if (!cancelled) setIconHtml(html);
+    });
+    return () => { cancelled = true; };
+  }, [itemType?.icon]);
+
+  const color = statusColors[item.status] || '#5D7F3A';
+
   return (
     <Marker
       position={[item.latitude, item.longitude]}
-      icon={createIcon(item, itemType)}
+      icon={createDivIcon(iconHtml, color)}
       eventHandlers={{
         click: () => onClick(item),
       }}
@@ -55,7 +71,9 @@ export default function ItemMarker({ item, itemType, onClick }: ItemMarkerProps)
           {itemType && (
             <>
               <br />
-              <span className="text-xs text-forest">{itemType.icon} {itemType.name}</span>
+              <span className="text-xs text-forest">
+                <IconRenderer icon={itemType.icon} size={12} /> {itemType.name}
+              </span>
             </>
           )}
         </div>

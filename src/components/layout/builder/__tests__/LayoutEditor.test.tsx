@@ -42,7 +42,7 @@ const mockLayout: TypeLayoutV2 = {
 };
 
 const defaultProps = {
-  itemType: { id: 't1', name: 'Bird', icon: '🐦', color: '#4a7c59', sort_order: 0, layout: null, created_at: '', org_id: 'o1' } as ItemType,
+  itemType: { id: 't1', name: 'Bird', icon: { set: 'emoji', name: '🐦' }, color: '#4a7c59', sort_order: 0, layout: null, created_at: '', org_id: 'o1' } as unknown as ItemType,
   initialLayout: mockLayout,
   customFields: [],
   entityTypes: [],

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { ItemType, ItemStatus } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import { statusColors, statusLabels } from '@/lib/utils';
 
 interface MapLegendProps {
@@ -76,7 +77,7 @@ export default function MapLegend({ itemTypes, legendConfig }: MapLegendProps) {
               <div className="space-y-1">
                 {visibleTypes.map((type) => (
                   <div key={type.id} className="flex items-center gap-2">
-                    <span className="text-sm">{type.icon}</span>
+                    <IconRenderer icon={type.icon} size={14} />
                     <span className="text-xs text-forest-dark">{type.name}</span>
                   </div>
                 ))}

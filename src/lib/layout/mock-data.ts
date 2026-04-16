@@ -1,4 +1,4 @@
-import type { CustomField, Entity, EntityType, ItemType, ItemUpdate, ItemWithDetails, Photo, UpdateType } from '@/lib/types';
+import type { CustomField, Entity, EntityType, ItemType, ItemUpdate, ItemWithDetails, Photo, UpdateType, IconValue } from '@/lib/types';
 
 const MOCK_ORG_ID = 'mock-org';
 const MOCK_PROPERTY_ID = 'mock-property';
@@ -46,7 +46,7 @@ const MOCK_ENTITY_TYPE: EntityType = {
   id: 'mock-entity-type',
   org_id: MOCK_ORG_ID,
   name: 'Volunteer',
-  icon: '👤',
+  icon: { set: 'emoji', name: '👤' } as IconValue,
   color: '#4A90D9',
   link_to: ['items'],
   sort_order: 0,

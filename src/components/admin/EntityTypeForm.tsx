@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { EntityType, EntityTypeField, EntityLinkTarget } from '@/lib/types';
+import type { EntityType, EntityTypeField, EntityLinkTarget, IconValue } from '@/lib/types';
 import { FieldDefinitionEditor, type FieldDraft } from '@/components/shared/fields';
+import { IconPicker } from '@/components/shared/IconPicker';
 
 interface EntityTypeWithFields extends EntityType {
   entity_type_fields?: EntityTypeField[];
@@ -18,7 +19,7 @@ interface EntityTypeFormProps {
 
 export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }: EntityTypeFormProps) {
   const [name, setName] = useState(entityType?.name || '');
-  const [icon, setIcon] = useState(entityType?.icon || '📋');
+  const [icon, setIcon] = useState<IconValue>(entityType?.icon || { set: 'emoji', name: '📋' });
   const [color, setColor] = useState(entityType?.color || '#5D7F3A');
   const [linkTo, setLinkTo] = useState<EntityLinkTarget[]>(entityType?.link_to || ['items', 'updates']);
 
@@ -144,10 +145,10 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
           <label className="label">Name *</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="input-field" placeholder="e.g., Species" required />
         </div>
-        <div className="flex gap-3">
+        <div className="grid grid-cols-[1fr_auto] gap-3">
           <div>
             <label className="label">Icon</label>
-            <input type="text" value={icon} onChange={(e) => setIcon(e.target.value)} className="input-field w-16 text-center text-lg" maxLength={4} />
+            <IconPicker value={icon} onChange={(v) => setIcon(v || { set: 'emoji', name: '📋' })} />
           </div>
           <div>
             <label className="label">Color</label>

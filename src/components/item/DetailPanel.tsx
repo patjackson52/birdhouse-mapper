@@ -1,6 +1,8 @@
 'use client';
 
 import type { ItemWithDetails } from '@/lib/types';
+import type { IconValue } from '@/lib/types';
+import { IconRenderer } from '@/components/shared/IconPicker';
 import StatusBadge from './StatusBadge';
 import UpdateTimeline from './UpdateTimeline';
 import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
@@ -49,7 +51,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            {item.item_type && <span className="text-xl">{item.item_type.icon}</span>}
+            {item.item_type && <IconRenderer icon={item.item_type.icon} size={20} />}
             <h2 className="font-heading font-semibold text-forest-dark text-xl">
               {item.name}
             </h2>
@@ -89,7 +91,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            {item.item_type && <span className="text-xl">{item.item_type.icon}</span>}
+            {item.item_type && <IconRenderer icon={item.item_type.icon} size={20} />}
             <h2 className="font-heading font-semibold text-forest-dark text-xl">
               {item.name}
             </h2>
@@ -138,7 +140,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
 
       {/* Entities grouped by type */}
       {item.entities && item.entities.length > 0 && (() => {
-        const grouped = new Map<string, { type: { id: string; name: string; icon: string }; entities: typeof item.entities }>();
+        const grouped = new Map<string, { type: { id: string; name: string; icon: IconValue }; entities: typeof item.entities }>();
         for (const e of item.entities) {
           const key = e.entity_type.id;
           if (!grouped.has(key)) grouped.set(key, { type: e.entity_type, entities: [] });
@@ -147,7 +149,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         return Array.from(grouped.values()).map(({ type, entities }) => (
           <div key={type.id} className="mb-3">
             <span className="text-xs font-medium text-sage uppercase tracking-wide">
-              {type.icon} {type.name}
+              <IconRenderer icon={type.icon} size={12} /> {type.name}
             </span>
             <div className="flex flex-wrap gap-1 mt-1">
               {entities.map((e) => (

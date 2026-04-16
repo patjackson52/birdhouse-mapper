@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { ItemType, CustomField, EntityType } from '@/lib/types';
+import type { ItemType, CustomField, EntityType, IconValue } from '@/lib/types';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ItemTypeEditor from '@/components/admin/ItemTypeEditor';
 import LayoutEditor from '@/components/layout/builder/LayoutEditor';
@@ -87,7 +87,7 @@ export default function TypesPage() {
     setAdding(false);
   }
 
-  async function handleSaveType(id: string, updates: { name: string; icon: string; color: string; sort_order: number }) {
+  async function handleSaveType(id: string, updates: { name: string; icon: IconValue; color: string; sort_order: number }) {
     const supabase = createClient();
     const { error } = await supabase.from('item_types').update(updates).eq('id', id);
     if (error) throw error;

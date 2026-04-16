@@ -39,7 +39,7 @@ const { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields } = vi.h
   ];
 
   const mockItemTypes = [
-    { id: 'type-1', name: 'Birdbox', icon: '🐦', color: '#00ff00', sort_order: 1, created_at: '', org_id: 'org-1' },
+    { id: 'type-1', name: 'Birdbox', icon: { set: 'emoji', name: '🐦' }, color: '#00ff00', sort_order: 1, created_at: '', org_id: 'org-1' },
   ];
 
   const mockUpdateTypes = [

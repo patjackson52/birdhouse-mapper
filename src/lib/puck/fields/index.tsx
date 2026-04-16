@@ -5,7 +5,8 @@ import { ColorPickerField } from './ColorPickerField';
 import { KnowledgePickerField } from './KnowledgePickerField';
 import { KnowledgeTagPickerField } from './KnowledgeTagPickerField';
 
-export type { LinkValue, IconValue } from './link-utils';
+export type { LinkValue } from './link-utils';
+export type { IconValue } from '@/lib/types';
 export { resolveLink } from './link-utils';
 export { ImagePickerField } from './ImagePickerField';
 export { IconPickerField } from './IconPickerField';
