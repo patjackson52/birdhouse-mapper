@@ -1,5 +1,7 @@
 import Image from '@tiptap/extension-image';
 import { mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import { VaultImageNodeView } from './VaultImageNodeView';
 
 type ImageLayout = 'default' | 'float-left' | 'float-right' | 'centered' | 'full-width';
 
@@ -43,6 +45,10 @@ export const VaultImage = Image.extend({
       return ['figure', figureAttrs, ['img', mergeAttributes(imgAttrs)], ['figcaption', {}, caption]];
     }
     return ['figure', figureAttrs, ['img', mergeAttributes(imgAttrs)]];
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(VaultImageNodeView);
   },
 
   addAttributes() {
