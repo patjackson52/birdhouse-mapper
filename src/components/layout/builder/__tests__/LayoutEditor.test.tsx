@@ -70,12 +70,11 @@ describe('LayoutEditor', () => {
     expect(onCancel).toHaveBeenCalled();
   });
 
-  it('shows unified preview layout in preview mode (no detail/form tabs)', () => {
+  it('shows Edit, Preview, and Form view toggle buttons', () => {
     render(<LayoutEditor {...defaultProps} />);
-    fireEvent.click(screen.getByText('Preview'));
-    // Should not show Detail/Form tab bar — unified preview only
-    expect(screen.queryByText('Detail')).not.toBeInTheDocument();
-    expect(screen.queryByText('Form')).not.toBeInTheDocument();
+    expect(screen.getByText('Edit')).toBeInTheDocument();
+    expect(screen.getByText('Preview')).toBeInTheDocument();
+    expect(screen.getByText('Form')).toBeInTheDocument();
   });
 
   it('shows component sidebar in edit mode', () => {
