@@ -93,3 +93,46 @@ describe('VaultImageExtension - layout attribute', () => {
     editor.destroy();
   });
 });
+
+describe('VaultImageExtension - widthPercent attribute', () => {
+  it('defaults widthPercent to null', () => {
+    const editor = createEditor('<p><img src="a.jpg" /></p>');
+    const imgNode = findVaultImage(editor.getJSON());
+    expect(imgNode?.attrs?.widthPercent).toBeNull();
+    editor.destroy();
+  });
+
+  it('parses data-width-percent from figure', () => {
+    const editor = createEditor(
+      '<figure data-width-percent="50"><img src="a.jpg" /></figure>'
+    );
+    const json = editor.getJSON();
+    const imgNode = json.content?.find((n) => n.type === 'vaultImage');
+    expect(imgNode?.attrs?.widthPercent).toBe(50);
+    editor.destroy();
+  });
+
+  it('renders widthPercent as data-width-percent on figure', () => {
+    const json = {
+      type: 'doc',
+      content: [{
+        type: 'vaultImage',
+        attrs: { src: 'a.jpg', alt: null, title: null, vaultItemId: null, layout: 'default', caption: null, widthPercent: 66 },
+      }],
+    };
+    const html = generateHTML(json, baseExtensions);
+    expect(html).toContain('data-width-percent="66"');
+  });
+
+  it('does not render data-width-percent when null', () => {
+    const json = {
+      type: 'doc',
+      content: [{
+        type: 'vaultImage',
+        attrs: { src: 'a.jpg', alt: null, title: null, vaultItemId: null, layout: 'default', caption: null, widthPercent: null },
+      }],
+    };
+    const html = generateHTML(json, baseExtensions);
+    expect(html).not.toContain('data-width-percent');
+  });
+});
