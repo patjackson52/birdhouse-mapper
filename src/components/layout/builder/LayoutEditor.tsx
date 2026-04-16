@@ -636,7 +636,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
     </div>
   );
 
-  const previewView = (
+  const cardView = (
     <div className="bg-gray-100 rounded-xl p-3">
       <div className="bg-white rounded-t-2xl shadow-lg">
         {/* Handle */}
@@ -650,13 +650,24 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
             <span className="text-xl">{itemType.icon}</span>
             <h2 className="font-heading font-semibold text-forest-dark text-xl">{mockItem.name}</h2>
           </div>
-          <LayoutRendererDispatch
-            layout={layout}
-            item={mockItem}
-            mode="preview"
-            context="preview"
-            customFields={allFields}
-          />
+          {isEditing ? (
+            <EditableLayoutRenderer
+              layout={layout}
+              item={mockItem}
+              customFields={allFields}
+              selectedBlockId={selectedBlockId}
+              isDragActive={isDragActive}
+              onSelect={handleSelectBlock}
+            />
+          ) : (
+            <LayoutRendererDispatch
+              layout={layout}
+              item={mockItem}
+              mode="preview"
+              context="preview"
+              customFields={allFields}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -710,18 +721,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
 
           {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto p-4">
-            {isEditing ? (
-              <EditableLayoutRenderer
-                layout={layout}
-                item={mockItem}
-                customFields={allFields}
-                selectedBlockId={selectedBlockId}
-                isDragActive={isDragActive}
-                onSelect={handleSelectBlock}
-              />
-            ) : (
-              previewView
-            )}
+            {cardView}
           </div>
 
           {/* Mobile FAB + component drawer */}
@@ -809,18 +809,7 @@ export default function LayoutEditor({ itemType, initialLayout, customFields, en
           {/* Centered preview card */}
           <div className="flex-1 flex justify-center">
             <div className="w-full max-w-[480px]">
-              {isEditing ? (
-                <EditableLayoutRenderer
-                  layout={layout}
-                  item={mockItem}
-                  customFields={allFields}
-                  selectedBlockId={selectedBlockId}
-                  isDragActive={isDragActive}
-                  onSelect={handleSelectBlock}
-                />
-              ) : (
-                previewView
-              )}
+              {cardView}
             </div>
           </div>
         </div>
