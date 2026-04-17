@@ -15,6 +15,12 @@ interface SpeciesPickerProps {
   lng?: number;
 }
 
+interface SelectedEntity {
+  id: string;
+  name: string;
+  photo_url: string | null;
+}
+
 export default function SpeciesPicker({
   entityTypeId,
   entityTypeName,
@@ -24,12 +30,6 @@ export default function SpeciesPicker({
   lat,
   lng,
 }: SpeciesPickerProps) {
-  interface SelectedEntity {
-    id: string;
-    name: string;
-    photo_url: string | null;
-  }
-
   const { isOnline } = useNetworkStatus();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
