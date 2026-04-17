@@ -69,12 +69,18 @@ Remedy — decide which is true for your migration:
 
 Remedy — do both, in the same migration cycle:
 
-1. Add `update <table> set updated_at = now();` to the SQL migration. When clients re-sync, Dexie's `bulkPut` will replace the cached row with one that no longer carries the old column.
+1. For **Class A** tables, add `update <table> set updated_at = now();` to the SQL migration so clients re-sync. Dexie's `bulkPut` replaces the cached row with one that no longer carries the old column. For **Class B** tables, fall back to Rule 1's Class B remedy (bump Dexie schema version or extend sync to watch `updated_at`) — the `update <table> set updated_at = now();` trick does not apply because these tables have no `updated_at` column. For **Class C** tables, cache drift self-corrects on the next full sync; no extra SQL needed.
 2. Bump the Dexie schema version in `src/lib/offline/db.ts`. Add a new `this.version(N + 1).stores({...})` block. If the removed/renamed column was an indexed field in Dexie, update the index list in the new version. Do not mutate the previous version block.
 
 ### Rule 4 — You added a new synced table
 
-Remedy — all three:
+Before the three steps below, decide which sync class the new table belongs in. The choice determines which timestamp columns you add.
+
+- **Class A** (rows mutate, need low-latency delta sync): add `created_at` and `updated_at` columns with an `updated_at` trigger (follow migration 013's `entities_updated_at` / `entity_types_updated_at` pattern). Add the table name to `TABLES_WITH_UPDATED_AT` in `src/lib/offline/sync-engine.ts`.
+- **Class B** (append-mostly, rarely mutated): add `created_at` only. The sync engine will pick up new rows via `created_at`; mutations on existing rows won't propagate until a Dexie schema bump or a sync-engine change, so only pick this class if mutations are truly rare.
+- **Class C** (tiny reference data, always full-sync): skip timestamps entirely. Add the table name to `TABLES_WITHOUT_TIMESTAMPS` in `src/lib/offline/sync-engine.ts`.
+
+Then:
 
 1. Add the table name to `SYNC_TABLES` in `src/lib/offline/sync-engine.ts`.
 2. Add the table to the appropriate scope filter in the same file (`propertyScoped` or `orgScoped`) so the sync engine queries the right foreign key.
@@ -98,7 +104,7 @@ What happens next depends on the table's sync class:
 
 ### None of the above?
 
-If the migration targets a Class A or B table with a change that doesn't match Rules 1–5, ask: "does this change the client-visible shape of the row?" If yes, bump `updated_at` as in Rule 1 out of caution. If no, the migration is cache-safe.
+If the migration targets a Class A or B table with a change that doesn't match Rules 1–5, ask: "does this change the client-visible shape of the row?" If yes, apply Rule 1's remedy for that class (updated_at bump for Class A; Dexie schema version bump or sync-engine widening for Class B). If no, the migration is cache-safe.
 
 Cache-safe examples that need no action:
 
