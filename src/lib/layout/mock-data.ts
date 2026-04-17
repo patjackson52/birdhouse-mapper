@@ -50,6 +50,7 @@ const MOCK_ENTITY_TYPE: EntityType = {
   color: '#4A90D9',
   link_to: ['items'],
   sort_order: 0,
+  api_source: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 };
@@ -62,6 +63,7 @@ const MOCK_ENTITY: Entity & { entity_type: EntityType } = {
   description: null,
   photo_path: null,
   external_link: null,
+  external_id: null,
   custom_field_values: {},
   sort_order: 0,
   created_at: '2026-01-01T00:00:00Z',
