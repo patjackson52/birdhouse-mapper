@@ -2195,9 +2195,25 @@ git commit -m "test(e2e): species picker deduplicates via external_id"
 
 ---
 
+## Deferred — Tasks 14 and 15 (E2E)
+
+Tasks 14 and 15 (Playwright happy-path and deduplication E2E) are deferred to a follow-up session. Implementing them cleanly requires:
+
+- Extending `e2e/fixtures/seed.ts` to provision an `api_source = 'inaturalist'` entity type alongside the existing basic `Species` entity type, seeded on the test property.
+- A known item with lat/lng on the test property so "nearby" suggestions have a target.
+- Running against the live e2e harness (`npm run test:e2e`) with `.env.test.local` configured — writing these without executing them in the real environment is fragile.
+
+The unit + integration coverage landed in Tasks 3–12 already exercises the API proxies, the picker component (search + debounce + selection + chips + offline), admin form wiring, the two parent-form integrations, and the EntityCard photo fallback. The open E2E work is UX-level verification, not implementation.
+
+When resumed, follow the task text in the sections above and also:
+1. Add a second entity-type seed row with `api_source: 'inaturalist'` (e.g. `iNat Species`) so existing tests that rely on the plain `Species` type aren't affected.
+2. Use `page.route('**/api/species/**', ...)` to intercept upstream requests at the Next.js route layer.
+
+---
+
 ## Done criteria
 
 - `npm run type-check` passes.
 - `npm run test` passes.
-- `npm run test:e2e:smoke` passes including the new `Species picker` tests.
 - Manual check in dev: creating an entity type with `api_source = inaturalist`, then opening the update form for an item, shows the new picker; selecting a species creates an `entities` row with `external_id` populated; selecting the same species again reuses that row.
+- (Deferred) `npm run test:e2e:smoke` passes including the new `Species picker` tests — see "Deferred" section above.
