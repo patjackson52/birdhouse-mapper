@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 
 interface ActionButtonsBlockProps {
   itemId: string;
@@ -9,6 +12,12 @@ interface ActionButtonsBlockProps {
 }
 
 export default function ActionButtonsBlock({ itemId, canEdit, canAddUpdate, isAuthenticated = false, mode }: ActionButtonsBlockProps) {
+  const params = useParams();
+  const slug = typeof params?.slug === 'string' ? params.slug : null;
+  const addUpdatePath = slug
+    ? `/p/${slug}/update/${itemId}`
+    : `/manage/update?item=${itemId}`;
+
   if (mode === 'preview') {
     return (
       <div className="flex flex-wrap gap-2 opacity-60">
@@ -27,8 +36,8 @@ export default function ActionButtonsBlock({ itemId, canEdit, canAddUpdate, isAu
   }
 
   const addUpdateHref = isAuthenticated
-    ? `/manage/update?item=${itemId}`
-    : `/login?redirect=${encodeURIComponent(`/manage/update?item=${itemId}`)}`;
+    ? addUpdatePath
+    : `/login?redirect=${encodeURIComponent(addUpdatePath)}`;
 
   return (
     <div className="flex flex-wrap gap-2">

@@ -339,13 +339,24 @@ export async function updateSession(request: NextRequest) {
       const manageMap: Record<string, string> = {
         '/manage': `/p/${defaultPropSlug}`,
         '/manage/add': `/p/${defaultPropSlug}/add`,
-        '/manage/update': `/p/${defaultPropSlug}/activity`,
         '/manage/offline': `/p/${defaultPropSlug}`,
       };
 
       const editMatch = pathname.match(/^\/manage\/edit\/(.+)$/);
       if (editMatch) {
         url.pathname = `/p/${defaultPropSlug}/edit/${editMatch[1]}`;
+        return NextResponse.redirect(url, 308);
+      }
+
+      // /manage/update?item=X → /p/[slug]/update/X (new type picker).
+      // /manage/update (no item) → /p/[slug] home, since we don't support
+      // a standalone "pick an item first" flow in the public shell yet.
+      if (pathname === '/manage/update') {
+        const itemId = request.nextUrl.searchParams.get('item');
+        url.search = '';
+        url.pathname = itemId
+          ? `/p/${defaultPropSlug}/update/${itemId}`
+          : `/p/${defaultPropSlug}`;
         return NextResponse.redirect(url, 308);
       }
 

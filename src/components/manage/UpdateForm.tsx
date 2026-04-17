@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, useParams } from 'next/navigation';
 import { useOfflineStore } from '@/lib/offline/provider';
 import { useConfig } from '@/lib/config/client';
 import { storePhotoBlob } from '@/lib/offline/photo-store';
@@ -18,11 +18,20 @@ import { DynamicFieldRenderer, validateFieldValues } from '@/components/shared/f
 import { canPerformUpdateTypeAction, ROLE_LABELS } from '@/lib/permissions/resolve';
 import { usePermissions } from '@/lib/permissions/hooks';
 
-export default function UpdateForm() {
+interface UpdateFormProps {
+  /** When set, pre-select this update type. */
+  initialTypeId?: string;
+  /** When true (and initialTypeId is set), disable the type select. */
+  lockType?: boolean;
+}
+
+export default function UpdateForm({ initialTypeId, lockType = false }: UpdateFormProps = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedItemId = searchParams.get('item') ?? null;
   const isLocked = preselectedItemId !== null;
+  const params = useParams();
+  const slug = typeof params?.slug === 'string' ? params.slug : null;
 
   const { userBaseRole } = usePermissions();
 
@@ -43,7 +52,7 @@ export default function UpdateForm() {
 
   // When locked, seed itemId immediately from URL param
   const [itemId, setItemId] = useState(preselectedItemId ?? '');
-  const [updateTypeId, setUpdateTypeId] = useState('');
+  const [updateTypeId, setUpdateTypeId] = useState(initialTypeId ?? '');
   const [content, setContent] = useState('');
   const [updateDate, setUpdateDate] = useState(
     new Date().toISOString().split('T')[0]
@@ -78,9 +87,11 @@ export default function UpdateForm() {
 
       if (typeData) {
         setUpdateTypes(typeData);
-        // Default to first global type
-        const firstGlobal = typeData.find((t) => t.is_global);
-        if (firstGlobal) setUpdateTypeId(firstGlobal.id);
+        // Default to first global type — only when no explicit initialTypeId was given.
+        if (!initialTypeId) {
+          const firstGlobal = typeData.find((t) => t.is_global);
+          if (firstGlobal) setUpdateTypeId(firstGlobal.id);
+        }
       }
 
       if (itData) setItemTypes(itData);
@@ -217,7 +228,11 @@ export default function UpdateForm() {
         });
       }
 
-      router.push('/manage');
+      if (slug && isLocked && preselectedItemId) {
+        router.push(`/p/${slug}?item=${preselectedItemId}`);
+      } else {
+        router.push('/manage');
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save update.');
@@ -294,6 +309,7 @@ export default function UpdateForm() {
             onChange={(e) => { setUpdateTypeId(e.target.value); setCustomFieldValues({}); }}
             className="input-field"
             required
+            disabled={lockType && !!initialTypeId}
           >
             <option value="">Select type...</option>
             {availableUpdateTypes.map((t) => {
