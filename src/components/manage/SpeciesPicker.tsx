@@ -243,10 +243,7 @@ export default function SpeciesPicker({
               <button
                 type="button"
                 key={s.id}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  void handleSelect(s);
-                }}
+                onClick={() => void handleSelect(s)}
                 className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
               >
                 <div className="font-medium">{s.common_name}</div>
@@ -272,10 +269,7 @@ export default function SpeciesPicker({
               <button
                 type="button"
                 key={s.id}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  void handleSelect(s);
-                }}
+                onClick={() => void handleSelect(s)}
                 className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
               >
                 <div className="font-medium">{s.common_name}</div>
