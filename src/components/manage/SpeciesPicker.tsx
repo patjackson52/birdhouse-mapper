@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNetworkStatus } from '@/lib/offline/network';
+import { createClient } from '@/lib/supabase/client';
 import type { SpeciesResult } from '@/lib/types';
 
 interface SpeciesPickerProps {
@@ -85,6 +86,50 @@ export default function SpeciesPicker({
   const showEmptyState =
     isFocused && query.trim().length === 0 && nearby.length === 0 && !nearbyLoading;
 
+  async function handleSelect(species: SpeciesResult) {
+    const supabase = createClient();
+    const externalId = String(species.id);
+
+    const { data: existing } = await supabase
+      .from('entities')
+      .select('id')
+      .eq('entity_type_id', entityTypeId)
+      .eq('external_id', externalId)
+      .maybeSingle();
+
+    let entityId: string | null = existing?.id ?? null;
+
+    if (!entityId) {
+      const { data: inserted, error } = await supabase
+        .from('entities')
+        .insert({
+          entity_type_id: entityTypeId,
+          org_id: orgId,
+          name: species.common_name,
+          description: species.name,
+          external_id: externalId,
+          photo_path: null,
+          custom_field_values: {
+            scientific_name: species.name,
+            photo_url: species.photo_url ?? '',
+            wikipedia_url: species.wikipedia_url ?? '',
+            observations_count: species.observations_count,
+          },
+        })
+        .select('id')
+        .single();
+
+      if (error || !inserted) return;
+      entityId = inserted.id;
+    }
+
+    if (entityId && !selectedIds.includes(entityId)) {
+      onChange([...selectedIds, entityId]);
+    }
+    setQuery('');
+    setIsFocused(false);
+  }
+
   return (
     <div className="relative">
       <input
@@ -113,9 +158,14 @@ export default function SpeciesPicker({
             <div className="px-3 py-2 text-xs text-sage">No matches.</div>
           )}
           {results.map((s) => (
-            <div
+            <button
+              type="button"
               key={s.id}
-              className="px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                void handleSelect(s);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
             >
               <div className="font-medium">{s.common_name}</div>
               <div className="text-xs italic text-sage">
@@ -126,7 +176,7 @@ export default function SpeciesPicker({
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
@@ -137,13 +187,18 @@ export default function SpeciesPicker({
             Recently seen nearby
           </div>
           {nearby.map((s) => (
-            <div
+            <button
+              type="button"
               key={s.id}
-              className="px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                void handleSelect(s);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
             >
               <div className="font-medium">{s.common_name}</div>
               <div className="text-xs italic text-sage">{s.name}</div>
-            </div>
+            </button>
           ))}
         </div>
       )}
