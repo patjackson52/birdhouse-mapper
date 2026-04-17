@@ -438,9 +438,31 @@ export interface ItemWithDetails extends Item {
  * For emoji icons, returns the emoji character.
  * For library icons, returns the icon name in a readable format.
  */
-export function iconDisplayName(icon: IconValue): string {
-  if (icon.set === 'emoji') return icon.name;
-  return icon.name.replace(/([A-Z])/g, ' $1').trim();
+export function iconDisplayName(icon: IconValue | string | null | undefined): string {
+  const normalized = normalizeIcon(icon);
+  if (!normalized) return '';
+  if (normalized.set === 'emoji') return normalized.name;
+  return normalized.name.replace(/([A-Z])/g, ' $1').trim();
+}
+
+/**
+ * Coerces a legacy string icon (pre-migration 044) to an IconValue object.
+ * Migration 044 changed item_types.icon and entity_types.icon from text to jsonb,
+ * but `ALTER COLUMN TYPE` doesn't bump `updated_at`, so clients whose IndexedDB
+ * cache synced before the migration still hold plain strings. All display code
+ * should route icon values through this normalizer.
+ */
+export function normalizeIcon(icon: IconValue | string | null | undefined): IconValue | null {
+  if (icon == null) return null;
+  if (typeof icon === 'string') {
+    const trimmed = icon.trim();
+    if (trimmed.length === 0) return null;
+    return { set: 'emoji', name: trimmed };
+  }
+  if (typeof icon === 'object' && typeof icon.set === 'string' && typeof icon.name === 'string') {
+    return icon;
+  }
+  return null;
 }
 
 // ======================

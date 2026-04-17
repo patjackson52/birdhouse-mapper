@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { IconValue } from '@/lib/types';
+import { normalizeIcon } from '@/lib/types';
 import { IconRenderer } from './IconRenderer';
 import { searchIcons, getLucideIcons, getHeroicons, getEmojis, type IconEntry } from './icon-catalog';
 import { getAllEmojis } from './emoji-catalog';
@@ -79,10 +80,11 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
     setQuery('');
   }
 
-  const displayName = value
-    ? value.set === 'emoji'
-      ? emojiDisplayName(value.name)
-      : value.name.replace(/([A-Z])/g, ' $1').trim()
+  const normalizedValue = normalizeIcon(value);
+  const displayName = normalizedValue
+    ? normalizedValue.set === 'emoji'
+      ? emojiDisplayName(normalizedValue.name)
+      : normalizedValue.name.replace(/([A-Z])/g, ' $1').trim()
     : null;
 
   return (
@@ -93,17 +95,17 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 input-field text-sm w-full text-left"
         >
-          {value ? (
+          {normalizedValue ? (
             <>
-              <IconRenderer icon={value} size={18} />
+              <IconRenderer icon={normalizedValue} size={18} />
               <span className="text-forest-dark">{displayName}</span>
-              <span className="text-sage text-xs ml-auto">{value.set}</span>
+              <span className="text-sage text-xs ml-auto">{normalizedValue.set}</span>
             </>
           ) : (
             <span className="text-sage">No icon</span>
           )}
         </button>
-        {value && (
+        {normalizedValue && (
           <button
             type="button"
             onClick={() => onChange(undefined)}
