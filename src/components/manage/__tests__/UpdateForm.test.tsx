@@ -83,6 +83,7 @@ const { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields, mockEnt
 const mockPush = vi.fn();
 const mockBack = vi.fn();
 let mockSearchParamsGet = vi.fn((_key: string): string | null => null);
+let mockParams: Record<string, string> = {};
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -93,6 +94,7 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: mockSearchParamsGet,
   }),
+  useParams: () => mockParams,
 }));
 
 // ── Config mock ──────────────────────────────────────────────────────────────
@@ -291,6 +293,34 @@ describe('UpdateForm — locked (with ?item=item-1 param)', () => {
   });
 });
 
+describe('UpdateForm — type locked (initialTypeId + lockType props)', () => {
+  beforeEach(() => {
+    mockSearchParamsGet = vi.fn((key: string) => (key === 'item' ? 'item-1' : null));
+    mockPush.mockReset();
+    mockBack.mockReset();
+  });
+
+  it('pre-selects the given update type', async () => {
+    render(<UpdateForm initialTypeId="ut-1" lockType />);
+    const select = await screen.findByLabelText(/update type/i) as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe('ut-1'));
+  });
+
+  it('disables the update type select when lockType is true', async () => {
+    render(<UpdateForm initialTypeId="ut-1" lockType />);
+    const select = await screen.findByLabelText(/update type/i) as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe('ut-1'));
+    expect(select).toBeDisabled();
+  });
+
+  it('leaves the update type select enabled when lockType is false', async () => {
+    render(<UpdateForm initialTypeId="ut-1" />);
+    const select = await screen.findByLabelText(/update type/i) as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe('ut-1'));
+    expect(select).not.toBeDisabled();
+  });
+});
+
 describe('UpdateForm — entity type rendering', () => {
   beforeEach(() => {
     mockSearchParamsGet = vi.fn(() => null);
@@ -304,5 +334,32 @@ describe('UpdateForm — entity type rendering', () => {
       expect(screen.getByTestId('species-picker-et-species')).toBeInTheDocument()
     );
     expect(screen.getByTestId('entity-select')).toBeInTheDocument();
+  });
+});
+
+describe('UpdateForm — post-save redirect', () => {
+  beforeEach(() => {
+    mockSearchParamsGet = vi.fn((key: string) => (key === 'item' ? 'item-1' : null));
+    mockPush.mockReset();
+    mockBack.mockReset();
+    mockParams = {};
+  });
+
+  it('redirects to /p/[slug]?item=[itemId] when slug is in route params', async () => {
+    mockParams = { slug: 'oak-meadow' };
+    render(<UpdateForm initialTypeId="ut-1" lockType />);
+    const submit = await screen.findByRole('button', { name: /add update/i });
+    await userEvent.click(submit);
+    await waitFor(() =>
+      expect(mockPush).toHaveBeenCalledWith('/p/oak-meadow?item=item-1')
+    );
+  });
+
+  it('falls back to /manage when no slug is in route params (legacy mount)', async () => {
+    mockParams = {};
+    render(<UpdateForm initialTypeId="ut-1" lockType />);
+    const submit = await screen.findByRole('button', { name: /add update/i });
+    await userEvent.click(submit);
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/manage'));
   });
 });
