@@ -16,6 +16,10 @@
 - [ ] Type check passes (`npm run type-check`)
 - [ ] E2E tests pass (if applicable)
 
+## Cache safety
+
+- [ ] This PR does not add a SQL migration, OR the migration follows `docs/playbooks/offline-cache-schema-changes.md`.
+
 ## Memory & Decision Tracking
 
 - [ ] Does this change introduce a lasting technical decision? If yes, create or update an ADR in `docs/adr/`.
