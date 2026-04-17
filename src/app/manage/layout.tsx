@@ -47,7 +47,6 @@ export default function ManageLayout({
   const tabs = [
     { href: '/manage', label: 'Dashboard', show: true },
     { href: '/manage/add', label: 'Add Item', show: permissions.items.create },
-    { href: '/manage/update', label: 'Add Update', show: permissions.updates.create },
   ].filter((t) => t.show);
 
   return (

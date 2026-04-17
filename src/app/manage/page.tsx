@@ -38,11 +38,6 @@ export default function ManageDashboard() {
               Add Item
             </Link>
           )}
-          {permissions.updates.create && (
-            <Link href="/manage/update" className="btn-secondary text-sm">
-              Add Update
-            </Link>
-          )}
         </div>
       </div>
 
