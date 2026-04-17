@@ -111,8 +111,8 @@ export default function SpeciesPicker({
           photo_path: null,
           custom_field_values: {
             scientific_name: species.name,
-            photo_url: species.photo_url ?? '',
-            wikipedia_url: species.wikipedia_url ?? '',
+            photo_url: species.photo_url,
+            wikipedia_url: species.wikipedia_url,
             observations_count: species.observations_count,
           },
         })
