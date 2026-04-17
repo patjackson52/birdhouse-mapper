@@ -5,6 +5,7 @@ import type {
   EntityType, EntityTypeField, Entity, ItemEntity, UpdateEntity,
   EntityFieldType, EntityLinkTarget,
 } from '../types';
+import { iconDisplayName, normalizeIcon } from '../types';
 
 describe('Item type structure', () => {
   it('accepts a valid Item object', () => {
@@ -359,5 +360,47 @@ describe('ItemWithDetails with entities', () => {
     expect(detailed.entities[0].name).toBe('Chickadee');
     expect(detailed.entities[0].entity_type.name).toBe('Species');
     expect(detailed.updates[0].entities).toHaveLength(1);
+  });
+});
+
+describe('normalizeIcon', () => {
+  it('passes a valid IconValue object through unchanged', () => {
+    const icon = { set: 'lucide' as const, name: 'Home' };
+    expect(normalizeIcon(icon)).toEqual(icon);
+  });
+
+  it('wraps a legacy string into an emoji IconValue', () => {
+    expect(normalizeIcon('📍')).toEqual({ set: 'emoji', name: '📍' });
+  });
+
+  it('trims whitespace around legacy string icons', () => {
+    expect(normalizeIcon('👀 ')).toEqual({ set: 'emoji', name: '👀' });
+  });
+
+  it('returns null for empty string, whitespace, null, or undefined', () => {
+    expect(normalizeIcon('')).toBeNull();
+    expect(normalizeIcon('   ')).toBeNull();
+    expect(normalizeIcon(null)).toBeNull();
+    expect(normalizeIcon(undefined)).toBeNull();
+  });
+});
+
+describe('iconDisplayName', () => {
+  it('returns the emoji character for emoji IconValues', () => {
+    expect(iconDisplayName({ set: 'emoji', name: '📍' })).toBe('📍');
+  });
+
+  it('formats PascalCase lucide names with spaces', () => {
+    expect(iconDisplayName({ set: 'lucide', name: 'HomeHeart' })).toBe('Home Heart');
+  });
+
+  it('handles legacy string icons without crashing (pre-migration 044 cache)', () => {
+    expect(iconDisplayName('📍')).toBe('📍');
+    expect(iconDisplayName('👀 ')).toBe('👀');
+  });
+
+  it('returns empty string for nullish inputs', () => {
+    expect(iconDisplayName(null)).toBe('');
+    expect(iconDisplayName(undefined)).toBe('');
   });
 });

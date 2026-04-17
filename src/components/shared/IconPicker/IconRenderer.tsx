@@ -2,19 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import type { IconValue } from '@/lib/types';
+import { normalizeIcon } from '@/lib/types';
 import type { ComponentType, SVGProps } from 'react';
 
 interface IconRendererProps {
-  icon: IconValue | undefined;
+  icon: IconValue | string | null | undefined;
   size?: number;
   className?: string;
 }
 
 export function IconRenderer({ icon, size = 20, className }: IconRendererProps) {
+  const normalized = normalizeIcon(icon);
   const [IconComponent, setIconComponent] = useState<ComponentType<SVGProps<SVGSVGElement>> | null>(null);
 
   useEffect(() => {
-    if (!icon || icon.set === 'emoji') {
+    if (!normalized || normalized.set === 'emoji') {
       setIconComponent(null);
       return;
     }
@@ -25,17 +27,17 @@ export function IconRenderer({ icon, size = 20, className }: IconRendererProps) 
       try {
         let Component: ComponentType<SVGProps<SVGSVGElement>> | undefined;
 
-        if (icon!.set === 'lucide') {
+        if (normalized!.set === 'lucide') {
           const mod = await import('lucide-react');
-          Component = (mod.icons as Record<string, ComponentType<any>>)[icon!.name];
-        } else if (icon!.set === 'heroicons') {
-          const style = icon!.style || 'outline';
+          Component = (mod.icons as Record<string, ComponentType<any>>)[normalized!.name];
+        } else if (normalized!.set === 'heroicons') {
+          const style = normalized!.style || 'outline';
           if (style === 'solid') {
             const mod = await import('@heroicons/react/24/solid');
-            Component = (mod as unknown as Record<string, ComponentType<any>>)[`${icon!.name}Icon`];
+            Component = (mod as unknown as Record<string, ComponentType<any>>)[`${normalized!.name}Icon`];
           } else {
             const mod = await import('@heroicons/react/24/outline');
-            Component = (mod as unknown as Record<string, ComponentType<any>>)[`${icon!.name}Icon`];
+            Component = (mod as unknown as Record<string, ComponentType<any>>)[`${normalized!.name}Icon`];
           }
         }
 
@@ -49,14 +51,14 @@ export function IconRenderer({ icon, size = 20, className }: IconRendererProps) 
 
     load();
     return () => { cancelled = true; };
-  }, [icon?.set, icon?.name, icon?.style]);
+  }, [normalized?.set, normalized?.name, normalized?.style]);
 
-  if (!icon) return null;
+  if (!normalized) return null;
 
-  if (icon.set === 'emoji') {
+  if (normalized.set === 'emoji') {
     return (
       <span style={{ fontSize: `${size}px`, lineHeight: 1 }} className={className}>
-        {icon.name}
+        {normalized.name}
       </span>
     );
   }
@@ -70,26 +72,28 @@ export function IconRenderer({ icon, size = 20, className }: IconRendererProps) 
  * Returns an HTML string for an icon. Used by Leaflet DivIcon markers
  * and other contexts that need raw HTML instead of React components.
  */
-export async function iconToHtml(icon: IconValue, size: number): Promise<string> {
-  if (icon.set === 'emoji') {
-    return icon.name;
+export async function iconToHtml(icon: IconValue | string | null | undefined, size: number): Promise<string> {
+  const normalized = normalizeIcon(icon);
+  if (!normalized) return '';
+  if (normalized.set === 'emoji') {
+    return normalized.name;
   }
 
   // For SVG icons, dynamically import and render to string
   const { renderToStaticMarkup } = await import('react-dom/server');
 
-  if (icon.set === 'lucide') {
+  if (normalized.set === 'lucide') {
     const mod = await import('lucide-react');
-    const Component = (mod.icons as Record<string, ComponentType<any>>)[icon.name];
+    const Component = (mod.icons as Record<string, ComponentType<any>>)[normalized.name];
     if (Component) {
       return renderToStaticMarkup(<Component width={size} height={size} />);
     }
-  } else if (icon.set === 'heroicons') {
-    const style = icon.style || 'outline';
+  } else if (normalized.set === 'heroicons') {
+    const style = normalized.style || 'outline';
     const mod = style === 'solid'
       ? await import('@heroicons/react/24/solid')
       : await import('@heroicons/react/24/outline');
-    const Component = (mod as unknown as Record<string, ComponentType<any>>)[`${icon.name}Icon`];
+    const Component = (mod as unknown as Record<string, ComponentType<any>>)[`${normalized.name}Icon`];
     if (Component) {
       return renderToStaticMarkup(<Component width={size} height={size} />);
     }
