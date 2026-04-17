@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import UpdateForm from '@/components/manage/UpdateForm';
 
 // ── Hoisted mock data (available before vi.mock factories run) ────────────────
-const { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields } = vi.hoisted(() => {
+const { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields, mockEntityTypes } = vi.hoisted(() => {
   const mockItems = [
     {
       id: 'item-1',
@@ -49,7 +49,34 @@ const { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields } = vi.h
 
   const mockUpdateTypeFields: never[] = [];
 
-  return { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields };
+  const mockEntityTypes = [
+    {
+      id: 'et-species',
+      org_id: 'org-1',
+      name: 'Species',
+      icon: { set: 'emoji', name: '🦅' },
+      color: '#5D7F3A',
+      link_to: ['updates'],
+      api_source: 'inaturalist',
+      sort_order: 0,
+      created_at: '',
+      updated_at: '',
+    },
+    {
+      id: 'et-volunteers',
+      org_id: 'org-1',
+      name: 'Volunteers',
+      icon: { set: 'emoji', name: '🙋' },
+      color: '#5D7F3A',
+      link_to: ['updates'],
+      api_source: null,
+      sort_order: 0,
+      created_at: '',
+      updated_at: '',
+    },
+  ];
+
+  return { mockItems, mockItemTypes, mockUpdateTypes, mockUpdateTypeFields, mockEntityTypes };
 });
 
 // ── Navigation mocks ────────────────────────────────────────────────────────
@@ -96,6 +123,12 @@ vi.mock('@/components/manage/EntitySelect', () => ({
   default: () => <div data-testid="entity-select" />,
 }));
 
+vi.mock('@/components/manage/SpeciesPicker', () => ({
+  default: (props: { entityTypeId: string }) => (
+    <div data-testid={`species-picker-${props.entityTypeId}`} />
+  ),
+}));
+
 vi.mock('@/components/item/StatusBadge', () => ({
   default: ({ status }: { status: string }) => (
     <span data-testid="status-badge">{status}</span>
@@ -108,7 +141,7 @@ vi.mock('@/lib/offline/provider', () => ({
     getItems: vi.fn().mockResolvedValue(mockItems),
     getItemTypes: vi.fn().mockResolvedValue(mockItemTypes),
     getUpdateTypes: vi.fn().mockResolvedValue(mockUpdateTypes),
-    getEntityTypes: vi.fn().mockResolvedValue([]),
+    getEntityTypes: vi.fn().mockResolvedValue(mockEntityTypes),
     getUpdateTypeFields: vi.fn().mockResolvedValue(mockUpdateTypeFields),
     getCustomFields: vi.fn().mockResolvedValue([]),
     getEntities: vi.fn().mockResolvedValue([]),
@@ -255,5 +288,21 @@ describe('UpdateForm — locked (with ?item=item-1 param)', () => {
     await userEvent.click(cancel);
     expect(mockPush).toHaveBeenCalledWith('/?item=item-1');
     expect(mockBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('UpdateForm — entity type rendering', () => {
+  beforeEach(() => {
+    mockSearchParamsGet = vi.fn(() => null);
+    mockPush.mockReset();
+    mockBack.mockReset();
+  });
+
+  it('renders SpeciesPicker for api_source entity types, EntitySelect otherwise', async () => {
+    render(<UpdateForm />);
+    await waitFor(() =>
+      expect(screen.getByTestId('species-picker-et-species')).toBeInTheDocument()
+    );
+    expect(screen.getByTestId('entity-select')).toBeInTheDocument();
   });
 });
