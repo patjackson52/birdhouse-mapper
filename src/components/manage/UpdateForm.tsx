@@ -10,6 +10,7 @@ import type { Item, ItemType, UpdateType, EntityType, UpdateTypeField } from '@/
 import { IconRenderer } from '@/components/shared/IconPicker';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
+import SpeciesPicker from './SpeciesPicker';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem } from '@/lib/location/utils';
 import StatusBadge from '@/components/item/StatusBadge';
@@ -126,6 +127,11 @@ export default function UpdateForm() {
   const selectedItemType = selectedItem
     ? itemTypes.find((t) => t.id === selectedItem.item_type_id)
     : undefined;
+
+  const speciesLat =
+    typeof selectedItem?.latitude === 'number' ? selectedItem.latitude : undefined;
+  const speciesLng =
+    typeof selectedItem?.longitude === 'number' ? selectedItem.longitude : undefined;
 
   const availableUpdateTypes = updateTypes.filter(
     (t) => t.is_global || (selectedItem && t.item_type_id === selectedItem.item_type_id)
@@ -348,13 +354,27 @@ export default function UpdateForm() {
 
       {entityTypes.map((et) => (
         <div key={et.id}>
-          <label className="label"><IconRenderer icon={et.icon} size={14} /> {et.name}</label>
-          <EntitySelect
-            entityTypeId={et.id}
-            entityTypeName={et.name}
-            selectedIds={selectedEntityIds[et.id] || []}
-            onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
-          />
+          <label className="label">
+            <IconRenderer icon={et.icon} size={14} /> {et.name}
+          </label>
+          {et.api_source === 'inaturalist' && orgId ? (
+            <SpeciesPicker
+              entityTypeId={et.id}
+              entityTypeName={et.name}
+              orgId={orgId}
+              selectedIds={selectedEntityIds[et.id] || []}
+              onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+              lat={speciesLat}
+              lng={speciesLng}
+            />
+          ) : (
+            <EntitySelect
+              entityTypeId={et.id}
+              entityTypeName={et.name}
+              selectedIds={selectedEntityIds[et.id] || []}
+              onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+            />
+          )}
         </div>
       ))}
 

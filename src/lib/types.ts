@@ -268,6 +268,18 @@ export type EntityFieldType = 'text' | 'number' | 'dropdown' | 'date' | 'url';
 
 export type EntityLinkTarget = 'items' | 'updates';
 
+export type EntityApiSource = 'inaturalist';
+
+export interface SpeciesResult {
+  id: number;
+  name: string;
+  common_name: string;
+  photo_url: string | null;
+  rank: string;
+  observations_count: number;
+  wikipedia_url: string | null;
+}
+
 export interface EntityType {
   id: string;
   org_id: string;
@@ -276,6 +288,7 @@ export interface EntityType {
   color: string;
   link_to: EntityLinkTarget[];
   sort_order: number;
+  api_source: EntityApiSource | null;
   created_at: string;
   updated_at: string;
 }
@@ -299,6 +312,7 @@ export interface Entity {
   description: string | null;
   photo_path: string | null;
   external_link: string | null;
+  external_id: string | null;
   custom_field_values: Record<string, unknown>;
   sort_order: number;
   created_at: string;

@@ -192,6 +192,7 @@ describe('EntityType structure', () => {
       color: '#5D7F3A',
       link_to: ['items', 'updates'],
       sort_order: 0,
+      api_source: null,
       created_at: '2025-01-01T00:00:00Z',
       updated_at: '2025-01-01T00:00:00Z',
     };
@@ -263,6 +264,7 @@ describe('Entity structure', () => {
       description: 'Small songbird',
       photo_path: 'entities/ent-1/1710720000000.jpg',
       external_link: 'https://example.com/chickadee',
+      external_id: null,
       custom_field_values: { 'etf-1': 'Poecile atricapillus', 'etf-2': 'LC' },
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
@@ -281,6 +283,7 @@ describe('Entity structure', () => {
       description: null,
       photo_path: null,
       external_link: null,
+      external_id: null,
       custom_field_values: {},
       sort_order: 0,
       created_at: '2025-01-01T00:00:00Z',
@@ -309,14 +312,14 @@ describe('ItemWithDetails with entities', () => {
   it('includes entities on item and on updates', () => {
     const entityType: EntityType = {
       id: 'et-1', org_id: 'org-1', name: 'Species', icon: { set: 'emoji', name: '🐦' }, color: '#5D7F3A',
-      link_to: ['items', 'updates'], sort_order: 0,
+      link_to: ['items', 'updates'], sort_order: 0, api_source: null,
       created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
     };
 
     const entity: Entity & { entity_type: EntityType } = {
       id: 'ent-1', entity_type_id: 'et-1', org_id: 'org-1',
       name: 'Chickadee', description: null, photo_path: null,
-      external_link: null, custom_field_values: {}, sort_order: 0,
+      external_link: null, external_id: null, custom_field_values: {}, sort_order: 0,
       created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
       entity_type: entityType,
     };

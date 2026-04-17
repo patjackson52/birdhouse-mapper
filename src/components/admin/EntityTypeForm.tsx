@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { EntityType, EntityTypeField, EntityLinkTarget, IconValue } from '@/lib/types';
+import type { EntityType, EntityTypeField, EntityLinkTarget, IconValue, EntityApiSource } from '@/lib/types';
 import { FieldDefinitionEditor, type FieldDraft } from '@/components/shared/fields';
 import { IconPicker } from '@/components/shared/IconPicker';
 
@@ -22,6 +22,9 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
   const [icon, setIcon] = useState<IconValue>(entityType?.icon || { set: 'emoji', name: '📋' });
   const [color, setColor] = useState(entityType?.color || '#5D7F3A');
   const [linkTo, setLinkTo] = useState<EntityLinkTarget[]>(entityType?.link_to || ['items', 'updates']);
+  const [apiSource, setApiSource] = useState<EntityApiSource | ''>(
+    entityType?.api_source ?? ''
+  );
 
   const [fields, setFields] = useState<FieldDraft[]>(() => {
     if (entityType?.entity_type_fields) {
@@ -66,6 +69,7 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
         icon,
         color,
         link_to: linkTo,
+        api_source: apiSource === '' ? null : apiSource,
         org_id: orgId,
       };
 
@@ -179,6 +183,22 @@ export default function EntityTypeForm({ entityType, orgId, onSaved, onCancel }:
             Updates
           </label>
         </div>
+      </div>
+
+      <div>
+        <label className="label" htmlFor="api-source">API Source</label>
+        <select
+          id="api-source"
+          value={apiSource}
+          onChange={(e) => setApiSource(e.target.value as EntityApiSource | '')}
+          className="input-field w-auto"
+        >
+          <option value="">None</option>
+          <option value="inaturalist">iNaturalist</option>
+        </select>
+        <p className="text-xs text-sage mt-1">
+          When set, forms render the species picker instead of a basic select.
+        </p>
       </div>
 
       {/* Custom Fields Editor */}
