@@ -76,6 +76,9 @@ export async function GET(request: NextRequest) {
       headers: { 'Cache-Control': 'public, max-age=3600' },
     });
   } catch {
-    return NextResponse.json([], { status: 200 });
+    return NextResponse.json([], {
+      status: 200,
+      headers: { 'Cache-Control': 'public, max-age=3600' },
+    });
   }
 }
