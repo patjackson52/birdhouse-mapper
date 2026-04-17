@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import PhotoViewer from '@/components/ui/PhotoViewer';
 import LayoutRendererDispatch from '@/components/layout/LayoutRendererDispatch';
 
@@ -25,6 +26,8 @@ interface DetailPanelProps {
 
 export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate, onSheetStateChange }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const params = useParams();
+  const slug = typeof params?.slug === 'string' ? params.slug : null;
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -193,7 +196,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
           )}
           {canAddUpdate && (
             <Link
-              href={`/manage/update?item=${item.id}`}
+              href={slug ? `/p/${slug}/update/${item.id}` : `/manage/update?item=${item.id}`}
               className="btn-secondary text-sm flex-1 text-center"
             >
               Add Update
