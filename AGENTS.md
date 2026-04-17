@@ -32,6 +32,7 @@ These are non-negotiable. Do not deviate without an ADR (see below).
 | Server mutations | Server actions (`'use server'`) returning `{ success: true }` or `{ error: string }` |
 | Server Supabase | `createClient()` from `@/lib/supabase/server` (synchronous) |
 | Client Supabase | `createClient()` from `@/lib/supabase/client` (synchronous) |
+| Offline cache safety | Any SQL migration that touches a table in `SYNC_TABLES` (see `src/lib/offline/sync-engine.ts`) must follow `docs/playbooks/offline-cache-schema-changes.md`. When in doubt, `update <table> set updated_at = now();` in the same migration. |
 
 ## Coding and Change Discipline
 
