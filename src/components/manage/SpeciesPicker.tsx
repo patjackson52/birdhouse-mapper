@@ -24,6 +24,12 @@ export default function SpeciesPicker({
   lat,
   lng,
 }: SpeciesPickerProps) {
+  interface SelectedEntity {
+    id: string;
+    name: string;
+    photo_url: string | null;
+  }
+
   const { isOnline } = useNetworkStatus();
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -31,6 +37,7 @@ export default function SpeciesPicker({
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [results, setResults] = useState<SpeciesResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedEntities, setSelectedEntities] = useState<SelectedEntity[]>([]);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -82,6 +89,52 @@ export default function SpeciesPicker({
     return () => clearTimeout(handle);
   }, [query, isOnline]);
 
+  useEffect(() => {
+    if (selectedIds.length === 0) {
+      setSelectedEntities([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchEntities = async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('entities')
+        .select('id, name, custom_field_values')
+        .in('id', selectedIds);
+
+      if (cancelled) return;
+      const rows = (data ?? []) as Array<{
+        id: string;
+        name: string;
+        custom_field_values: Record<string, unknown>;
+      }>;
+      const mapped: SelectedEntity[] = selectedIds.map((sid) => {
+        const row = rows.find((r) => r.id === sid);
+        const photo =
+          row && typeof row.custom_field_values?.photo_url === 'string'
+            ? (row.custom_field_values.photo_url as string)
+            : null;
+        return {
+          id: sid,
+          name: row?.name ?? 'Unknown',
+          photo_url: photo,
+        };
+      });
+      setSelectedEntities(mapped);
+    };
+
+    fetchEntities();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedIds]);
+
+  function removeSelected(id: string) {
+    onChange(selectedIds.filter((sid) => sid !== id));
+  }
+
   const showNearby = isFocused && query.trim().length === 0 && nearby.length > 0;
   const showEmptyState =
     isFocused && query.trim().length === 0 && nearby.length === 0 && !nearbyLoading;
@@ -131,83 +184,113 @@ export default function SpeciesPicker({
   }
 
   return (
-    <div className="relative">
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setTimeout(() => setIsFocused(false), 150)}
-        placeholder={`Search ${entityTypeName.toLowerCase()}...`}
-        className="input-field"
-        disabled={!isOnline}
-      />
-
-      {!isOnline && (
-        <p className="text-xs text-sage mt-1">
-          Search requires internet connection.
-        </p>
-      )}
-
-      {isFocused && query.trim().length > 0 && (
-        <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-sage-light rounded-lg shadow-lg">
-          {searchLoading && (
-            <div className="px-3 py-2 text-xs text-sage">Searching...</div>
-          )}
-          {!searchLoading && results.length === 0 && (
-            <div className="px-3 py-2 text-xs text-sage">No matches.</div>
-          )}
-          {results.map((s) => (
-            <button
-              type="button"
-              key={s.id}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                void handleSelect(s);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
+    <div>
+      {selectedEntities.length > 0 && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {selectedEntities.map((se) => (
+            <span
+              key={se.id}
+              className="inline-flex items-center gap-1.5 bg-forest/10 text-forest-dark text-xs px-2 py-1 rounded-full"
             >
-              <div className="font-medium">{s.common_name}</div>
-              <div className="text-xs italic text-sage">
-                {s.name}
-                {s.observations_count > 0 && (
-                  <span className="not-italic ml-2 text-[10px]">
-                    ({s.observations_count.toLocaleString()} observations)
-                  </span>
-                )}
-              </div>
-            </button>
+              {se.photo_url && (
+                <img
+                  src={se.photo_url}
+                  alt=""
+                  className="w-5 h-5 rounded-full object-cover"
+                />
+              )}
+              {se.name}
+              <button
+                type="button"
+                aria-label={`Remove ${se.name}`}
+                onClick={() => removeSelected(se.id)}
+                className="hover:text-red-600"
+              >
+                &times;
+              </button>
+            </span>
           ))}
         </div>
       )}
 
-      {showNearby && (
-        <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-sage-light rounded-lg shadow-lg">
-          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-sage border-b border-sage-light">
-            Recently seen nearby
+      <div className="relative">
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setTimeout(() => setIsFocused(false), 150)}
+          placeholder={`Search ${entityTypeName.toLowerCase()}...`}
+          className="input-field"
+          disabled={!isOnline}
+        />
+
+        {!isOnline && (
+          <p className="text-xs text-sage mt-1">
+            Search requires internet connection.
+          </p>
+        )}
+
+        {isFocused && query.trim().length > 0 && (
+          <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-sage-light rounded-lg shadow-lg">
+            {searchLoading && (
+              <div className="px-3 py-2 text-xs text-sage">Searching...</div>
+            )}
+            {!searchLoading && results.length === 0 && (
+              <div className="px-3 py-2 text-xs text-sage">No matches.</div>
+            )}
+            {results.map((s) => (
+              <button
+                type="button"
+                key={s.id}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  void handleSelect(s);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
+              >
+                <div className="font-medium">{s.common_name}</div>
+                <div className="text-xs italic text-sage">
+                  {s.name}
+                  {s.observations_count > 0 && (
+                    <span className="not-italic ml-2 text-[10px]">
+                      ({s.observations_count.toLocaleString()} observations)
+                    </span>
+                  )}
+                </div>
+              </button>
+            ))}
           </div>
-          {nearby.map((s) => (
-            <button
-              type="button"
-              key={s.id}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                void handleSelect(s);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
-            >
-              <div className="font-medium">{s.common_name}</div>
-              <div className="text-xs italic text-sage">{s.name}</div>
-            </button>
-          ))}
-        </div>
-      )}
+        )}
 
-      {showEmptyState && (
-        <div className="absolute z-10 mt-1 w-full bg-white border border-sage-light rounded-lg shadow-lg px-3 py-2 text-xs text-sage">
-          Type to search species...
-        </div>
-      )}
+        {showNearby && (
+          <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-sage-light rounded-lg shadow-lg">
+            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-sage border-b border-sage-light">
+              Recently seen nearby
+            </div>
+            {nearby.map((s) => (
+              <button
+                type="button"
+                key={s.id}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  void handleSelect(s);
+                }}
+                className="w-full text-left px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
+              >
+                <div className="font-medium">{s.common_name}</div>
+                <div className="text-xs italic text-sage">{s.name}</div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showEmptyState && (
+          <div className="absolute z-10 mt-1 w-full bg-white border border-sage-light rounded-lg shadow-lg px-3 py-2 text-xs text-sage">
+            Type to search species...
+          </div>
+        )}
+      </div>
     </div>
   );
 }

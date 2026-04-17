@@ -289,3 +289,50 @@ describe('SpeciesPicker (selection)', () => {
     expect(onChange).toHaveBeenCalledWith(['new-entity-id']);
   });
 });
+
+describe('SpeciesPicker (chips)', () => {
+  beforeEach(() => {
+    mockIsOnline = true;
+    vi.clearAllMocks();
+  });
+
+  it('renders chip for each selected entity with name and remove button', async () => {
+    const inFn = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'e1',
+          name: 'Eastern Bluebird',
+          description: 'Sialia sialis',
+          custom_field_values: { photo_url: 'https://example.com/b.jpg' },
+        },
+      ],
+      error: null,
+    });
+    const select = vi.fn().mockReturnValue({ in: inFn });
+    const from = vi.fn().mockReturnValue({ select });
+
+    const supabaseModule = await import('@/lib/supabase/client');
+    vi.spyOn(supabaseModule, 'createClient').mockReturnValue({
+      from,
+      storage: { from: vi.fn() },
+    } as unknown as ReturnType<typeof supabaseModule.createClient>);
+
+    const onChange = vi.fn();
+    render(
+      <SpeciesPicker
+        {...baseProps}
+        selectedIds={['e1']}
+        onChange={onChange}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByText('Eastern Bluebird')).toBeInTheDocument()
+    );
+
+    const removeBtn = screen.getByRole('button', { name: /remove eastern bluebird/i });
+    const user = userEvent.setup();
+    await user.click(removeBtn);
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+});
