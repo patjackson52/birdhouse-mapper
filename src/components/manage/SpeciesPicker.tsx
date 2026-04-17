@@ -28,6 +28,8 @@ export default function SpeciesPicker({
   const [isFocused, setIsFocused] = useState(false);
   const [nearby, setNearby] = useState<SpeciesResult[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [results, setResults] = useState<SpeciesResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
     if (!isFocused) return;
@@ -53,6 +55,32 @@ export default function SpeciesPicker({
     };
   }, [isFocused, lat, lng, isOnline]);
 
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length === 0) {
+      setResults([]);
+      return;
+    }
+    if (!isOnline) return;
+
+    const handle = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(
+          `/api/species/search?q=${encodeURIComponent(trimmed)}`
+        );
+        const json = res.ok ? await res.json() : [];
+        setResults(Array.isArray(json) ? json : []);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(handle);
+  }, [query, isOnline]);
+
   const showNearby = isFocused && query.trim().length === 0 && nearby.length > 0;
   const showEmptyState =
     isFocused && query.trim().length === 0 && nearby.length === 0 && !nearbyLoading;
@@ -74,6 +102,33 @@ export default function SpeciesPicker({
         <p className="text-xs text-sage mt-1">
           Search requires internet connection.
         </p>
+      )}
+
+      {isFocused && query.trim().length > 0 && (
+        <div className="absolute z-10 mt-1 w-full max-h-72 overflow-y-auto bg-white border border-sage-light rounded-lg shadow-lg">
+          {searchLoading && (
+            <div className="px-3 py-2 text-xs text-sage">Searching...</div>
+          )}
+          {!searchLoading && results.length === 0 && (
+            <div className="px-3 py-2 text-xs text-sage">No matches.</div>
+          )}
+          {results.map((s) => (
+            <div
+              key={s.id}
+              className="px-3 py-2 text-sm text-forest-dark hover:bg-sage-light"
+            >
+              <div className="font-medium">{s.common_name}</div>
+              <div className="text-xs italic text-sage">
+                {s.name}
+                {s.observations_count > 0 && (
+                  <span className="not-italic ml-2 text-[10px]">
+                    ({s.observations_count.toLocaleString()} observations)
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {showNearby && (
