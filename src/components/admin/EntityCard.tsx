@@ -15,9 +15,17 @@ interface EntityCardProps {
 
 export default function EntityCard({ entity, entityType, fields, onEdit, onDelete }: EntityCardProps) {
   const photoUrl = useMemo(() => {
-    if (!entity.photo_path) return null;
-    return createClient().storage.from('vault-public').getPublicUrl(entity.photo_path).data.publicUrl;
-  }, [entity.photo_path]);
+    if (entity.photo_path) {
+      return createClient()
+        .storage.from('vault-public')
+        .getPublicUrl(entity.photo_path).data.publicUrl;
+    }
+    const fromCustom = entity.custom_field_values?.photo_url;
+    if (typeof fromCustom === 'string' && fromCustom.length > 0) {
+      return fromCustom;
+    }
+    return null;
+  }, [entity.photo_path, entity.custom_field_values]);
 
   const fieldValues = fields
     .map((f) => ({ name: f.name, value: entity.custom_field_values[f.id] }))
