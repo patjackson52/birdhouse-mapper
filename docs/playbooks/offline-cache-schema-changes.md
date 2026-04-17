@@ -4,6 +4,8 @@
 
 **When to use:** Any SQL migration under `supabase/migrations/` that adds, removes, renames, or changes the type of a column on a synced table. Also applies when you add a new synced table, narrow an enum, or change a check constraint.
 
+**Decision record:** See [ADR-0002: Offline Cache Drift Prevention](../adr/0002-offline-cache-drift-prevention.md) for the alternatives considered (runtime validators, schema fingerprint) and why this process-only defense was chosen.
+
 ---
 
 ## 1. Why this exists
