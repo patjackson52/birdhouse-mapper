@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import * as React from 'react';
 import ItemForm from '@/components/manage/ItemForm';
 
 // ── Hoisted mock data (available before vi.mock factories run) ────────────────
@@ -91,22 +92,18 @@ vi.mock('@/components/manage/LocationPicker', () => ({
 }));
 
 // ── Next dynamic mock ────────────────────────────────────────────────────────
-vi.mock('next/dynamic', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const React = require('react') as typeof import('react');
-  return {
-    default: (loader: () => Promise<{ default: React.ComponentType<unknown> }>) => {
-      const Component = (props: Record<string, unknown>) => {
-        const [Loaded, setLoaded] = React.useState<React.ComponentType<unknown> | null>(null);
-        React.useEffect(() => {
-          loader().then((m: { default: React.ComponentType<unknown> }) => setLoaded(() => m.default));
-        }, []);
-        return Loaded ? React.createElement(Loaded, props) : null;
-      };
-      return Component;
-    },
-  };
-});
+vi.mock('next/dynamic', () => ({
+  default: (loader: () => Promise<{ default: React.ComponentType<unknown> }>) => {
+    const Component = (props: Record<string, unknown>) => {
+      const [Loaded, setLoaded] = React.useState<React.ComponentType<unknown> | null>(null);
+      React.useEffect(() => {
+        loader().then((m: { default: React.ComponentType<unknown> }) => setLoaded(() => m.default));
+      }, []);
+      return Loaded ? React.createElement(Loaded, props) : null;
+    };
+    return Component;
+  },
+}));
 
 // ── Offline store mock ────────────────────────────────────────────────────────
 vi.mock('@/lib/offline/provider', () => ({
