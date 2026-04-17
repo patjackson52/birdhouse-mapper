@@ -12,6 +12,7 @@ import { iconDisplayName } from '@/lib/types';
 import { IconRenderer } from '@/components/shared/IconPicker';
 import PhotoUploader from './PhotoUploader';
 import EntitySelect from './EntitySelect';
+import SpeciesPicker from './SpeciesPicker';
 
 const LocationPicker = dynamic(() => import('./LocationPicker'), {
   ssr: false,
@@ -328,13 +329,27 @@ export default function ItemForm() {
 
       {entityTypes.map((et) => (
         <div key={et.id}>
-          <label className="label"><IconRenderer icon={et.icon} size={14} /> {et.name}</label>
-          <EntitySelect
-            entityTypeId={et.id}
-            entityTypeName={et.name}
-            selectedIds={selectedEntityIds[et.id] || []}
-            onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
-          />
+          <label className="label">
+            <IconRenderer icon={et.icon} size={14} /> {et.name}
+          </label>
+          {et.api_source === 'inaturalist' && orgId ? (
+            <SpeciesPicker
+              entityTypeId={et.id}
+              entityTypeName={et.name}
+              orgId={orgId}
+              selectedIds={selectedEntityIds[et.id] || []}
+              onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+              lat={latitude ?? undefined}
+              lng={longitude ?? undefined}
+            />
+          ) : (
+            <EntitySelect
+              entityTypeId={et.id}
+              entityTypeName={et.name}
+              selectedIds={selectedEntityIds[et.id] || []}
+              onChange={(ids) => setSelectedEntityIds((prev) => ({ ...prev, [et.id]: ids }))}
+            />
+          )}
         </div>
       ))}
 
