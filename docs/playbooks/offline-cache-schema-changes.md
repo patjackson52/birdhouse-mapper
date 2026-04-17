@@ -12,6 +12,8 @@ The client keeps a local IndexedDB copy of every synced row. Delta sync refreshe
 
 Real example: migration `044_icon_jsonb.sql` converted `item_types.icon` and `entity_types.icon` from `text` to `jsonb` via `ALTER COLUMN TYPE`. Clients whose caches synced before the migration kept plain-string icons (`"📍"`). Display code assumed the new `{set, name}` object shape and crashed with `Cannot read properties of undefined (reading 'replace')` on the edit-item page.
 
+What migration 044 should have done additionally: `update item_types set updated_at = now();` and `update entity_types set updated_at = now();` in the same migration. Rule 1 below codifies this.
+
 ## 2. When this applies
 
 Synced tables (as of this writing — re-check `SYNC_TABLES` in `src/lib/offline/sync-engine.ts` for the authoritative list):
@@ -23,6 +25,18 @@ properties, orgs, roles, org_memberships
 ```
 
 Changes to tables NOT in that list cannot drift client caches because they are never cached. Examples out of scope: `invites`, `communications_*`, `location_history`, `mutation_queue` internals.
+
+### Sync mode per table
+
+The sync engine uses three strategies, and the right remedy depends on which class your table is in. Consult `TABLES_WITH_UPDATED_AT` and `TABLES_WITHOUT_TIMESTAMPS` in `src/lib/offline/sync-engine.ts` for the authoritative split.
+
+| Class | Sync strategy | Tables (as of this writing) | Matters for this playbook? |
+|---|---|---|---|
+| **A** | Delta sync on `updated_at` (trigger-backed) | `items`, `item_types`, `entities`, `entity_types`, `properties`, `orgs`, `roles`, `org_memberships` | Yes — the main audience of the checklist. |
+| **B** | Delta sync on `created_at` (append-mostly tables) | `item_updates`, `photos`, `geo_layers` | Sometimes — see Rule 1's Class B caveat. |
+| **C** | Full sync every time (no timestamp column) | `update_types`, `update_type_fields`, `custom_fields` | No — cache drift self-corrects on the next sync. Skip the checklist. |
+
+If your migration touches a Class C table, you're done. If it touches a Class B table, read Rule 1's Class B caveat before choosing a remedy. Class A is the primary case the rules below describe.
 
 ## 3. The checklist
 
@@ -39,6 +53,8 @@ update <table> set updated_at = now();
 ```
 
 This forces every row to be re-synced so clients download the new representation. Cost: one-time extra bandwidth the next time each client syncs.
+
+**Caveat for Class B tables** (`item_updates`, `photos`, `geo_layers`): the delta-sync cursor is on `created_at`, not `updated_at`, so bumping `updated_at` has no effect on sync. Either (a) bump the Dexie schema version in `src/lib/offline/db.ts` to force a full rebuild of the store on next app load, or (b) extend the sync engine to also watch `updated_at` on the affected table (larger change — coordinate with the offline-sync owner). Do NOT do `update <table> set created_at = now();` — that corrupts sort order.
 
 ### Rule 2 — You added a column with a server-side default
 
@@ -74,11 +90,17 @@ Remedy — in the same migration, repair any rows carrying the now-invalid value
 update <table> set <column> = '<valid-value>' where <column> = '<removed-value>';
 ```
 
-This update itself bumps `updated_at` on synced tables (they have an `updated_at` trigger from migration 013 onward), so clients re-sync the repaired rows automatically. No separate timestamp bump is needed unless the table lacks the trigger — verify by grepping `supabase/migrations/` for `<table>_updated_at`.
+What happens next depends on the table's sync class:
+
+- **Class A** (has `updated_at` trigger): the repair `UPDATE` bumps `updated_at` automatically, and the delta-sync cursor picks up the repaired rows on the next sync. No extra step needed.
+- **Class B** (delta on `created_at`): the repair fixes the server but stale caches won't re-sync. Pair with the Class B remedy from Rule 1.
+- **Class C** (full sync): the repair shows up on the next full sync. No extra step needed.
 
 ### None of the above?
 
-The migration is cache-safe. Examples that need no action:
+If the migration targets a Class A or B table with a change that doesn't match Rules 1–5, ask: "does this change the client-visible shape of the row?" If yes, bump `updated_at` as in Rule 1 out of caution. If no, the migration is cache-safe.
+
+Cache-safe examples that need no action:
 
 - Creating a brand-new table that is not in `SYNC_TABLES`.
 - Adding an index or unique constraint (no row-shape change).
@@ -96,4 +118,4 @@ Ask: will stale caches still work?
 
 ## 5. Rule of thumb
 
-When in doubt, add `update <table> set updated_at = now();` to the migration. It forces one extra round-trip of sync per client but eliminates the entire class of cache-drift bugs.
+When in doubt on a Class A table, add `update <table> set updated_at = now();` to the migration. For Class B tables, bump the Dexie schema version. For Class C tables, no action is needed — drift self-corrects on the next sync. This class-aware default eliminates the entire cache-drift bug class with one line per migration.
