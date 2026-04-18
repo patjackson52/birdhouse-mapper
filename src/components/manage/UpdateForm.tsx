@@ -52,6 +52,13 @@ export default function UpdateForm({ initialTypeId, lockType = false }: UpdateFo
 
   // When locked, seed itemId immediately from URL param
   const [itemId, setItemId] = useState(preselectedItemId ?? '');
+
+  // Sync itemId when searchParams hydrate after initial render
+  useEffect(() => {
+    if (preselectedItemId) {
+      setItemId(preselectedItemId);
+    }
+  }, [preselectedItemId]);
   const [updateTypeId, setUpdateTypeId] = useState(initialTypeId ?? '');
   const [content, setContent] = useState('');
   const [updateDate, setUpdateDate] = useState(
