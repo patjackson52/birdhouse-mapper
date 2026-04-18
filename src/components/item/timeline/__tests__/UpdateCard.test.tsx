@@ -88,7 +88,7 @@ describe('UpdateCard', () => {
   });
 
   it('renders entity overflow indicator when more than 3 entities', () => {
-    const entityType = { id: 'et1', org_id: 'o1', name: 'Species', icon: '🐦', color: null, link_to: null, sort_order: 0, api_source: null, created_at: '', updated_at: '' };
+    const entityType = { id: 'et1', org_id: 'o1', name: 'Species', icon: { set: 'emoji' as const, name: '🐦' }, color: '#000000', link_to: [], sort_order: 0, api_source: null, created_at: '', updated_at: '' };
     const entities = Array.from({ length: 5 }, (_, i) => ({
       id: `e${i}`,
       org_id: 'o1',
@@ -99,6 +99,7 @@ describe('UpdateCard', () => {
       external_link: null,
       external_id: null,
       custom_field_values: {},
+      sort_order: i,
       created_at: '',
       updated_at: '',
       entity_type: entityType,
