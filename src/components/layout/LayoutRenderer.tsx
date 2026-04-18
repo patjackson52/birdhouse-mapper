@@ -29,6 +29,10 @@ export interface LayoutRendererProps {
   isAuthenticated?: boolean;
   selectedBlockId?: string;
   onBlockSelect?: (blockId: string | null) => void;
+  canEditUpdate?: boolean;
+  canDeleteUpdate?: boolean;
+  onDeleteUpdate?: (updateId: string) => void | Promise<void>;
+  onEditUpdate?: (updateId: string) => void;
 }
 
 function EditBlockWrapper({
@@ -219,7 +223,17 @@ function renderBlockContent(
         property_id: u.property_id,
         custom_field_values: u.custom_field_values,
       }));
-      return <TimelineBlock config={config} updates={updates} />;
+      return (
+        <TimelineBlock
+          config={config}
+          updates={updates}
+          updateTypeFields={[]}
+          canEditUpdate={!!props.canEditUpdate}
+          canDeleteUpdate={!!props.canDeleteUpdate}
+          onDeleteUpdate={props.onDeleteUpdate}
+          onEditUpdate={props.onEditUpdate}
+        />
+      );
     }
 
     default:

@@ -8,14 +8,20 @@ vi.mock('@/components/item/StatusBadge', () => ({
   ),
 }));
 
-vi.mock('@/components/item/UpdateTimeline', () => ({
-  default: ({ updates }: { updates: unknown[] }) => (
-    <div data-testid="update-timeline">
-      {updates.map((u: any) => (
-        <div key={u.id} data-testid="timeline-item">{u.content}</div>
-      ))}
-    </div>
-  ),
+vi.mock('@/components/item/timeline/TimelineOverview', () => ({
+  default: ({ updates, config }: { updates: unknown[]; config: { maxItems: number } }) => {
+    const visible = updates.slice(0, config.maxItems);
+    if (visible.length === 0) {
+      return <p>No activity yet</p>;
+    }
+    return (
+      <div data-testid="update-timeline">
+        {visible.map((u: any) => (
+          <div key={u.id} data-testid="timeline-item">{u.content}</div>
+        ))}
+      </div>
+    );
+  },
 }));
 
 vi.mock('@/components/ui/PhotoViewer', () => ({
@@ -246,27 +252,33 @@ describe('TimelineBlock', () => {
     showEntityChips: true,
   };
 
-  it('renders the UpdateTimeline with updates', () => {
-    render(<TimelineBlock config={baseConfig} updates={updates} />);
+  const baseProps = {
+    updateTypeFields: [] as import('@/lib/types').UpdateTypeField[],
+    canEditUpdate: false,
+    canDeleteUpdate: false,
+  };
+
+  it('renders the TimelineOverview with updates', () => {
+    render(<TimelineBlock config={baseConfig} updates={updates} {...baseProps} />);
     expect(screen.getByTestId('update-timeline')).toBeDefined();
     expect(screen.getAllByTestId('timeline-item')).toHaveLength(3);
   });
 
   it('shows empty message when no updates', () => {
-    render(<TimelineBlock config={baseConfig} updates={[]} />);
+    render(<TimelineBlock config={baseConfig} updates={[]} {...baseProps} />);
     expect(screen.getByText('No activity yet')).toBeDefined();
     expect(screen.queryByTestId('update-timeline')).toBeNull();
   });
 
   it('returns null when showUpdates is false', () => {
     const config = { ...baseConfig, showUpdates: false };
-    const { container } = render(<TimelineBlock config={config} updates={updates} />);
+    const { container } = render(<TimelineBlock config={config} updates={updates} {...baseProps} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('limits updates to maxItems', () => {
     const config = { ...baseConfig, maxItems: 2 };
-    render(<TimelineBlock config={config} updates={updates} />);
+    render(<TimelineBlock config={config} updates={updates} {...baseProps} />);
     expect(screen.getAllByTestId('timeline-item')).toHaveLength(2);
   });
 });
