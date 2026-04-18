@@ -4,7 +4,8 @@ import type { ItemWithDetails } from '@/lib/types';
 import type { IconValue } from '@/lib/types';
 import { IconRenderer } from '@/components/shared/IconPicker';
 import StatusBadge from './StatusBadge';
-import UpdateTimeline from './UpdateTimeline';
+import TimelineOverview from './timeline/TimelineOverview';
+import { deleteUpdate } from '@/app/manage/update/[id]/actions';
 import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
 import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
@@ -87,6 +88,11 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         canEdit={canEditItem}
         canAddUpdate={canAddUpdate}
         isAuthenticated={isAuthenticated}
+        canEditUpdate={canEditItem}
+        canDeleteUpdate={canEditItem}
+        onDeleteUpdate={async (updateId: string) => {
+          await deleteUpdate(updateId);
+        }}
       />
     </div>
   ) : (
@@ -210,7 +216,23 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         <h3 className="text-xs font-medium text-sage uppercase tracking-wide mb-3">
           Updates
         </h3>
-        <UpdateTimeline updates={item.updates} />
+        <TimelineOverview
+          updates={item.updates}
+          updateTypeFields={[]}
+          config={{
+            showUpdates: true,
+            showScheduled: true,
+            maxItems: 10,
+            showPhotos: true,
+            showFieldValues: true,
+            showEntityChips: true,
+          }}
+          canEditUpdate={!!canEditItem}
+          canDeleteUpdate={!!canEditItem}
+          onDeleteUpdate={async (updateId: string) => {
+            await deleteUpdate(updateId);
+          }}
+        />
       </div>
     </div>
   );
