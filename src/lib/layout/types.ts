@@ -69,6 +69,9 @@ export interface TimelineConfig {
   showUpdates: boolean;
   showScheduled: boolean;
   maxItems: number;
+  showPhotos: boolean;
+  showFieldValues: boolean;
+  showEntityChips: boolean;
 }
 
 export interface TextLabelConfig {

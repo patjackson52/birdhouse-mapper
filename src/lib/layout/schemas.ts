@@ -22,6 +22,9 @@ const timelineConfigSchema = z.object({
   showUpdates: z.boolean(),
   showScheduled: z.boolean(),
   maxItems: z.number().int().min(1).max(50),
+  showPhotos: z.boolean().default(true),
+  showFieldValues: z.boolean().default(true),
+  showEntityChips: z.boolean().default(true),
 });
 
 const textLabelConfigSchema = z.object({

@@ -168,6 +168,33 @@ export default function BlockConfigPanelV2({
               />
               <span className="text-sm">Show scheduled</span>
             </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={config.showPhotos}
+                onChange={(e) => onConfigChange(block.id, { ...config, showPhotos: e.target.checked })}
+                className="rounded"
+              />
+              <span className="text-sm">Show photo thumbnails</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={config.showFieldValues}
+                onChange={(e) => onConfigChange(block.id, { ...config, showFieldValues: e.target.checked })}
+                className="rounded"
+              />
+              <span className="text-sm">Show field value chips</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={config.showEntityChips}
+                onChange={(e) => onConfigChange(block.id, { ...config, showEntityChips: e.target.checked })}
+                className="rounded"
+              />
+              <span className="text-sm">Show entity chips</span>
+            </label>
             <div>
               <label className="label">Max items: {config.maxItems}</label>
               <input

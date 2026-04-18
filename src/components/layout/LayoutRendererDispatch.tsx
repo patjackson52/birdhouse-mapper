@@ -16,6 +16,10 @@ interface Props {
   canEdit?: boolean;
   canAddUpdate?: boolean;
   isAuthenticated?: boolean;
+  canEditUpdate?: boolean;
+  canDeleteUpdate?: boolean;
+  onDeleteUpdate?: (updateId: string) => void | Promise<void>;
+  onEditUpdate?: (updateId: string) => void;
 }
 
 export default function LayoutRendererDispatch({ layout, ...rest }: Props) {

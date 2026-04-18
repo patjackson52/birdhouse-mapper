@@ -30,6 +30,10 @@ export interface LayoutRendererV2Props {
   canEdit?: boolean;
   canAddUpdate?: boolean;
   isAuthenticated?: boolean;
+  canEditUpdate?: boolean;
+  canDeleteUpdate?: boolean;
+  onDeleteUpdate?: (updateId: string) => void | Promise<void>;
+  onEditUpdate?: (updateId: string) => void;
 }
 
 const WIDTH_TO_CSS: Record<string, string> = {
@@ -232,7 +236,17 @@ export function renderBlockContent(
         property_id: u.property_id,
         custom_field_values: u.custom_field_values,
       }));
-      return <TimelineBlock config={config} updates={updates} />;
+      return (
+        <TimelineBlock
+          config={config}
+          updates={updates}
+          updateTypeFields={[]}
+          canEditUpdate={!!props.canEditUpdate}
+          canDeleteUpdate={!!props.canDeleteUpdate}
+          onDeleteUpdate={props.onDeleteUpdate}
+          onEditUpdate={props.onEditUpdate}
+        />
+      );
     }
 
     case 'description': {

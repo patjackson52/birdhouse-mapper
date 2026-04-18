@@ -1,20 +1,38 @@
-import type { ItemUpdate } from '@/lib/types';
+import type { UpdateTypeField } from '@/lib/types';
 import type { TimelineConfig } from '@/lib/layout/types';
-import UpdateTimeline from '@/components/item/UpdateTimeline';
+import type { TimelineUpdate } from '@/components/item/timeline/timeline-helpers';
+import TimelineOverview from '@/components/item/timeline/TimelineOverview';
 
 interface TimelineBlockProps {
   config: TimelineConfig;
-  updates: ItemUpdate[];
+  updates: TimelineUpdate[];
+  updateTypeFields: UpdateTypeField[];
+  canEditUpdate: boolean;
+  canDeleteUpdate: boolean;
+  onDeleteUpdate?: (updateId: string) => void | Promise<void>;
+  onEditUpdate?: (updateId: string) => void;
 }
 
-export default function TimelineBlock({ config, updates }: TimelineBlockProps) {
+export default function TimelineBlock({
+  config,
+  updates,
+  updateTypeFields,
+  canEditUpdate,
+  canDeleteUpdate,
+  onDeleteUpdate,
+  onEditUpdate,
+}: TimelineBlockProps) {
   if (!config.showUpdates) return null;
 
-  const limited = updates.slice(0, config.maxItems);
-
-  if (limited.length === 0) {
-    return <p className="text-sm text-sage italic">No activity yet</p>;
-  }
-
-  return <UpdateTimeline updates={limited} />;
+  return (
+    <TimelineOverview
+      updates={updates}
+      updateTypeFields={updateTypeFields}
+      config={config}
+      canEditUpdate={canEditUpdate}
+      canDeleteUpdate={canDeleteUpdate}
+      onDeleteUpdate={onDeleteUpdate}
+      onEditUpdate={onEditUpdate}
+    />
+  );
 }
