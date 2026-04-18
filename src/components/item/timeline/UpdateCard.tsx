@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import type { UpdateTypeField } from '@/lib/types';
 import type { TimelineUpdate } from './timeline-helpers';
 import { getKeyFieldValues } from './timeline-helpers';
 import { formatRelativeDate, formatDate } from '@/lib/utils';
 import { IconRenderer } from '@/components/shared/IconPicker';
+import { getPhotoUrl } from '@/lib/photos';
 
 interface UpdateCardProps {
   update: TimelineUpdate;
@@ -25,6 +27,8 @@ export default function UpdateCard({
   showFieldValues = true,
   showEntityChips = true,
 }: UpdateCardProps) {
+  const [imgError, setImgError] = useState(false);
+
   const typeName = update.update_type?.name ?? 'Update';
   const typeIcon = update.update_type?.icon ?? '📝';
 
@@ -113,18 +117,16 @@ export default function UpdateCard({
       </div>
 
       {/* Photo thumbnail */}
-      {showPhotos && firstPhoto && (
+      {showPhotos && firstPhoto && !imgError && (
         <div
           data-testid="update-card-thumb"
           className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-sage-light/40"
         >
           <img
-            src={firstPhoto.storage_path}
+            src={getPhotoUrl(firstPhoto.storage_path)}
             alt=""
             className="h-full w-full object-cover"
-            onError={(e) => {
-              (e.currentTarget as HTMLImageElement).style.display = 'none';
-            }}
+            onError={() => setImgError(true)}
           />
         </div>
       )}

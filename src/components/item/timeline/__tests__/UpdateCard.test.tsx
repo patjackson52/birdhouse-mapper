@@ -8,6 +8,10 @@ vi.mock('@/components/shared/IconPicker', () => ({
   IconRenderer: ({ icon }: { icon: unknown }) => <span data-testid="icon">{String(icon)}</span>,
 }));
 
+vi.mock('@/lib/photos', () => ({
+  getPhotoUrl: (path: string) => `https://cdn.example.com${path}`,
+}));
+
 const baseUpdate = (overrides: Partial<TimelineUpdate> = {}): TimelineUpdate => ({
   id: 'u1',
   item_id: 'i1',
