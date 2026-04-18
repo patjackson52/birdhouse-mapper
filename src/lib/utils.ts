@@ -71,3 +71,30 @@ export const statusLabels: Record<ItemStatus, string> = {
   damaged: 'Needs Repair',
   removed: 'Removed',
 };
+
+export function formatRelativeDate(dateString: string): string {
+  const then = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - then.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  const diffMin = Math.round(diffSec / 60);
+  const diffHr = Math.round(diffMin / 60);
+  const diffDay = Math.round(diffHr / 24);
+
+  if (diffMs < 0) {
+    const futDay = Math.round(-diffDay);
+    if (futDay === 0) return 'today';
+    return `in ${futDay}d`;
+  }
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  if (diffDay === 1) return 'Yesterday';
+  if (diffDay < 7) return `${diffDay}d ago`;
+
+  const sameYear = then.getUTCFullYear() === now.getUTCFullYear();
+  const month = then.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' });
+  const day = then.getUTCDate();
+  return sameYear ? `${month} ${day}` : `${month} ${day}, ${then.getUTCFullYear()}`;
+}
