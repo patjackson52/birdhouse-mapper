@@ -1,23 +1,38 @@
-'use client';
+import { redirect } from 'next/navigation';
+import { resolveTenant } from '@/lib/tenant/resolve';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
 
-import { Suspense } from 'react';
-import UpdateForm from '@/components/manage/UpdateForm';
+interface AddUpdatePageProps {
+  searchParams: { item?: string };
+}
 
-export default function AddUpdatePage() {
-  return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      <h1 className="font-heading text-2xl font-semibold text-forest-dark mb-6">
-        Add Update
-      </h1>
-      <p className="text-sm text-sage mb-6">
-        Record an observation, maintenance visit, or sighting. You can
-        include photos taken in the field.
-      </p>
-      <div className="card">
-        <Suspense fallback={<div className="py-8 text-center text-sm text-sage">Loading…</div>}>
-          <UpdateForm />
-        </Suspense>
-      </div>
-    </div>
+export default async function AddUpdatePage({ searchParams }: AddUpdatePageProps) {
+  const hostname = headers().get('host') ?? 'localhost';
+  const tenantClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
+  const tenant = await resolveTenant(hostname, '/manage/update', tenantClient);
+
+  let slug = tenant?.propertySlug ?? null;
+  if (!slug && tenant?.orgId) {
+    const { data: property } = await tenantClient
+      .from('properties')
+      .select('slug')
+      .eq('org_id', tenant.orgId)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    slug = property?.slug ?? null;
+  }
+
+  if (!slug) {
+    redirect('/');
+  }
+
+  const itemId = searchParams.item;
+  redirect(itemId ? `/p/${slug}/update/${itemId}` : `/p/${slug}`);
 }
