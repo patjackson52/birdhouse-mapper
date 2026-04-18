@@ -39,11 +39,9 @@ export default function TimelineOverview({
     ? updates.find((u) => u.id === detailUpdateId) ?? null
     : null;
 
-  // TimelineConfig gains these three fields in Task 9; cast is needed in test until then.
-  const cfg = config as TimelineConfig & { showPhotos?: boolean; showFieldValues?: boolean; showEntityChips?: boolean };
-  const showPhotos = cfg.showPhotos;
-  const showFieldValues = cfg.showFieldValues;
-  const showEntityChips = cfg.showEntityChips;
+  const showPhotos = config.showPhotos;
+  const showFieldValues = config.showFieldValues;
+  const showEntityChips = config.showEntityChips;
 
   const openDetail = (u: TimelineUpdate) => setDetailUpdateId(u.id);
   const closeDetail = () => setDetailUpdateId(null);

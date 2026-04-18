@@ -241,6 +241,9 @@ describe('TimelineBlock', () => {
     showUpdates: true,
     showScheduled: false,
     maxItems: 10,
+    showPhotos: true,
+    showFieldValues: true,
+    showEntityChips: true,
   };
 
   it('renders the UpdateTimeline with updates', () => {

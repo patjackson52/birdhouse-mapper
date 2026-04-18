@@ -70,7 +70,7 @@ describe('deriveFormFields', () => {
     const layout: TypeLayout = {
       version: 1,
       blocks: [
-        { id: 'b1', type: 'timeline', config: { showUpdates: true, showScheduled: false, maxItems: 5 } },
+        { id: 'b1', type: 'timeline', config: { showUpdates: true, showScheduled: false, maxItems: 5, showPhotos: true, showFieldValues: true, showEntityChips: true } },
         { id: 'b2', type: 'map_snippet', config: {} },
         { id: 'b3', type: 'action_buttons', config: {} },
         { id: 'b4', type: 'field_display', config: { fieldId: 'f1', size: 'normal', showLabel: true } },

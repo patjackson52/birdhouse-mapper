@@ -16,15 +16,14 @@ vi.mock('@/lib/photos', () => ({
   getPhotoUrl: (p: string) => `https://cdn.example.com${p}`,
 }));
 
-// Cast needed until Task 9 extends TimelineConfig with showPhotos/FieldValues/EntityChips.
-const config = {
+const config: TimelineConfig = {
   showUpdates: true,
   showScheduled: true,
   maxItems: 3,
   showPhotos: true,
   showFieldValues: true,
   showEntityChips: true,
-} as TimelineConfig;
+};
 
 const mkUpdate = (id: string, daysAgo: number): TimelineUpdate => {
   const d = new Date();

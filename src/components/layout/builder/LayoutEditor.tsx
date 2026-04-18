@@ -60,7 +60,7 @@ function getDefaultConfig(type: BlockTypeV2): BlockConfigV2 {
   switch (type) {
     case 'field_display': return { fieldId: '', size: 'normal' as const, showLabel: true };
     case 'photo_gallery': return { style: 'hero' as const, maxPhotos: 4 };
-    case 'timeline': return { showUpdates: true, showScheduled: false, maxItems: 5 };
+    case 'timeline': return { showUpdates: true, showScheduled: false, maxItems: 5, showPhotos: true, showFieldValues: true, showEntityChips: true };
     case 'text_label': return { text: 'Section Title', style: 'heading' as const };
     case 'entity_list': return { entityTypeIds: [] };
     case 'description': return { showLabel: true };
