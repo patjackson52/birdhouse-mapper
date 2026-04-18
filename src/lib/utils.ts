@@ -76,16 +76,17 @@ export function formatRelativeDate(dateString: string): string {
   const then = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - then.getTime();
-  const diffSec = Math.round(diffMs / 1000);
-  const diffMin = Math.round(diffSec / 60);
-  const diffHr = Math.round(diffMin / 60);
-  const diffDay = Math.round(diffHr / 24);
 
   if (diffMs < 0) {
-    const futDay = Math.round(-diffDay);
+    const futDay = Math.floor(-diffMs / 86_400_000);
     if (futDay === 0) return 'today';
     return `in ${futDay}d`;
   }
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffMs / 60_000);
+  const diffHr = Math.floor(diffMs / 3_600_000);
+  const diffDay = Math.floor(diffMs / 86_400_000);
 
   if (diffSec < 60) return 'just now';
   if (diffMin < 60) return `${diffMin}m ago`;
