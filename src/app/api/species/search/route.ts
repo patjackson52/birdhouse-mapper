@@ -1,31 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { SpeciesResult } from '@/lib/types';
-
-interface INatTaxonRaw {
-  id: number;
-  name: string;
-  preferred_common_name?: string | null;
-  default_photo?: { medium_url?: string | null } | null;
-  rank?: string;
-  observations_count?: number;
-  wikipedia_url?: string | null;
-}
-
-function toSpeciesResult(raw: INatTaxonRaw): SpeciesResult {
-  return {
-    id: raw.id,
-    name: raw.name,
-    common_name: raw.preferred_common_name || raw.name,
-    photo_url: raw.default_photo?.medium_url ?? null,
-    rank: raw.rank ?? 'unknown',
-    observations_count: raw.observations_count ?? 0,
-    wikipedia_url: raw.wikipedia_url ?? null,
-  };
-}
+import { resolvePlaceId } from '@/lib/species/place-id-cache';
+import { toSpeciesResult, type INatTaxonRaw } from '@/lib/species/inat-projection';
 
 export async function GET(request: NextRequest) {
   const q = request.nextUrl.searchParams.get('q');
   const taxonId = request.nextUrl.searchParams.get('taxon_id');
+  const latRaw = request.nextUrl.searchParams.get('lat');
+  const lngRaw = request.nextUrl.searchParams.get('lng');
 
   if (!q || q.trim().length === 0) {
     return NextResponse.json(
@@ -34,10 +15,20 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  let placeId: number | null = null;
+  if (latRaw !== null && lngRaw !== null) {
+    const lat = Number(latRaw);
+    const lng = Number(lngRaw);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      placeId = await resolvePlaceId(lat, lng);
+    }
+  }
+
   const upstream = new URL('https://api.inaturalist.org/v1/taxa/autocomplete');
   upstream.searchParams.set('q', q);
   upstream.searchParams.set('per_page', '20');
   if (taxonId) upstream.searchParams.set('taxon_id', taxonId);
+  if (placeId !== null) upstream.searchParams.set('place_id', String(placeId));
 
   try {
     const res = await fetch(upstream.toString(), {

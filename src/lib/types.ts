@@ -270,14 +270,44 @@ export type EntityLinkTarget = 'items' | 'updates';
 
 export type EntityApiSource = 'inaturalist';
 
+export type SpeciesEstablishmentMeans = 'native' | 'introduced' | null;
+
 export interface SpeciesResult {
   id: number;
   name: string;
   common_name: string;
   photo_url: string | null;
+  photo_square_url: string | null;
   rank: string;
   observations_count: number;
   wikipedia_url: string | null;
+  nearby_count?: number;
+  establishment_means?: SpeciesEstablishmentMeans;
+  iucn_code?: string | null;
+}
+
+export interface SpeciesAncestor {
+  id: number;
+  name: string;
+  rank: string;
+}
+
+export interface SpeciesDetail {
+  id: number;
+  name: string;
+  common_name: string;
+  photo_square_url: string | null;
+  photo_medium_url: string | null;
+  photo_large_url: string | null;
+  rank: string;
+  observations_count: number;
+  wikipedia_url: string | null;
+  wikipedia_summary: string | null;
+  iucn_code: string | null;
+  establishment_means: SpeciesEstablishmentMeans;
+  ancestry: SpeciesAncestor[];
+  family: string | null;
+  nearby_count: number | null;
 }
 
 export interface EntityType {
