@@ -48,9 +48,12 @@ describe('GET /api/species/search', () => {
         name: 'Sialia sialis',
         common_name: 'Eastern Bluebird',
         photo_url: 'https://example.com/bluebird.jpg',
+        photo_square_url: null,
         rank: 'species',
         observations_count: 42000,
         wikipedia_url: 'https://en.wikipedia.org/wiki/Eastern_bluebird',
+        establishment_means: null,
+        iucn_code: null,
       },
     ]);
   });

@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SpeciesResult } from '@/lib/types';
+import { resolvePlaceId } from '@/lib/species/place-id-cache';
+import { toSpeciesResult, type INatTaxonRaw } from '@/lib/species/inat-projection';
 
-interface INatTaxonRaw {
-  id: number;
-  name: string;
-  preferred_common_name?: string | null;
-  default_photo?: { medium_url?: string | null } | null;
-  rank?: string;
-  observations_count?: number;
-  wikipedia_url?: string | null;
-}
-
-function toSpeciesResult(raw: INatTaxonRaw): SpeciesResult {
-  return {
-    id: raw.id,
-    name: raw.name,
-    common_name: raw.preferred_common_name || raw.name,
-    photo_url: raw.default_photo?.medium_url ?? null,
-    rank: raw.rank ?? 'unknown',
-    observations_count: raw.observations_count ?? 0,
-    wikipedia_url: raw.wikipedia_url ?? null,
-  };
+function toNearbyResult(raw: INatTaxonRaw, nearbyCount: number): SpeciesResult {
+  return { ...toSpeciesResult(raw), nearby_count: nearbyCount };
 }
 
 export async function GET(request: NextRequest) {
@@ -43,6 +27,8 @@ export async function GET(request: NextRequest) {
     ? Math.min(Math.max(requestedRadius, 1), 50)
     : 10;
 
+  const placeId = await resolvePlaceId(lat, lng);
+
   const upstream = new URL(
     'https://api.inaturalist.org/v1/observations/species_counts'
   );
@@ -50,6 +36,7 @@ export async function GET(request: NextRequest) {
   upstream.searchParams.set('lng', String(lng));
   upstream.searchParams.set('radius', String(radius));
   upstream.searchParams.set('per_page', '20');
+  if (placeId !== null) upstream.searchParams.set('place_id', String(placeId));
 
   try {
     const res = await fetch(upstream.toString(), {
@@ -64,12 +51,12 @@ export async function GET(request: NextRequest) {
     }
 
     const json = (await res.json()) as {
-      results?: Array<{ taxon: INatTaxonRaw }>;
+      results?: Array<{ taxon: INatTaxonRaw; count?: number }>;
     };
 
     const results = (json.results ?? [])
       .filter((r) => r.taxon)
-      .map((r) => toSpeciesResult(r.taxon));
+      .map((r) => toNearbyResult(r.taxon, r.count ?? 0));
 
     return NextResponse.json(results, {
       status: 200,
