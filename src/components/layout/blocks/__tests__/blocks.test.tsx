@@ -224,7 +224,7 @@ describe('EntityListBlock', () => {
 // TimelineBlock
 // =====================
 describe('TimelineBlock', () => {
-  const makeUpdate = (id: string, content: string) => ({
+  const makeUpdate = (id: string, content: string): import('@/lib/types').EnrichedUpdate => ({
     id,
     item_id: 'item-1',
     update_type_id: 'ut-1',
@@ -236,6 +236,15 @@ describe('TimelineBlock', () => {
     org_id: 'org-1',
     property_id: 'prop-1',
     custom_field_values: {},
+    update_type: {
+      id: 'ut-1', org_id: 'org-1', name: 'Update', icon: '📝',
+      is_global: true, item_type_id: null, sort_order: 0,
+      min_role_create: null, min_role_edit: null, min_role_delete: null,
+    },
+    photos: [],
+    species: [],
+    fields: [],
+    createdByProfile: null,
   });
 
   const updates = [

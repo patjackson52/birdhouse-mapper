@@ -1,11 +1,10 @@
 import type { EnrichedUpdate, UpdateTypeField } from '@/lib/types';
 import type { TimelineConfig } from '@/lib/layout/types';
-import type { TimelineUpdate } from '@/components/item/timeline/timeline-helpers';
 import { TimelineRail } from '@/components/item/timeline/TimelineRail';
 
 interface TimelineBlockProps {
   config: TimelineConfig;
-  updates: TimelineUpdate[];
+  updates: EnrichedUpdate[];
   updateTypeFields: UpdateTypeField[];
   canEditUpdate: boolean;
   canDeleteUpdate: boolean;
@@ -22,7 +21,7 @@ export default function TimelineBlock({
 
   return (
     <TimelineRail
-      updates={updates as unknown as EnrichedUpdate[]}
+      updates={updates}
       maxItems={config.maxItems}
       showScheduled={config.showScheduled}
       canAddUpdate={false}
