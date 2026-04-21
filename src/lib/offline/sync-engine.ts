@@ -72,17 +72,31 @@ async function executeMutation(
     // user's default property, and silently causes the RLS check to fail
     // against the wrong property. The mutation carries the correct scope
     // (set when enqueued for the specific item).
-    const { error: photoInsertError } = await supabase.from('photos').insert({
-      item_id: photoBlob.item_id,
-      update_id: photoBlob.update_id,
-      storage_path: storagePath,
-      is_primary: photoBlob.is_primary,
-      org_id: mutation.org_id,
-      property_id: mutation.property_id,
-    });
+    const { data: insertedPhoto, error: photoInsertError } = await supabase
+      .from('photos')
+      .insert({
+        item_id: photoBlob.item_id,
+        update_id: photoBlob.update_id,
+        storage_path: storagePath,
+        is_primary: photoBlob.is_primary,
+        org_id: mutation.org_id,
+        property_id: mutation.property_id,
+      })
+      .select()
+      .single();
 
     if (photoInsertError) {
       return `Photo record insert failed: ${photoInsertError.message}`;
+    }
+
+    // Mirror the new row into IndexedDB so the item detail panel (which reads
+    // from the local cache via offlineStore.getPhotos) sees the photo as soon
+    // as the user navigates back — without waiting for the next inbound
+    // syncPropertyData tick. The OfflineProvider is mounted at the app root
+    // and its inbound-sync effect only re-runs on propertyId / isOnline
+    // change, so route navigation alone doesn't refresh the cache.
+    if (insertedPhoto) {
+      await db.photos.put({ ...insertedPhoto, _synced_at: new Date().toISOString() });
     }
   }
 
