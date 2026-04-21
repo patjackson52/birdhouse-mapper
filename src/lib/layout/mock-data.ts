@@ -1,4 +1,4 @@
-import type { CustomField, Entity, EntityType, ItemType, ItemUpdate, ItemWithDetails, Photo, UpdateType, IconValue } from '@/lib/types';
+import type { CustomField, Entity, EntityType, EnrichedUpdate, ItemType, ItemWithDetails, Photo, UpdateType, IconValue } from '@/lib/types';
 
 const MOCK_ORG_ID = 'mock-org';
 const MOCK_PROPERTY_ID = 'mock-property';
@@ -71,7 +71,7 @@ const MOCK_ENTITY: Entity & { entity_type: EntityType } = {
   entity_type: MOCK_ENTITY_TYPE,
 };
 
-function makeMockUpdate(id: string, daysAgo: number): ItemUpdate & { update_type: UpdateType; photos: Photo[]; entities: (Entity & { entity_type: EntityType })[] } {
+function makeMockUpdate(id: string, daysAgo: number): EnrichedUpdate {
   const ts = dateOffset(daysAgo);
   return {
     id,
@@ -87,7 +87,9 @@ function makeMockUpdate(id: string, daysAgo: number): ItemUpdate & { update_type
     custom_field_values: {},
     update_type: MOCK_UPDATE_TYPE,
     photos: [],
-    entities: [],
+    species: [],
+    fields: [],
+    createdByProfile: null,
   };
 }
 
@@ -136,5 +138,6 @@ export function generateMockItem(itemType: ItemType, fields: CustomField[]): Ite
     photos,
     custom_fields: fields,
     entities: [MOCK_ENTITY],
+    stats: { updatesCount: updates.length, speciesCount: 0, contributorsCount: 0 },
   };
 }

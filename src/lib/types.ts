@@ -458,10 +458,11 @@ export interface CustomDomain {
 
 export interface ItemWithDetails extends Item {
   item_type: ItemType;
-  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[]; entities: (Entity & { entity_type: EntityType })[] })[];
+  updates: EnrichedUpdate[];
   photos: Photo[];
   custom_fields: CustomField[];
   entities: (Entity & { entity_type: EntityType })[];
+  stats: ItemHeaderStats;
 }
 
 // --- Attribution ---
