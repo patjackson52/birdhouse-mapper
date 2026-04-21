@@ -1,7 +1,13 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
-import { TimelineRail } from '../TimelineRail';
+import { describe, it, expect, vi } from 'vitest';
 import type { EnrichedUpdate } from '@/lib/types';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  usePathname: () => '/',
+}));
+
+import { TimelineRail } from '../TimelineRail';
 
 function make(i: number): EnrichedUpdate {
   return {

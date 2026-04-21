@@ -1,6 +1,7 @@
 'use client';
 
 import type { EnrichedUpdate } from '@/lib/types';
+import { usePathname, useRouter } from 'next/navigation';
 import { Attribution } from './Attribution';
 import { SpeciesRow } from '@/components/species/SpeciesRow';
 import './timeline.css';
@@ -25,18 +26,18 @@ function fmtRel(iso: string): string {
 export function UpdateDetailSheet({
   update,
   onClose,
-  onSpeciesOpen,
   onDelete,
   canEdit,
   canDelete,
 }: {
   update: EnrichedUpdate | null;
   onClose: () => void;
-  onSpeciesOpen: (externalId: number) => void;
   onDelete: () => void;
   canEdit: boolean;
   canDelete: boolean;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
   if (!update) return null;
   const firstPhoto = update.photos[0];
   const extraPhotos = update.photos.slice(1);
@@ -111,7 +112,7 @@ export function UpdateDetailSheet({
                     native: s.native,
                     cavity_nester: s.cavity_nester,
                   }}
-                  onOpen={() => onSpeciesOpen(s.external_id)}
+                  onOpen={() => router.push(`/species/${s.external_id}?from=${encodeURIComponent(pathname ?? '/')}`)}
                 />
               ))}
             </div>

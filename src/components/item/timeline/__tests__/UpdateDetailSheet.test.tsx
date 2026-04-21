@@ -1,7 +1,14 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
-import { UpdateDetailSheet } from '../UpdateDetailSheet';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { EnrichedUpdate } from '@/lib/types';
+
+const pushMock = vi.fn();
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: pushMock }),
+  usePathname: () => '/p/farm/item/abc',
+}));
+
+import { UpdateDetailSheet } from '../UpdateDetailSheet';
 
 function make(overrides: Partial<EnrichedUpdate> = {}): EnrichedUpdate {
   return {
@@ -19,31 +26,38 @@ function make(overrides: Partial<EnrichedUpdate> = {}): EnrichedUpdate {
 }
 
 describe('UpdateDetailSheet', () => {
+  beforeEach(() => {
+    pushMock.mockReset();
+  });
+
   it('renders nothing when update is null', () => {
-    const { container } = render(<UpdateDetailSheet update={null} onClose={() => {}} onSpeciesOpen={() => {}} canEdit={false} canDelete={false} onDelete={() => {}} />);
+    const { container } = render(<UpdateDetailSheet update={null} onClose={() => {}} canEdit={false} canDelete={false} onDelete={() => {}} />);
     expect(container).toBeEmptyDOMElement();
   });
 
   it('renders content and attribution', () => {
-    render(<UpdateDetailSheet update={make()} onClose={() => {}} onSpeciesOpen={() => {}} canEdit={false} canDelete={false} onDelete={() => {}} />);
+    render(<UpdateDetailSheet update={make()} onClose={() => {}} canEdit={false} canDelete={false} onDelete={() => {}} />);
     expect(screen.getByText('Bluebird fledged!')).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
 
   it('close button fires onClose', () => {
     const onClose = vi.fn();
-    render(<UpdateDetailSheet update={make()} onClose={onClose} onSpeciesOpen={() => {}} canEdit={false} canDelete={false} onDelete={() => {}} />);
+    render(<UpdateDetailSheet update={make()} onClose={onClose} canEdit={false} canDelete={false} onDelete={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /close/i }));
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('species row click fires onSpeciesOpen with external_id', () => {
-    const onSpeciesOpen = vi.fn();
+  it('species row click pushes to /species/:id?from=<pathname>', () => {
     const update = make({
       species: [{ external_id: 14886, entity_id: 'e1', common_name: 'Eastern Bluebird', photo_url: 'b.png', native: true, cavity_nester: true }],
     });
-    render(<UpdateDetailSheet update={update} onClose={() => {}} onSpeciesOpen={onSpeciesOpen} canEdit={false} canDelete={false} onDelete={() => {}} />);
-    fireEvent.click(screen.getAllByText('Eastern Bluebird')[0]);
-    expect(onSpeciesOpen).toHaveBeenCalledWith(14886);
+    render(<UpdateDetailSheet update={update} onClose={() => {}} canEdit={false} canDelete={false} onDelete={() => {}} />);
+    // The species row may render the common_name twice (once as common, once as scientific which is a known gap).
+    const targets = screen.getAllByText('Eastern Bluebird');
+    fireEvent.click(targets[0]);
+    expect(pushMock).toHaveBeenCalledWith(expect.stringMatching(/^\/species\/14886\?from=/));
+    // Confirm the pathname is encoded in the URL.
+    expect(pushMock.mock.calls[0][0]).toContain(encodeURIComponent('/p/farm/item/abc'));
   });
 });

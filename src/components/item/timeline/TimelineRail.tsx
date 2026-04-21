@@ -25,7 +25,6 @@ export function TimelineRail({
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [allOpen, setAllOpen] = useState(false);
-  const [speciesOpenExternalId, setSpeciesOpenExternalId] = useState<number | null>(null);
 
   const { scheduled, past } = partitionScheduled(updates as any);
   const cap = maxItems ?? past.length;
@@ -65,7 +64,6 @@ export function TimelineRail({
       <UpdateDetailSheet
         update={open}
         onClose={() => setOpenId(null)}
-        onSpeciesOpen={(externalId) => setSpeciesOpenExternalId(externalId)}
         canEdit={false}
         canDelete={false}
         onDelete={() => {
