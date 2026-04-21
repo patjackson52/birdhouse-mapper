@@ -1,76 +1,40 @@
 'use client';
 
-import { useEffect } from 'react';
-import type { UpdateTypeField } from '@/lib/types';
-import type { TimelineUpdate } from './timeline-helpers';
-import UpdateCard from './UpdateCard';
+import type { EnrichedUpdate } from '@/lib/types';
+import { RailCard } from './RailCard';
+import './timeline.css';
 
-interface AllUpdatesSheetProps {
-  updates: TimelineUpdate[];
-  updateTypeFields: UpdateTypeField[];
-  isOpen: boolean;
-  onClose: () => void;
-  onUpdateTap: (update: TimelineUpdate) => void;
-  showPhotos?: boolean;
-  showFieldValues?: boolean;
-  showEntityChips?: boolean;
-}
-
-export default function AllUpdatesSheet({
+export function AllUpdatesSheet({
   updates,
-  updateTypeFields,
-  isOpen,
   onClose,
-  onUpdateTap,
-  showPhotos,
-  showFieldValues,
-  showEntityChips,
-}: AllUpdatesSheetProps) {
-  useEffect(() => {
-    if (!isOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
+  onOpen,
+}: {
+  updates: EnrichedUpdate[];
+  onClose: () => void;
+  onOpen: (u: EnrichedUpdate) => void;
+}) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-stretch md:items-center justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div
-        className="relative bg-white w-full md:max-w-lg md:rounded-xl md:shadow-2xl md:max-h-[85vh] h-full md:h-auto flex flex-col"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
-        <div className="flex items-center justify-between p-4 border-b border-sage-light/50 shrink-0">
-          <h2 className="font-semibold text-forest-dark">All updates ({updates.length})</h2>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="p-2 rounded-md text-sage hover:bg-sage-light/40"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {updates.map((u) => (
-            <UpdateCard
-              key={u.id}
-              update={u}
-              updateTypeFields={updateTypeFields}
-              onTap={() => onUpdateTap(u)}
-              showPhotos={showPhotos}
-              showFieldValues={showFieldValues}
-              showEntityChips={showEntityChips}
-            />
-          ))}
-        </div>
+    <div className="fm-slide-up fixed inset-0 z-[100] flex flex-col bg-parchment">
+      <header className="flex items-center justify-between border-b border-forest-border-soft bg-white px-4 pb-3 pt-[58px]">
+        <h2 className="font-heading text-lg font-medium text-forest-dark">All updates</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-sage-light"
+        >
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+      </header>
+      <div className="flex-1 overflow-auto px-4 pt-4">
+        {updates.map((u, i) => (
+          <RailCard
+            key={u.id}
+            update={u}
+            onOpen={() => onOpen(u)}
+            isLast={i === updates.length - 1}
+          />
+        ))}
       </div>
     </div>
   );
