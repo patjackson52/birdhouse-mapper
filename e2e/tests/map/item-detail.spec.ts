@@ -13,7 +13,7 @@ test.describe('Item Detail Panel @smoke', () => {
     const marker = page.locator('.leaflet-marker-icon').first();
     await marker.click({ force: true });
 
-    const panel = page.locator('h2.font-heading');
+    const panel = page.locator('h1.font-heading');
     await expect(panel).toBeVisible({ timeout: 10000 });
   });
 

@@ -19,7 +19,7 @@ test.describe('Add Update Flow @smoke', () => {
     await marker.click({ force: true });
 
     // Detail panel heading should appear
-    const panelHeading = page.locator('h2.font-heading');
+    const panelHeading = page.locator('h1.font-heading');
     await expect(panelHeading).toBeVisible({ timeout: 10000 });
 
     // ── Step 3: Click the "Add Update" link ─────────────────────────────────
@@ -65,7 +65,7 @@ test.describe('Add Update Flow @smoke', () => {
     // ── Step 10: Detail panel re-opens and the new note is visible ────────────
     // The panel heading should be visible again, and our note text should appear
     // somewhere in the timeline.
-    await expect(page.locator('h2.font-heading')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h1.font-heading')).toBeVisible({ timeout: 10000 });
     await expect(page.locator(`text=${NOTE_TEXT}`)).toBeVisible({ timeout: 10000 });
   });
 });
