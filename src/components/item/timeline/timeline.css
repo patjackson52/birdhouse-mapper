@@ -1,0 +1,12 @@
+@keyframes fmSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes fmSlideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.fm-slide-up { animation: fmSlideUp 0.28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.fm-slide-in { animation: fmSlideIn  0.26s cubic-bezier(0.2, 0.8, 0.2, 1); }
