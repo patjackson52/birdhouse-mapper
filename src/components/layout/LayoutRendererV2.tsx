@@ -232,6 +232,7 @@ export function renderBlockContent(
         update_date: u.update_date,
         created_at: u.created_at,
         created_by: u.created_by,
+        anon_name: u.anon_name,
         org_id: u.org_id,
         property_id: u.property_id,
         custom_field_values: u.custom_field_values,

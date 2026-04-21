@@ -20,6 +20,7 @@ const baseUpdate = (overrides: Partial<TimelineUpdate> = {}): TimelineUpdate => 
   update_date: new Date().toISOString(),
   created_at: new Date().toISOString(),
   created_by: null,
+  anon_name: null,
   org_id: 'o1',
   property_id: 'p1',
   custom_field_values: {},

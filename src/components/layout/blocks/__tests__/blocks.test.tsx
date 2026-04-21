@@ -232,6 +232,7 @@ describe('TimelineBlock', () => {
     update_date: '2024-01-01T00:00:00Z',
     created_at: '2024-01-01T00:00:00Z',
     created_by: null,
+    anon_name: null,
     org_id: 'org-1',
     property_id: 'prop-1',
     custom_field_values: {},

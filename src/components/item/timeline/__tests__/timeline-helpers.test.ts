@@ -14,6 +14,7 @@ const baseUpdate = (overrides: Partial<ItemUpdate> = {}): ItemUpdate => ({
   update_date: '2026-04-17T00:00:00Z',
   created_at: '2026-04-17T00:00:00Z',
   created_by: null,
+  anon_name: null,
   org_id: 'o1',
   property_id: 'p1',
   custom_field_values: {},

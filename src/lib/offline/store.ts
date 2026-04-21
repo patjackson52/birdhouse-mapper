@@ -155,6 +155,7 @@ export async function insertItemUpdate(
     custom_field_values: params.custom_field_values ?? {},
     created_at: now,
     created_by: null,
+    anon_name: null,
     _synced_at: '',
   };
 

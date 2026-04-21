@@ -81,6 +81,7 @@ function makeMockUpdate(id: string, daysAgo: number): ItemUpdate & { update_type
     update_date: ts.split('T')[0],
     created_at: ts,
     created_by: null,
+    anon_name: null,
     org_id: MOCK_ORG_ID,
     property_id: MOCK_PROPERTY_ID,
     custom_field_values: {},
