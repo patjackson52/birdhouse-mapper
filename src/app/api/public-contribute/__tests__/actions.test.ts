@@ -316,4 +316,67 @@ describe('submitPublicContribution', () => {
 
     expect(result).toEqual({ success: true, status: 'pending' });
   });
+
+  it('persists trimmed anon_name when provided', async () => {
+    existingMembership = {
+      id: 'mem-1',
+      status: 'active',
+      role_id: 'role-1',
+      upload_count_this_hour: 2,
+      last_upload_window_start: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    };
+    uploadToVaultResult = { success: true, item: { id: 'vault-1', moderation_status: 'approved' } } as never;
+
+    const result = await submitPublicContribution({
+      ...baseInput,
+      itemId: 'item-1',
+      anonName: '  BirdFan  ',
+    } as never);
+
+    expect(result).toEqual({ success: true, status: 'approved' });
+
+    // The item_updates insert should have been called with trimmed anon_name.
+    const updateInsert = insertCalls.find((c) => c.table === 'item_updates');
+    expect(updateInsert).toBeDefined();
+    expect(updateInsert?.payload).toMatchObject({
+      org_id: 'org-1',
+      item_id: 'item-1',
+      vault_item_id: 'vault-1',
+      anon_name: 'BirdFan',
+    });
+  });
+
+  it('stores null anon_name when empty or missing', async () => {
+    existingMembership = {
+      id: 'mem-1',
+      status: 'active',
+      role_id: 'role-1',
+      upload_count_this_hour: 2,
+      last_upload_window_start: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+    };
+    uploadToVaultResult = { success: true, item: { id: 'vault-1', moderation_status: 'approved' } } as never;
+
+    // Case 1: anonName provided as empty string.
+    await submitPublicContribution({
+      ...baseInput,
+      itemId: 'item-1',
+      anonName: '',
+    } as never);
+
+    let updateInsert = insertCalls.find((c) => c.table === 'item_updates');
+    expect(updateInsert).toBeDefined();
+    expect(updateInsert?.payload.anon_name).toBeNull();
+
+    // Reset captured inserts and run again without anonName at all.
+    insertCalls.length = 0;
+
+    await submitPublicContribution({
+      ...baseInput,
+      itemId: 'item-1',
+    } as never);
+
+    updateInsert = insertCalls.find((c) => c.table === 'item_updates');
+    expect(updateInsert).toBeDefined();
+    expect(updateInsert?.payload.anon_name).toBeNull();
+  });
 });

@@ -18,6 +18,7 @@ const baseProps = {
     created_at: '', updated_at: '', created_by: null, org_id: 'o1', property_id: 'p1',
     item_type: { id: 't1', name: 'T', icon: { set: 'emoji' as const, name: '' }, color: '', sort_order: 0, layout: null, created_at: '', org_id: 'o1' },
     updates: [], photos: [], custom_fields: [], entities: [],
+    stats: { updatesCount: 0, speciesCount: 0, contributorsCount: 0 },
   },
   mode: 'live' as const,
   context: 'side-panel' as const,

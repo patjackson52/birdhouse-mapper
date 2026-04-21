@@ -1,5 +1,7 @@
 # Timeline Updates Viewing — Design
 
+> **Superseded by [`2026-04-20-item-timeline-v2-design.md`](./2026-04-20-item-timeline-v2-design.md).** The photo-led vertical rail, attribution, and species scope toggle replace the `UpdateCard` / adaptive-detail approach described below. This document remains for context on the prior iteration.
+
 ## Context
 
 The `TimelineBlock` on item layouts is the primary surface where users browse the history of updates attached to an item. Today it renders `UpdateTimeline` (`src/components/item/UpdateTimeline.tsx`), a single 98-line component that draws a vertical timeline spine with per-update rows containing an icon, type name, date, text content, entity chips, and custom field values. It does not show photos, offers no "deeper dive" affordance, does not handle scheduled updates, and does not scale visually to items with many updates.

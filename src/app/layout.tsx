@@ -29,8 +29,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   const headersList = await headers();
   const isPlatform = headersList.get('x-tenant-source') === 'platform';
@@ -38,7 +40,10 @@ export default async function RootLayout({
   if (isPlatform) {
     return (
       <html lang="en">
-        <body className="antialiased">{children}</body>
+        <body className="antialiased">
+          {children}
+          {modal}
+        </body>
       </html>
     );
   }
@@ -81,6 +86,7 @@ export default async function RootLayout({
                     <main className="flex-1">{children}</main>
                   </>
                 )}
+                {modal}
               </QueryProvider>
             </OfflineProvider>
           </UserLocationProvider>

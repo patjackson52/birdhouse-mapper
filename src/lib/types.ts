@@ -105,6 +105,7 @@ export interface ItemUpdate {
   update_date: string;
   created_at: string;
   created_by: string | null;
+  anon_name: string | null;
   org_id: string;
   property_id: string;
   custom_field_values: Record<string, unknown>;
@@ -457,10 +458,87 @@ export interface CustomDomain {
 
 export interface ItemWithDetails extends Item {
   item_type: ItemType;
-  updates: (ItemUpdate & { update_type: UpdateType; photos: Photo[]; entities: (Entity & { entity_type: EntityType })[] })[];
+  updates: EnrichedUpdate[];
   photos: Photo[];
   custom_fields: CustomField[];
   entities: (Entity & { entity_type: EntityType })[];
+  stats: ItemHeaderStats;
+}
+
+// --- Attribution ---
+
+export interface AuthorCard {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  role: string;            // base_role from the user's active membership in the item's org
+  update_count: number;    // updates by this user in that org (all items)
+}
+
+// --- Timeline rail ---
+
+export interface EnrichedUpdateSpecies {
+  external_id: number;     // iNat taxon_id
+  entity_id: string;
+  common_name: string;
+  photo_url: string | null;
+  native: boolean | null;
+  cavity_nester: boolean | null;
+}
+
+export interface EnrichedUpdateField {
+  label: string;
+  value: string;
+}
+
+export interface EnrichedUpdate extends ItemUpdate {
+  update_type: UpdateType;
+  photos: Photo[];
+  species: EnrichedUpdateSpecies[];
+  fields: EnrichedUpdateField[];
+  createdByProfile: AuthorCard | null;
+}
+
+// --- Species citings (scope toggle) ---
+
+export interface SpeciesCitingsItem {
+  count: number;
+  lastObserved: string | null;
+}
+
+export interface SpeciesCitingsPropertyItem {
+  item_id: string;
+  item_name: string;
+  count: number;
+  last: string;
+  current: boolean;
+}
+
+export interface SpeciesCitingsProperty {
+  total: { count: number; itemCount: number };
+  items: SpeciesCitingsPropertyItem[];
+}
+
+export interface SpeciesCitingsOrgProperty {
+  property_id: string;
+  property_name: string;
+  item_count: number;
+  count: number;
+  last: string;
+  current: boolean;
+}
+
+export interface SpeciesCitingsOrg {
+  total: { count: number; propertyCount: number; itemCount: number };
+  properties: SpeciesCitingsOrgProperty[];
+}
+
+// --- Item header stats ---
+
+export interface ItemHeaderStats {
+  updatesCount: number;
+  speciesCount: number;
+  contributorsCount: number;
 }
 
 /**

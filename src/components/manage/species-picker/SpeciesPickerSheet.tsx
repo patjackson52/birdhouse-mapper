@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
-import MultiSnapBottomSheet from '@/components/ui/MultiSnapBottomSheet';
 import type { SpeciesDetail, SpeciesResult } from '@/lib/types';
 import { useNetworkStatus } from '@/lib/offline/network';
 import { useUserLocation } from '@/lib/location/provider';
@@ -15,6 +14,7 @@ import {
 import SpeciesPickerGrid from './SpeciesPickerGrid';
 import SpeciesPickerDetail from './SpeciesPickerDetail';
 import type { RecentSpeciesEntry } from './useRecentSpecies';
+import '@/components/item/timeline/timeline.css';
 
 interface SpeciesPickerSheetProps {
   isOpen: boolean;
@@ -63,6 +63,26 @@ export default function SpeciesPickerSheet({
     }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Body overflow lock while sheet is open.
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isOpen]);
+
+  // Escape to close.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   const isStaged = useCallback(
     (taxonId: number) => state.staged.has(taxonId),
     [state]
@@ -100,7 +120,7 @@ export default function SpeciesPickerSheet({
 
   const header = useMemo(
     () => (
-      <div className="sticky top-0 z-10 flex items-center justify-between bg-white pb-3 pt-1">
+      <div className="flex shrink-0 items-center justify-between border-b border-forest-border-soft bg-white px-4 pb-3 pt-[env(safe-area-inset-top)]">
         <button
           type="button"
           onClick={onClose}
@@ -125,10 +145,18 @@ export default function SpeciesPickerSheet({
     [onClose, detailCard, entityTypeName, handleDone, committing]
   );
 
+  if (!isOpen) return <></>;
+
   return (
-    <MultiSnapBottomSheet isOpen={isOpen} onClose={onClose}>
-      <div className="flex flex-col">
-        {header}
+    <div
+      className="fm-slide-up fixed inset-0 z-[80] flex flex-col bg-white"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Species picker"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      {header}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {detailCard ? (
           <SpeciesPickerDetail
             card={detailCard}
@@ -153,6 +181,6 @@ export default function SpeciesPickerSheet({
           />
         )}
       </div>
-    </MultiSnapBottomSheet>
+    </div>
   );
 }

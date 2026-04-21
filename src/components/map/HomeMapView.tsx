@@ -9,11 +9,16 @@ import type {
   ItemWithDetails,
   ItemType,
   CustomField,
-  UpdateType,
   Entity,
   EntityType,
+  Photo,
+  AuthorCard,
+  ItemHeaderStats,
 } from "@/lib/types";
 import { useOfflineStore } from "@/lib/offline/provider";
+import { enrichUpdates } from "@/lib/timeline/enrichUpdates";
+import { getAuthorCards } from "@/lib/attribution/getAuthorCards";
+import { createClient } from "@/lib/supabase/client";
 import DetailPanel from "@/components/item/DetailPanel";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import PublicContributeButton from "@/components/map/PublicContributeButton";
@@ -253,42 +258,96 @@ function HomeMapViewContent() {
     // Fetch fresh item data from offline store (state may be stale after editing)
     const freshItem = await offlineStore.getItem(item.id);
     const currentItem = freshItem || item;
-
     const orgId = currentItem.org_id;
 
-    const [updates, photos, updateTypeData, entities, entityTypes] = await Promise.all([
-      offlineStore.getItemUpdates(item.id),
-      offlineStore.getPhotos(item.id),
-      offlineStore.getUpdateTypes(orgId),
-      offlineStore.getEntities(orgId),
-      offlineStore.getEntityTypes(orgId),
-    ]);
+    const [updates, photos, updateTypes, entities, entityTypes, updateTypeFields] =
+      await Promise.all([
+        offlineStore.getItemUpdates(item.id),
+        offlineStore.getPhotos(item.id),
+        offlineStore.getUpdateTypes(orgId),
+        offlineStore.getEntities(orgId),
+        offlineStore.getEntityTypes(orgId),
+        offlineStore.getUpdateTypeFields(orgId),
+      ]);
 
-    const typeMap = new Map(updateTypeData.map((t) => [t.id, t]));
+    // Resolve author cards online. Offline-mode: skip; profile renders as null.
+    const userIds = Array.from(
+      new Set(updates.map((u) => u.created_by).filter((x): x is string => Boolean(x))),
+    );
+    let authorCards: Map<string, AuthorCard> = new Map();
+    if (userIds.length > 0 && typeof navigator !== "undefined" && navigator.onLine) {
+      try {
+        const supabase = createClient();
+        authorCards = await getAuthorCards(supabase as any, orgId, userIds);
+      } catch {
+        authorCards = new Map();
+      }
+    }
+
+    // Build per-update photos map from flat list.
+    const photosByUpdateId = new Map<string, Photo[]>();
+    for (const p of photos) {
+      if (!p.update_id) continue;
+      const arr = photosByUpdateId.get(p.update_id) ?? [];
+      arr.push(p);
+      photosByUpdateId.set(p.update_id, arr);
+    }
+
+    // Build per-update entities map. If offlineStore.getUpdateEntities is not available,
+    // leave the map empty (species stack will be empty on rail cards until offline cache
+    // is extended in a follow-up).
     const entityTypeMap = new Map(entityTypes.map((t) => [t.id, t]));
+    const entitiesByUpdateId = new Map<string, Array<Entity & { entity_type: EntityType }>>();
+    const getUpdateEntities = (offlineStore as any).getUpdateEntities;
+    if (typeof getUpdateEntities === "function") {
+      // Expected signature: getUpdateEntities(orgId: string) => Promise<{ update_id: string; entity_id: string }[]>
+      const joinRows: Array<{ update_id: string; entity_id: string }> =
+        await getUpdateEntities.call(offlineStore, orgId);
+      const entityMap = new Map(entities.map((e) => [e.id, e]));
+      for (const row of joinRows) {
+        const entity = entityMap.get(row.entity_id);
+        if (!entity) continue;
+        const entityType = entityTypeMap.get(entity.entity_type_id);
+        if (!entityType) continue;
+        const arr = entitiesByUpdateId.get(row.update_id) ?? [];
+        arr.push({ ...entity, entity_type: entityType });
+        entitiesByUpdateId.set(row.update_id, arr);
+      }
+    }
+
+    const enriched = enrichUpdates({
+      updates,
+      updateTypes,
+      updateTypeFields,
+      photosByUpdateId,
+      entitiesByUpdateId,
+      authorCards,
+    });
+
+    const stats: ItemHeaderStats = {
+      updatesCount: updates.length,
+      speciesCount: new Set(
+        enriched.flatMap((u) => u.species.map((s) => s.external_id)),
+      ).size,
+      contributorsCount: new Set(
+        updates.map((u) => u.created_by).filter(Boolean),
+      ).size,
+    };
+
     const itemType = itemTypes.find((t) => t.id === currentItem.item_type_id);
     const fields = customFields.filter(
       (f) => f.item_type_id === currentItem.item_type_id,
     );
 
-    // For entity associations, we read from the entities cached in IndexedDB.
-    // item_entities join table isn't cached separately, so entities are included directly.
-    // TODO: When item_entities are synced to IndexedDB, filter them here.
-    const itemEntities: (Entity & { entity_type: EntityType })[] = [];
-
     setSelectedItem({
       ...currentItem,
       item_type: itemType!,
-      updates: updates.map((u) => ({
-        ...u,
-        update_type: typeMap.get(u.update_type_id)!,
-        photos: [],
-        entities: [],
-      })),
-      photos: photos,
+      updates: enriched,
+      photos,
       custom_fields: fields,
-      entities: itemEntities,
-    });
+      entities: [],
+      stats,
+    } as any);
   }
 
   if (loading) {

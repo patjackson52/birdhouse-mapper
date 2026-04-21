@@ -22,6 +22,7 @@ const mkUpdate = (id: string, futureDays: number): TimelineUpdate => {
     update_date: d.toISOString(),
     created_at: new Date().toISOString(),
     created_by: null,
+    anon_name: null,
     org_id: 'o1',
     property_id: 'p1',
     custom_field_values: {},

@@ -224,22 +224,10 @@ export function renderBlockContent(
 
     case 'timeline': {
       const config = block.config as import('@/lib/layout/types').TimelineConfig;
-      const updates = item.updates.map((u) => ({
-        id: u.id,
-        item_id: u.item_id,
-        update_type_id: u.update_type_id,
-        content: u.content,
-        update_date: u.update_date,
-        created_at: u.created_at,
-        created_by: u.created_by,
-        org_id: u.org_id,
-        property_id: u.property_id,
-        custom_field_values: u.custom_field_values,
-      }));
       return (
         <TimelineBlock
           config={config}
-          updates={updates}
+          updates={item.updates}
           updateTypeFields={[]}
           canEditUpdate={!!props.canEditUpdate}
           canDeleteUpdate={!!props.canDeleteUpdate}

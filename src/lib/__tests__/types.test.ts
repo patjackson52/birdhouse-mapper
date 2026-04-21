@@ -158,12 +158,15 @@ describe('ItemWithDetails composite type', () => {
           update_date: '2025-04-01',
           created_at: '2025-04-01T00:00:00Z',
           created_by: null,
+          anon_name: null,
           org_id: 'org-1',
           property_id: 'prop-1',
           custom_field_values: {},
           update_type: updateType,
           photos: [],
-          entities: [],
+          species: [],
+          fields: [],
+          createdByProfile: null,
         },
       ],
       photos: [],
@@ -174,6 +177,7 @@ describe('ItemWithDetails composite type', () => {
         },
       ],
       entities: [],
+      stats: { updatesCount: 1, speciesCount: 0, contributorsCount: 0 },
     };
 
     expect(detailed.item_type.name).toBe('Bird Box');
@@ -347,19 +351,22 @@ describe('ItemWithDetails with entities', () => {
         id: 'upd-1', item_id: '123', update_type_id: 'ut-1',
         content: 'Saw a bird', update_date: '2025-04-01',
         created_at: '2025-04-01T00:00:00Z', created_by: null,
+        anon_name: null,
         org_id: 'org-1', property_id: 'prop-1',
         custom_field_values: {},
-        update_type: updateType, photos: [], entities: [entity],
+        update_type: updateType, photos: [],
+        species: [], fields: [], createdByProfile: null,
       }],
       photos: [],
       custom_fields: [],
       entities: [entity],
+      stats: { updatesCount: 1, speciesCount: 0, contributorsCount: 0 },
     };
 
     expect(detailed.entities).toHaveLength(1);
     expect(detailed.entities[0].name).toBe('Chickadee');
     expect(detailed.entities[0].entity_type.name).toBe('Species');
-    expect(detailed.updates[0].entities).toHaveLength(1);
+    expect(detailed.updates[0].species).toHaveLength(0);
   });
 });
 

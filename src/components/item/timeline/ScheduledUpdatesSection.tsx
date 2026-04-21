@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import type { UpdateTypeField } from '@/lib/types';
+import type { EnrichedUpdate, UpdateTypeField } from '@/lib/types';
 import type { TimelineUpdate } from './timeline-helpers';
-import UpdateCard from './UpdateCard';
+import { RailCard } from './RailCard';
 
 interface ScheduledUpdatesSectionProps {
   updates: TimelineUpdate[];
@@ -16,11 +16,7 @@ interface ScheduledUpdatesSectionProps {
 
 export default function ScheduledUpdatesSection({
   updates,
-  updateTypeFields,
   onUpdateTap,
-  showPhotos,
-  showFieldValues,
-  showEntityChips,
 }: ScheduledUpdatesSectionProps) {
   const defaultExpanded = updates.length <= 2;
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -28,7 +24,7 @@ export default function ScheduledUpdatesSection({
   if (updates.length === 0) return null;
 
   return (
-    <section className="mb-4">
+    <section className="mb-4 px-4 pt-[14px]">
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
@@ -49,19 +45,27 @@ export default function ScheduledUpdatesSection({
       </button>
 
       {expanded && (
-        <div className="space-y-2 mt-2">
-          {updates.map((u) => (
-            <UpdateCard
-              key={u.id}
-              update={u}
-              updateTypeFields={updateTypeFields}
-              onTap={() => onUpdateTap(u)}
-              isScheduled
-              showPhotos={showPhotos}
-              showFieldValues={showFieldValues}
-              showEntityChips={showEntityChips}
-            />
-          ))}
+        <div className="mt-2">
+          {updates.map((u, i) => {
+            const raw = u as unknown as Partial<EnrichedUpdate>;
+            const safeUpdate: EnrichedUpdate = {
+              ...u,
+              anon_name: raw.anon_name ?? null,
+              update_type: raw.update_type ?? { id: '', name: 'Update', icon: '📝' } as EnrichedUpdate['update_type'],
+              photos: raw.photos ?? [],
+              species: raw.species ?? [],
+              fields: raw.fields ?? [],
+              createdByProfile: raw.createdByProfile ?? null,
+            } as EnrichedUpdate;
+            return (
+              <RailCard
+                key={u.id}
+                update={safeUpdate}
+                onOpen={() => onUpdateTap(u)}
+                isLast={i === updates.length - 1}
+              />
+            );
+          })}
         </div>
       )}
     </section>

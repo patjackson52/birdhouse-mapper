@@ -4,7 +4,7 @@ import type { ItemWithDetails } from '@/lib/types';
 import type { IconValue } from '@/lib/types';
 import { IconRenderer } from '@/components/shared/IconPicker';
 import StatusBadge from './StatusBadge';
-import TimelineOverview from './timeline/TimelineOverview';
+import { TimelineRail } from './timeline/TimelineRail';
 import { deleteUpdate } from '@/app/manage/update/[id]/actions';
 import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
 import { formatDate } from '@/lib/utils';
@@ -216,21 +216,13 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         <h3 className="text-xs font-medium text-sage uppercase tracking-wide mb-3">
           Updates
         </h3>
-        <TimelineOverview
+        <TimelineRail
           updates={item.updates}
-          updateTypeFields={[]}
-          config={{
-            showUpdates: true,
-            showScheduled: true,
-            maxItems: 10,
-            showPhotos: true,
-            showFieldValues: true,
-            showEntityChips: true,
-          }}
-          canEditUpdate={!!canEditItem}
-          canDeleteUpdate={!!canEditItem}
-          onDeleteUpdate={async (updateId: string) => {
-            await deleteUpdate(updateId);
+          maxItems={10}
+          showScheduled={true}
+          canAddUpdate={!!canAddUpdate}
+          onDeleteUpdate={(updateId: string) => {
+            void deleteUpdate(updateId);
           }}
         />
       </div>

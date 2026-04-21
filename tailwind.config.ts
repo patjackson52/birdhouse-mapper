@@ -16,6 +16,8 @@ const config: Config = {
           DEFAULT: 'var(--color-primary)',
           dark: 'var(--color-primary-dark)',
           light: 'var(--color-muted)',
+          border: '#DBE0D3',
+          'border-soft': '#E8ECE3',
         },
         golden: 'var(--color-accent)',
         parchment: 'var(--color-background)',

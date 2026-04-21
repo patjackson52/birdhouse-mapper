@@ -8,9 +8,9 @@ vi.mock('@/components/item/StatusBadge', () => ({
   ),
 }));
 
-vi.mock('@/components/item/timeline/TimelineOverview', () => ({
-  default: ({ updates, config }: { updates: unknown[]; config: { maxItems: number } }) => {
-    const visible = updates.slice(0, config.maxItems);
+vi.mock('@/components/item/timeline/TimelineRail', () => ({
+  TimelineRail: ({ updates, maxItems }: { updates: unknown[]; maxItems?: number }) => {
+    const visible = maxItems != null ? updates.slice(0, maxItems) : updates;
     if (visible.length === 0) {
       return <p>No activity yet</p>;
     }
@@ -224,7 +224,7 @@ describe('EntityListBlock', () => {
 // TimelineBlock
 // =====================
 describe('TimelineBlock', () => {
-  const makeUpdate = (id: string, content: string) => ({
+  const makeUpdate = (id: string, content: string): import('@/lib/types').EnrichedUpdate => ({
     id,
     item_id: 'item-1',
     update_type_id: 'ut-1',
@@ -232,9 +232,19 @@ describe('TimelineBlock', () => {
     update_date: '2024-01-01T00:00:00Z',
     created_at: '2024-01-01T00:00:00Z',
     created_by: null,
+    anon_name: null,
     org_id: 'org-1',
     property_id: 'prop-1',
     custom_field_values: {},
+    update_type: {
+      id: 'ut-1', org_id: 'org-1', name: 'Update', icon: '📝',
+      is_global: true, item_type_id: null, sort_order: 0,
+      min_role_create: null, min_role_edit: null, min_role_delete: null,
+    },
+    photos: [],
+    species: [],
+    fields: [],
+    createdByProfile: null,
   });
 
   const updates = [
@@ -258,7 +268,7 @@ describe('TimelineBlock', () => {
     canDeleteUpdate: false,
   };
 
-  it('renders the TimelineOverview with updates', () => {
+  it('renders the TimelineRail with updates', () => {
     render(<TimelineBlock config={baseConfig} updates={updates} {...baseProps} />);
     expect(screen.getByTestId('update-timeline')).toBeDefined();
     expect(screen.getAllByTestId('timeline-item')).toHaveLength(3);

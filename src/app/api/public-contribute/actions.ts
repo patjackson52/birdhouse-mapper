@@ -8,14 +8,20 @@ const MAX_UPLOADS_PER_HOUR = 10;
 
 interface PublicContributionInput {
   orgId: string;
+  itemId?: string | null;
   file: { name: string; type: string; size: number; base64: string };
   description?: string;
+  anonName?: string | null;
 }
 
 export async function submitPublicContribution(
   input: PublicContributionInput,
 ): Promise<{ success: true; status: string } | { error: string }> {
   const supabase = createClient();
+
+  // Normalize the optional anon nickname: trim, clamp to 80 chars, coerce
+  // empty/whitespace to null. Defense-in-depth on top of client trimming.
+  const anon_name = (input.anonName ?? '').trim().slice(0, 80) || null;
 
   // 1. Check org allows public contributions
   const { data: org, error: orgError } = await supabase
@@ -127,6 +133,19 @@ export async function submitPublicContribution(
   });
 
   if ('error' in result) return { error: result.error };
+
+  // 7. If the contribution is tied to a specific item, record an item_update
+  //    row so the photo appears on that item's timeline with the anon nickname.
+  if (input.itemId) {
+    await supabase.from('item_updates').insert({
+      org_id: input.orgId,
+      item_id: input.itemId,
+      created_by: user.id,
+      vault_item_id: result.item.id,
+      description: input.description?.trim() || null,
+      anon_name,
+    });
+  }
 
   return {
     success: true,

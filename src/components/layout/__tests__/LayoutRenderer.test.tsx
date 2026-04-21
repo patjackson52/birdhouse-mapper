@@ -111,6 +111,7 @@ const baseItem: ItemWithDetails = {
   photos: [],
   custom_fields: [],
   entities: [],
+  stats: { updatesCount: 0, speciesCount: 0, contributorsCount: 0 },
 };
 
 const baseCustomFields: CustomField[] = [

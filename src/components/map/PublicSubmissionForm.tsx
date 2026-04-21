@@ -21,6 +21,7 @@ export default function PublicSubmissionForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [anonName, setAnonName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -76,6 +77,7 @@ export default function PublicSubmissionForm({
           base64,
         },
         description: description.trim() || undefined,
+        anonName: anonName.trim() || null,
       });
 
       if ("error" in result) {
@@ -214,6 +216,23 @@ export default function PublicSubmissionForm({
                 </span>
               </label>
             )}
+          </div>
+
+          {/* Name (optional nickname for attribution) */}
+          <div>
+            <label htmlFor="public-name" className="label block mb-1">
+              Name{" "}
+              <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              id="public-name"
+              type="text"
+              value={anonName}
+              onChange={(e) => setAnonName(e.target.value)}
+              maxLength={80}
+              placeholder="How should we credit you?"
+              className="input-field w-full"
+            />
           </div>
 
           {/* Description */}
