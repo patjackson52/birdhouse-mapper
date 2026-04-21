@@ -1,7 +1,7 @@
-import type { UpdateTypeField } from '@/lib/types';
+import type { EnrichedUpdate, UpdateTypeField } from '@/lib/types';
 import type { TimelineConfig } from '@/lib/layout/types';
 import type { TimelineUpdate } from '@/components/item/timeline/timeline-helpers';
-import TimelineOverview from '@/components/item/timeline/TimelineOverview';
+import { TimelineRail } from '@/components/item/timeline/TimelineRail';
 
 interface TimelineBlockProps {
   config: TimelineConfig;
@@ -16,23 +16,19 @@ interface TimelineBlockProps {
 export default function TimelineBlock({
   config,
   updates,
-  updateTypeFields,
-  canEditUpdate,
-  canDeleteUpdate,
   onDeleteUpdate,
-  onEditUpdate,
 }: TimelineBlockProps) {
   if (!config.showUpdates) return null;
 
   return (
-    <TimelineOverview
-      updates={updates}
-      updateTypeFields={updateTypeFields}
-      config={config}
-      canEditUpdate={canEditUpdate}
-      canDeleteUpdate={canDeleteUpdate}
-      onDeleteUpdate={onDeleteUpdate}
-      onEditUpdate={onEditUpdate}
+    <TimelineRail
+      updates={updates as unknown as EnrichedUpdate[]}
+      maxItems={config.maxItems}
+      showScheduled={config.showScheduled}
+      canAddUpdate={false}
+      onDeleteUpdate={(id) => {
+        if (onDeleteUpdate) void onDeleteUpdate(id);
+      }}
     />
   );
 }

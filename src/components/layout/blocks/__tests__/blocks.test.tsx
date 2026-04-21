@@ -8,9 +8,9 @@ vi.mock('@/components/item/StatusBadge', () => ({
   ),
 }));
 
-vi.mock('@/components/item/timeline/TimelineOverview', () => ({
-  default: ({ updates, config }: { updates: unknown[]; config: { maxItems: number } }) => {
-    const visible = updates.slice(0, config.maxItems);
+vi.mock('@/components/item/timeline/TimelineRail', () => ({
+  TimelineRail: ({ updates, maxItems }: { updates: unknown[]; maxItems?: number }) => {
+    const visible = maxItems != null ? updates.slice(0, maxItems) : updates;
     if (visible.length === 0) {
       return <p>No activity yet</p>;
     }
@@ -259,7 +259,7 @@ describe('TimelineBlock', () => {
     canDeleteUpdate: false,
   };
 
-  it('renders the TimelineOverview with updates', () => {
+  it('renders the TimelineRail with updates', () => {
     render(<TimelineBlock config={baseConfig} updates={updates} {...baseProps} />);
     expect(screen.getByTestId('update-timeline')).toBeDefined();
     expect(screen.getAllByTestId('timeline-item')).toHaveLength(3);
