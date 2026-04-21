@@ -39,8 +39,12 @@ export function UpdateDetailSheet({
   const router = useRouter();
   const pathname = usePathname();
   if (!update) return null;
-  const firstPhoto = update.photos[0];
-  const extraPhotos = update.photos.slice(1);
+  const photos = update.photos ?? [];
+  const species = update.species ?? [];
+  const fields = update.fields ?? [];
+  const updateType = update.update_type ?? { id: '', name: 'Update', icon: '📝' };
+  const firstPhoto = photos[0];
+  const extraPhotos = photos.slice(1);
 
   return (
     <div className="fm-slide-up fixed inset-0 z-[100] flex flex-col bg-white">
@@ -72,8 +76,8 @@ export function UpdateDetailSheet({
         )}
         <div className="absolute inset-x-4 bottom-3 text-white">
           <div className="flex items-center gap-[6px] font-mono text-[11px] uppercase tracking-[1px] opacity-90">
-            <span>{update.update_type.icon}</span>
-            <span>{update.update_type.name}</span>
+            <span>{updateType.icon}</span>
+            <span>{updateType.name}</span>
           </div>
           <h2 className="mt-[3px] font-heading text-[22px] font-medium leading-tight">{fmtDate(update.update_date)}</h2>
         </div>
@@ -92,16 +96,16 @@ export function UpdateDetailSheet({
           <p className="mb-[18px] text-[15px] leading-[1.55] font-body">{update.content}</p>
         )}
 
-        {update.species.length > 0 && (
+        {species.length > 0 && (
           <div className="mb-[18px]">
             <div className="mb-2 flex items-baseline justify-between">
               <div className="text-[11px] font-semibold uppercase tracking-[0.8px] text-sage font-body">
-                Species observed · {update.species.length}
+                Species observed · {species.length}
               </div>
               <div className="font-mono text-[10.5px] text-forest">iNat</div>
             </div>
             <div className="flex flex-col gap-2">
-              {update.species.map((s) => (
+              {species.map((s) => (
                 <SpeciesRow
                   key={s.external_id}
                   species={{
@@ -132,11 +136,11 @@ export function UpdateDetailSheet({
           </div>
         )}
 
-        {update.fields.length > 0 && (
+        {fields.length > 0 && (
           <div className="mb-[18px]">
             <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.8px] text-sage font-body">Details</div>
             <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-forest-border-soft bg-white">
-              {update.fields.map((f, i, arr) => {
+              {fields.map((f, i, arr) => {
                 const odd = arr.length % 2 !== 0 && i === arr.length - 1;
                 return (
                   <div

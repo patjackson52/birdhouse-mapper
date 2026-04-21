@@ -47,11 +47,16 @@ export default function ScheduledUpdatesSection({
       {expanded && (
         <div className="mt-2">
           {updates.map((u, i) => {
-            const safeUpdate = {
+            const raw = u as unknown as Partial<EnrichedUpdate>;
+            const safeUpdate: EnrichedUpdate = {
               ...u,
-              photos: u.photos ?? [],
-              species: (u as unknown as { species?: unknown[] }).species ?? [],
-            } as unknown as EnrichedUpdate;
+              anon_name: raw.anon_name ?? null,
+              update_type: raw.update_type ?? { id: '', name: 'Update', icon: '📝' } as EnrichedUpdate['update_type'],
+              photos: raw.photos ?? [],
+              species: raw.species ?? [],
+              fields: raw.fields ?? [],
+              createdByProfile: raw.createdByProfile ?? null,
+            } as EnrichedUpdate;
             return (
               <RailCard
                 key={u.id}

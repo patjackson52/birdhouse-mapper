@@ -22,8 +22,13 @@ export function RailCard({
   onOpen: () => void;
   isLast: boolean;
 }) {
-  const firstPhoto = update.photos[0];
-  const speciesStack = update.species.slice(0, 3);
+  // Defensive reads: tolerate legacy / partial updates that reach RailCard
+  // without the full EnrichedUpdate shape (e.g., mock data, cache drift).
+  const photos = update.photos ?? [];
+  const species = update.species ?? [];
+  const updateType = update.update_type ?? { id: '', name: 'Update', icon: '📝' };
+  const firstPhoto = photos[0];
+  const speciesStack = species.slice(0, 3);
   return (
     <div className="relative pl-7" style={{ paddingBottom: isLast ? 0 : 14 }}>
       {!isLast && (
@@ -44,12 +49,12 @@ export function RailCard({
           </div>
         ) : (
           <div className="flex h-[66px] w-[66px] shrink-0 items-center justify-center rounded-[10px] bg-sage-light text-[26px]">
-            {update.update_type.icon}
+            {updateType.icon}
           </div>
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-[6px]">
-            <span className="text-[13px] font-semibold text-forest-dark">{update.update_type.name}</span>
+            <span className="text-[13px] font-semibold text-forest-dark">{updateType.name}</span>
             <span className="font-mono text-[11px] text-sage">{fmtRel(update.update_date)}</span>
           </div>
           {update.content && (
