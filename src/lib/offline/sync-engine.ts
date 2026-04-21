@@ -186,6 +186,42 @@ export async function syncPropertyData(
       await table.bulkPut(withSyncedAt);
     }
 
+    // Reconcile deletions: delta sync (keyed on created_at / updated_at) can
+    // never detect hard-deleted rows on the server — the local cache would
+    // keep the deleted row forever, causing UI drift (e.g., item detail shows
+    // a photo that the edit page no longer lists). Re-query the authoritative
+    // ID set for this table+scope and drop any local rows that are missing.
+    // Cheap: select id only, bounded by property/org scope.
+    const scopeColumn = propertyScoped.includes(tableName)
+      ? 'property_id'
+      : orgScoped.includes(tableName)
+      ? 'org_id'
+      : null;
+    if (scopeColumn) {
+      const { data: idRows, error: idError } = await supabase
+        .from(tableName)
+        .select('id')
+        .eq(scopeColumn, scopeColumn === 'property_id' ? propertyId : orgId);
+      if (!idError && idRows) {
+        const serverIds = new Set((idRows as Array<{ id: string }>).map((r) => r.id));
+        const scopeValue = scopeColumn === 'property_id' ? propertyId : orgId;
+        const localRows = (await db
+          .table(tableName)
+          .where(scopeColumn)
+          .equals(scopeValue)
+          .toArray()) as Array<{ id: string; _synced_at?: string }>;
+        // Only delete rows that have been synced from the server at some point.
+        // Rows with empty _synced_at are local pending inserts — the server
+        // doesn't have them yet, so their absence from the ID set is expected.
+        const toDelete = localRows
+          .filter((r) => !serverIds.has(r.id) && !!r._synced_at)
+          .map((r) => r.id);
+        if (toDelete.length > 0) {
+          await db.table(tableName).bulkDelete(toDelete);
+        }
+      }
+    }
+
     const totalCount = await db.table(tableName).count();
     await db.sync_metadata.put({
       id: metaId, property_id: propertyId, table_name: tableName,
