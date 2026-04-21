@@ -4,10 +4,12 @@ import type { ItemWithDetails } from '@/lib/types';
 import type { IconValue } from '@/lib/types';
 import { IconRenderer } from '@/components/shared/IconPicker';
 import StatusBadge from './StatusBadge';
+import { ItemHeader } from './ItemHeader';
 import { TimelineRail } from './timeline/TimelineRail';
 import { deleteUpdate } from '@/app/manage/update/[id]/actions';
 import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
 import { formatDate } from '@/lib/utils';
+import { getPhotoUrl } from '@/lib/photos';
 import { useEffect, useState } from 'react';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
@@ -50,34 +52,19 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   const distance = getDistanceToItem(position, item);
   const layout = item.item_type?.layout ?? null;
 
+  const firstPhoto = item.photos[0];
+  const photoUrl = firstPhoto ? getPhotoUrl(firstPhoto.storage_path) : null;
+
   const content = layout ? (
     <div>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {item.item_type && <IconRenderer icon={item.item_type.icon} size={20} />}
-            <h2 className="font-heading font-semibold text-forest-dark text-xl">
-              {item.name}
-            </h2>
-          </div>
-          {distance != null && (
-            <span className="text-xs text-forest">
-              {formatDistance(distance)} away
-            </span>
-          )}
-        </div>
-        {!isMobile && (
-          <button
-            onClick={onClose}
-            className="ml-2 p-1 rounded-lg text-sage hover:bg-sage-light transition-colors"
-            aria-label="Close panel"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
+      <ItemHeader
+        item={item}
+        location={distance != null ? `${formatDistance(distance)} away` : null}
+        photoUrl={photoUrl}
+        stats={item.stats}
+        onBack={onClose}
+        onShare={() => {}}
+      />
       <LayoutRendererDispatch
         layout={layout}
         item={item}
@@ -97,34 +84,16 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
     </div>
   ) : (
     <div>
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            {item.item_type && <IconRenderer icon={item.item_type.icon} size={20} />}
-            <h2 className="font-heading font-semibold text-forest-dark text-xl">
-              {item.name}
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <StatusBadge status={item.status} />
-            {distance != null && (
-              <span className="text-xs text-forest">
-                {formatDistance(distance)} away
-              </span>
-            )}
-          </div>
-        </div>
-        {!isMobile && (
-          <button
-            onClick={onClose}
-            className="ml-2 p-1 rounded-lg text-sage hover:bg-sage-light transition-colors"
-            aria-label="Close panel"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        )}
+      <ItemHeader
+        item={item}
+        location={distance != null ? `${formatDistance(distance)} away` : null}
+        photoUrl={photoUrl}
+        stats={item.stats}
+        onBack={onClose}
+        onShare={() => {}}
+      />
+      <div className="px-1 pt-3 mb-3">
+        <StatusBadge status={item.status} />
       </div>
 
       {/* Custom fields */}
