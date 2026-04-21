@@ -66,11 +66,19 @@ async function executeMutation(
       return `Photo upload failed: ${uploadError.message}`;
     }
 
+    // Pass org_id + property_id explicitly rather than relying on the
+    // auto_populate_org_property trigger, which derives property_id from
+    // `orgs.default_property_id` — wrong whenever the item isn't on the
+    // user's default property, and silently causes the RLS check to fail
+    // against the wrong property. The mutation carries the correct scope
+    // (set when enqueued for the specific item).
     const { error: photoInsertError } = await supabase.from('photos').insert({
       item_id: photoBlob.item_id,
       update_id: photoBlob.update_id,
       storage_path: storagePath,
       is_primary: photoBlob.is_primary,
+      org_id: mutation.org_id,
+      property_id: mutation.property_id,
     });
 
     if (photoInsertError) {
