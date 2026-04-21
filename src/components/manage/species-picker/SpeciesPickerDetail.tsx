@@ -3,6 +3,7 @@
 import type { ReactElement } from 'react';
 import type { SpeciesDetail, SpeciesResult } from '@/lib/types';
 import { isCavityNester } from '@/lib/species/cavity-nesters';
+import { SpeciesTaxonomySection } from '@/components/species/SpeciesTaxonomySection';
 import { useSpeciesDetail } from './useSpeciesDetail';
 
 interface SpeciesPickerDetailProps {
@@ -71,35 +72,15 @@ export default function SpeciesPickerDetail({
         <p className="italic text-sm text-sage">{scientificName}</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {establishment === 'native' && (
-          <span className="rounded-full bg-forest/10 px-2.5 py-1 text-xs text-forest-dark">
-            Native
-          </span>
-        )}
-        {establishment === 'introduced' && (
-          <span className="rounded-full bg-[var(--color-accent)] px-2.5 py-1 text-xs text-forest-dark">
-            Introduced
-          </span>
-        )}
-        {showCavityBadge && (
-          <span className="rounded-full bg-sage-light px-2.5 py-1 text-xs text-forest-dark">
-            Cavity nester
-          </span>
-        )}
-        {iucn && (
-          <span className="rounded-full bg-sage-light px-2.5 py-1 text-xs text-forest-dark">
-            IUCN {iucn}
-          </span>
-        )}
-      </div>
+      <SpeciesTaxonomySection
+        native={establishment === 'native'}
+        cavityNester={showCavityBadge}
+        iucnStatus={iucn}
+        summary={summary}
+      />
 
       {loading && <p className="text-xs text-sage">Loading details...</p>}
       {error && <p className="text-xs text-sage">Details unavailable right now.</p>}
-
-      {summary && (
-        <p className="text-sm leading-relaxed text-forest-dark">{summary}</p>
-      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="rounded-lg bg-sage-light px-3 py-2">
