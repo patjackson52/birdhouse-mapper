@@ -17,7 +17,7 @@ test.describe('Detail Panel Visual @visual', () => {
     await page.waitForFunction(() => document.fonts.ready);
 
     // Wait for panel to appear
-    await expect(page.locator('h1.font-heading')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2.font-heading')).toBeVisible({ timeout: 10000 });
 
     await expect(page).toHaveScreenshot('detail-panel.png', {
       mask: [

@@ -94,7 +94,7 @@ test.describe('Item Photos in Detail Panel', () => {
     await page.waitForLoadState('networkidle');
 
     // Wait for the detail panel to open via deep-link
-    const panelTitle = page.locator('h1.font-heading');
+    const panelTitle = page.locator('h2.font-heading');
     await expect(panelTitle).toBeVisible({ timeout: 30000 });
     await expect(panelTitle).toContainText('E2E Photo Test');
 
