@@ -5,6 +5,7 @@ import type { TypeLayoutV2 } from '@/lib/layout/types-v2';
 import type { ItemWithDetails, CustomField } from '@/lib/types';
 import LayoutRenderer from './LayoutRenderer';
 import LayoutRendererV2 from './LayoutRendererV2';
+import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
 
 interface Props {
   layout: TypeLayout | TypeLayoutV2;
@@ -18,7 +19,9 @@ interface Props {
   isAuthenticated?: boolean;
   canEditUpdate?: boolean;
   canDeleteUpdate?: boolean;
-  onDeleteUpdate?: (updateId: string) => void | Promise<void>;
+  currentUserId?: string | null;
+  userRole?: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null;
+  onDeleteUpdate?: (updateId: string, permission: DeletePermission) => void;
   onEditUpdate?: (updateId: string) => void;
 }
 

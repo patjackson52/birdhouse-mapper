@@ -19,6 +19,7 @@ import TimelineBlock from './blocks/TimelineBlock';
 import RowBlockV2 from './blocks/RowBlockV2';
 import DescriptionBlock from './blocks/DescriptionBlock';
 import type { EntityDisplay } from './blocks/EntityListBlock';
+import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
 
 export interface LayoutRendererV2Props {
   layout: TypeLayoutV2;
@@ -32,7 +33,9 @@ export interface LayoutRendererV2Props {
   isAuthenticated?: boolean;
   canEditUpdate?: boolean;
   canDeleteUpdate?: boolean;
-  onDeleteUpdate?: (updateId: string) => void | Promise<void>;
+  currentUserId?: string | null;
+  userRole?: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null;
+  onDeleteUpdate?: (updateId: string, permission: DeletePermission) => void;
   onEditUpdate?: (updateId: string) => void;
 }
 
@@ -231,6 +234,8 @@ export function renderBlockContent(
           updateTypeFields={[]}
           canEditUpdate={!!props.canEditUpdate}
           canDeleteUpdate={!!props.canDeleteUpdate}
+          currentUserId={props.currentUserId ?? null}
+          userRole={props.userRole ?? null}
           onDeleteUpdate={props.onDeleteUpdate}
           onEditUpdate={props.onEditUpdate}
         />

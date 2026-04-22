@@ -5,16 +5,48 @@ import type { IconValue } from '@/lib/types';
 import { IconRenderer } from '@/components/shared/IconPicker';
 import StatusBadge from './StatusBadge';
 import { TimelineRail } from './timeline/TimelineRail';
-import { deleteUpdate } from '@/app/manage/update/[id]/actions';
 import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
 import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import PhotoViewer from '@/components/ui/PhotoViewer';
 import LayoutRendererDispatch from '@/components/layout/LayoutRendererDispatch';
+import { createClient } from '@/lib/supabase/client';
+import { usePermissions } from '@/lib/permissions/hooks';
+import { softDeleteUpdate } from '@/app/items/[itemId]/updates/actions';
+import { useDeleteStore } from '@/stores/deleteSlice';
+import { DeleteToastHost } from '@/components/delete/DeleteToastHost';
+import { track } from '@/lib/telemetry/track';
+import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
+
+/**
+ * Map the existing app's userBaseRole (public_admin / org_admin / org_staff /
+ * contributor / viewer / public) onto the simplified role type expected by
+ * TimelineRail's computeDeletePermission, which only distinguishes
+ * admin/coordinator (full delete rights) vs member/public_contributor (can
+ * only delete own updates).
+ */
+function mapUserBaseRole(
+  userBaseRole: string
+): 'admin' | 'coordinator' | 'member' | 'public_contributor' | null {
+  switch (userBaseRole) {
+    case 'platform_admin':
+    case 'org_admin':
+      return 'admin';
+    case 'org_staff':
+      return 'coordinator';
+    case 'contributor':
+    case 'viewer':
+      return 'member';
+    case 'public':
+      return 'public_contributor';
+    default:
+      return null;
+  }
+}
 
 interface DetailPanelProps {
   item: ItemWithDetails | null;
@@ -27,14 +59,35 @@ interface DetailPanelProps {
 
 export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate, onSheetStateChange }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const params = useParams();
+  const router = useRouter();
   const slug = typeof params?.slug === 'string' ? params.slug : null;
+  const { userBaseRole } = usePermissions();
+  const userRole = mapUserBaseRole(userBaseRole);
+  const setPending = useDeleteStore((s) => s.setPending);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (!cancelled) setCurrentUserId(data.user?.id ?? null);
+      } catch {
+        if (!cancelled) setCurrentUserId(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -45,7 +98,36 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
 
   const { position } = useUserLocation();
 
-  if (!item) return null;
+  const handleDeleteUpdate = async (
+    updateId: string,
+    permission: DeletePermission
+  ) => {
+    track('update.delete.initiated', {
+      update_id: updateId,
+      role: permission.kind,
+      is_own: permission.kind === 'author',
+    });
+    const res = await softDeleteUpdate(updateId);
+    if ('error' in res) {
+      console.error('delete failed:', res.error);
+      return;
+    }
+    track('update.delete.confirmed', {
+      update_id: updateId,
+      role: permission.kind,
+    });
+    setPending({
+      updateId,
+      undoToken: res.undoToken,
+      expiresAtMs: res.expiresAtMs,
+    });
+    router.refresh();
+  };
+
+  // NOTE: Keep DeleteToastHost mounted even when no item is selected so the
+  // undo toast persists if the user closes the panel immediately after a
+  // delete. Only the DetailPanel chrome is gated on `item`.
+  if (!item) return <DeleteToastHost />;
 
   const distance = getDistanceToItem(position, item);
   const layout = item.item_type?.layout ?? null;
@@ -90,9 +172,9 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         isAuthenticated={isAuthenticated}
         canEditUpdate={canEditItem}
         canDeleteUpdate={canEditItem}
-        onDeleteUpdate={async (updateId: string) => {
-          await deleteUpdate(updateId);
-        }}
+        currentUserId={currentUserId}
+        userRole={userRole}
+        onDeleteUpdate={handleDeleteUpdate}
       />
     </div>
   ) : (
@@ -221,9 +303,9 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
           maxItems={10}
           showScheduled={true}
           canAddUpdate={!!canAddUpdate}
-          onDeleteUpdate={(updateId: string) => {
-            void deleteUpdate(updateId);
-          }}
+          currentUserId={currentUserId}
+          userRole={userRole}
+          onDeleteUpdate={handleDeleteUpdate}
         />
       </div>
     </div>
@@ -232,16 +314,22 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   // Mobile: bottom sheet
   if (isMobile) {
     return (
-      <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={(s) => { onSheetStateChange?.(s); }}>
-        {content}
-      </MultiSnapBottomSheet>
+      <>
+        <MultiSnapBottomSheet isOpen={!!item} onClose={onClose} onStateChange={(s) => { onSheetStateChange?.(s); }}>
+          {content}
+        </MultiSnapBottomSheet>
+        <DeleteToastHost />
+      </>
     );
   }
 
   // Desktop: side panel
   return (
-    <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-2xl border-l border-sage-light z-20 overflow-y-auto animate-slide-in-right">
-      <div className="p-5">{content}</div>
-    </div>
+    <>
+      <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-2xl border-l border-sage-light z-20 overflow-y-auto animate-slide-in-right">
+        <div className="p-5">{content}</div>
+      </div>
+      <DeleteToastHost />
+    </>
   );
 }
