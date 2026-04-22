@@ -21,3 +21,5 @@
 .fm-fade { animation: fm-fade 0.2s ease-out; }
 @keyframes fm-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
 .fm-sheet-up { animation: fm-sheet-up 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes fm-toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.fm-toast-in { animation: fm-toast-in 0.22s cubic-bezier(0.2, 0.8, 0.2, 1); }
