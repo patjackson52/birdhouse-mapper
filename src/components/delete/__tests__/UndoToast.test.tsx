@@ -12,7 +12,7 @@ describe('UndoToast', () => {
     const expiresAtMs = Date.now() + 5500;
     render(
       <UndoToast
-        pending={{ updateId: 'u-1', undoToken: 't', expiresAtMs }}
+        pending={{ updateId: 'u-1', undoToken: 't', expiresAtMs, update: null }}
         onUndo={() => {}}
         onExpire={() => {}}
       />
@@ -24,7 +24,7 @@ describe('UndoToast', () => {
     const onUndo = vi.fn();
     render(
       <UndoToast
-        pending={{ updateId: 'u-1', undoToken: 't', expiresAtMs: Date.now() + 8000 }}
+        pending={{ updateId: 'u-1', undoToken: 't', expiresAtMs: Date.now() + 8000, update: null }}
         onUndo={onUndo}
         onExpire={() => {}}
       />
@@ -38,7 +38,7 @@ describe('UndoToast', () => {
     const onExpire = vi.fn();
     render(
       <UndoToast
-        pending={{ updateId: 'u-1', undoToken: 't', expiresAtMs: Date.now() + 200 }}
+        pending={{ updateId: 'u-1', undoToken: 't', expiresAtMs: Date.now() + 200, update: null }}
         onUndo={() => {}}
         onExpire={onExpire}
       />
