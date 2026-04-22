@@ -8,6 +8,7 @@ import { TimelineRail } from './timeline/TimelineRail';
 import MultiSnapBottomSheet, { type SheetState } from '@/components/ui/MultiSnapBottomSheet';
 import { formatDate } from '@/lib/utils';
 import { useEffect, useState } from 'react';
+import { getOfflineDb } from '@/lib/offline/db';
 import { useUserLocation } from '@/lib/location/provider';
 import { getDistanceToItem, formatDistance } from '@/lib/location/utils';
 import Link from 'next/link';
@@ -66,6 +67,8 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   const { userBaseRole } = usePermissions();
   const userRole = mapUserBaseRole(userBaseRole);
   const setPending = useDeleteStore((s) => s.setPending);
+  const markHidden = useDeleteStore((s) => s.markHidden);
+  const hiddenUpdateIds = useDeleteStore((s) => s.hiddenUpdateIds);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -107,6 +110,9 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       role: permission.kind,
       is_own: permission.kind === 'author',
     });
+    // Save the original row (from item.updates, hydrated from the offline
+    // cache) so we can restore it to IndexedDB if the user undoes.
+    const savedUpdate = item?.updates.find((u) => u.id === updateId) ?? null;
     const res = await softDeleteUpdate(updateId);
     if ('error' in res) {
       console.error('delete failed:', res.error);
@@ -120,7 +126,20 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       updateId,
       undoToken: res.undoToken,
       expiresAtMs: res.expiresAtMs,
+      update: savedUpdate,
     });
+    // Optimistic UI: hide this id from the current render. item.updates is
+    // parent-owned React state hydrated from IndexedDB at marker-click time,
+    // so we can't mutate it here — filter via the store in `filteredItem`.
+    markHidden(updateId);
+    // Evict from the offline IndexedDB cache so subsequent reads (on next
+    // marker click or sync reconciliation) don't repopulate the stale row.
+    // If this fails, the sync reconciliation pass will eventually clean it up.
+    try {
+      await getOfflineDb().item_updates.delete(updateId);
+    } catch {
+      // best-effort; no action needed
+    }
     router.refresh();
   };
 
@@ -128,6 +147,14 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
   // undo toast persists if the user closes the panel immediately after a
   // delete. Only the DetailPanel chrome is gated on `item`.
   if (!item) return <DeleteToastHost />;
+
+  // Filter optimistically-hidden updates out before handing to children.
+  const filteredItem = hiddenUpdateIds.length === 0
+    ? item
+    : {
+        ...item,
+        updates: item.updates.filter((u) => !hiddenUpdateIds.includes(u.id)),
+      };
 
   const distance = getDistanceToItem(position, item);
   const layout = item.item_type?.layout ?? null;
@@ -162,7 +189,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       </div>
       <LayoutRendererDispatch
         layout={layout}
-        item={item}
+        item={filteredItem}
         mode="live"
         context={isMobile ? 'bottom-sheet' : 'side-panel'}
         sheetState={isMobile ? 'full' : undefined}
@@ -299,7 +326,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
           Updates
         </h3>
         <TimelineRail
-          updates={item.updates}
+          updates={filteredItem.updates}
           maxItems={10}
           showScheduled={true}
           canAddUpdate={!!canAddUpdate}
