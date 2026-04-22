@@ -138,24 +138,33 @@ export function OfflineProvider({ children }: { children: React.ReactNode }) {
     getPhotos: (itemId) => store.getPhotos(db, itemId),
     getEntities: (orgId) => store.getEntities(db, orgId),
     getEntityTypes: (orgId) => store.getEntityTypes(db, orgId),
+    // triggerSync must be scheduled as a macrotask (setTimeout 0), not a
+    // microtask. Callers routinely do more awaited work after this mutation
+    // resolves — e.g. EditItemForm stores photo blobs keyed by the returned
+    // mutationId. If triggerSync ran as a microtask, processOutboundQueue
+    // could pick up the mutation and call getPhotoBlobs() BEFORE the blob
+    // has been written, silently dropping the photos (the mutation completes
+    // without uploading them and removePhotoBlobsByMutation then deletes
+    // any blobs that arrived too late). Deferring via setTimeout lets the
+    // caller's microtask chain finish first.
     insertItem: (params) => {
       const result = store.insertItem(db, params);
-      result.then(() => { refreshPendingCount(); triggerSync(); });
+      result.then(() => { refreshPendingCount(); setTimeout(triggerSync, 0); });
       return result;
     },
     updateItem: (itemId, changes, orgId, propertyId) => {
       const result = store.updateItem(db, itemId, changes, orgId, propertyId);
-      result.then(() => { refreshPendingCount(); triggerSync(); });
+      result.then(() => { refreshPendingCount(); setTimeout(triggerSync, 0); });
       return result;
     },
     deleteItem: (itemId, orgId, propertyId) => {
       const result = store.deleteItem(db, itemId, orgId, propertyId);
-      result.then(() => { refreshPendingCount(); triggerSync(); });
+      result.then(() => { refreshPendingCount(); setTimeout(triggerSync, 0); });
       return result;
     },
     insertItemUpdate: (params) => {
       const result = store.insertItemUpdate(db, params);
-      result.then(() => { refreshPendingCount(); triggerSync(); });
+      result.then(() => { refreshPendingCount(); setTimeout(triggerSync, 0); });
       return result;
     },
     syncProperty,
