@@ -57,7 +57,14 @@ async function executeMutation(
   // Handle photo uploads first if this mutation has associated blobs
   const photoBlobs = await getPhotoBlobs(db, mutation.id);
   for (const photoBlob of photoBlobs) {
-    const storagePath = `${photoBlob.item_id}/${Date.now()}_${photoBlob.filename}`;
+    // The vault-public bucket RLS (migration 026) requires the first path
+    // segment to be an org_id the user has active membership in:
+    //   (storage.foldername(name))[1] in (select id::text from orgs where
+    //     id in (select user_active_org_ids()))
+    // Previously we uploaded to `${item_id}/...` which always failed the
+    // RLS check; every photo upload through this path was silently rejected
+    // and the mutation retried up to MAX_RETRIES with no visible error.
+    const storagePath = `${mutation.org_id}/${photoBlob.item_id}/${Date.now()}_${photoBlob.filename}`;
     const { error: uploadError } = await supabase.storage
       .from('vault-public')
       .upload(storagePath, photoBlob.blob);
