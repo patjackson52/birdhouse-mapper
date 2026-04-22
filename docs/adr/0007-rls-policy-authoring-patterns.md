@@ -50,15 +50,23 @@ This means:
 
 Before merging any policy change, walk through the matrix: for every feature that mutates any column the policy references, does the post-mutation state still pass USING? If not, and the policy is RESTRICTIVE, expect errors.
 
-### 3. The PostgREST `return=representation` trap
+### 3. Any UPDATE via PostgREST enforces SELECT USING on the new row
 
-PostgREST's default `Prefer` header for `PATCH` (and `POST`) is `return=representation`. Supabase's `.update(...)` and `.insert(...)` both inherit this — they issue `UPDATE ... RETURNING` under the hood unless you explicitly pass `{ returning: 'minimal' }` or chain `.select()` in a way that opts out.
+PostgREST's default `Prefer` header for `PATCH` is `return=representation`, so Supabase's `.update(...)` issues `UPDATE ... RETURNING` under the hood. Postgres then evaluates SELECT policies' `USING` against the **new row** to decide visibility for the returned result. When that evaluation fails — *including* for a permissive SELECT policy with a single USING branch — the UPDATE is rejected with `new row violates row-level security policy for table "<table>"` (no policy name, because the rejection is "no permissive policy allowed the new row's post-state to be visible").
 
-Every mutation through `@supabase/supabase-js` therefore triggers the post-update SELECT policy evaluation described in rule 2. There is no way to write a client-side query that says "mutate this and don't look at the result" without passing the `returning: 'minimal'` option or sending raw SQL via a stored function.
+This is the trap that bit PR #275 twice:
 
-Implication: **policy authors should assume every mutation re-reads its result through SELECT RLS**, and design policies accordingly. The column-matrix walkthrough from rule 2 is not optional — it's part of writing the policy.
+- First attempt used a RESTRICTIVE policy with `USING (deleted_at IS NULL)`. New row with `deleted_at` populated failed → error named the policy explicitly.
+- Second attempt (migration 048) moved the filter into the permissive `item_updates_select` policy. New row still failed → error lost the policy name but the UPDATE was still rejected.
+- Third attempt (migration 048 + server-action refactor to service-role client) finally worked — because service role bypasses RLS entirely.
 
-If you find yourself tempted to use `returning: 'minimal'` in application code to work around a policy problem, stop: the problem is the policy, not the client. Fix the policy so the post-state passes its own USING; return=minimal should be reserved for deletes-without-restore or other cases where the client legitimately doesn't care about the result.
+**Implication:** any UPDATE via `@supabase/supabase-js` that mutates a column referenced by a SELECT policy's USING will be rejected whenever the post-update state fails that USING. You cannot flip a visibility-filter column from "visible" to "hidden" through a user-auth Supabase client. You have three options:
+
+1. **Use the service-role client for the mutation** (`createServiceClient()` from `@/lib/supabase/server`). Authorization must still be enforced via a pre-check (e.g., the `can_user_delete_update` RPC). This is the pragmatic fix for the update-delete flow.
+2. **Wrap the mutation in a SECURITY DEFINER RPC** that performs its own permission check and the UPDATE. Callers invoke `supabase.rpc('soft_delete_update', ...)` instead of `.from(...).update(...)`. Cleaner architecturally; more migration work.
+3. **Remove the visibility filter from RLS** and enforce it in application code. Rejected — loses defense in depth and every future read path has to remember to filter.
+
+Column-mutation matrix (repeat of rule 2): before merging a policy change, walk through every feature that mutates any column the policy references. For each one, does the post-mutation state still pass USING? If the new state *intentionally* fails USING (as with soft-delete), the mutation path needs option 1 or 2 above. Mocked unit tests won't catch this — only a real mutation through PostgREST will.
 
 ### 4. RLS-enabled tables need policies for every command the app uses
 
