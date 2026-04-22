@@ -35,7 +35,7 @@ export function DeleteConfirmModal({
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M12 1l3 6 6 1-4.5 4.5 1 6.5L12 16l-5.5 3 1-6.5L3 8l6-1z" />
             </svg>
-            ADMIN · DELETE OTHERS' UPDATE
+            {"ADMIN · DELETE OTHERS' UPDATE"}
           </div>
         )}
         <h2
