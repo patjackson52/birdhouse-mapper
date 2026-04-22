@@ -69,3 +69,59 @@ describe('softDeleteUpdate', () => {
     expect('error' in result).toBe(true);
   });
 });
+
+import { undoDeleteUpdate } from '../actions';
+import { signUndoToken } from '@/lib/delete-updates/undo-token';
+
+describe('undoDeleteUpdate', () => {
+  it('clears deleted_at when token is valid and actor matches', async () => {
+    mockSingle.mockResolvedValueOnce({
+      data: { id: 'u-1', created_by: 'user-1', org_id: 'org-1', deleted_at: new Date().toISOString() },
+      error: null,
+    });
+    mockUpdate.mockReturnValue({
+      eq: async () => ({ error: null }),
+    });
+    mockInsert.mockResolvedValue({ error: null });
+
+    const token = signUndoToken({
+      updateId: 'u-1',
+      actorId: 'user-1',
+      expiresAtMs: Date.now() + 10_000,
+    });
+    const result = await undoDeleteUpdate({ updateId: 'u-1', undoToken: token });
+    expect('success' in result && result.success).toBe(true);
+  });
+
+  it('rejects an expired token with status: gone', async () => {
+    const token = signUndoToken({
+      updateId: 'u-1',
+      actorId: 'user-1',
+      expiresAtMs: Date.now() - 1,
+    });
+    const result = await undoDeleteUpdate({ updateId: 'u-1', undoToken: token });
+    expect('error' in result).toBe(true);
+    if ('error' in result) expect(result.error).toBe('gone');
+  });
+
+  it('rejects a mismatched actor with forbidden', async () => {
+    const token = signUndoToken({
+      updateId: 'u-1',
+      actorId: 'someone-else',
+      expiresAtMs: Date.now() + 10_000,
+    });
+    const result = await undoDeleteUpdate({ updateId: 'u-1', undoToken: token });
+    expect('error' in result).toBe(true);
+    if ('error' in result) expect(result.error).toBe('forbidden');
+  });
+
+  it('rejects a mismatched updateId', async () => {
+    const token = signUndoToken({
+      updateId: 'different',
+      actorId: 'user-1',
+      expiresAtMs: Date.now() + 10_000,
+    });
+    const result = await undoDeleteUpdate({ updateId: 'u-1', undoToken: token });
+    expect('error' in result).toBe(true);
+  });
+});
