@@ -20,6 +20,10 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
     rpc: vi.fn().mockResolvedValue({ data: false, error: null }),
   })),
+  // The service-role client is used to perform the actual UPDATE + audit
+  // INSERT (bypasses the deleted_at SELECT USING clause that blocks the
+  // mutation under RLS).
+  createServiceClient: vi.fn(() => ({ from: mockFrom })),
 }));
 
 beforeEach(() => {
