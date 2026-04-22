@@ -7,12 +7,15 @@ import { UpdateDetailSheet } from './UpdateDetailSheet';
 import { AllUpdatesSheet } from './AllUpdatesSheet';
 import ScheduledUpdatesSection from './ScheduledUpdatesSection';
 import { partitionScheduled } from './timeline-helpers';
+import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
 
 export function TimelineRail({
   updates,
   maxItems,
   showScheduled = true,
   canAddUpdate,
+  currentUserId,
+  userRole,
   onAddUpdate,
   onDeleteUpdate,
 }: {
@@ -20,8 +23,10 @@ export function TimelineRail({
   maxItems?: number;
   showScheduled?: boolean;
   canAddUpdate: boolean;
+  currentUserId: string | null;
+  userRole: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null;
   onAddUpdate?: () => void;
-  onDeleteUpdate: (id: string) => void;
+  onDeleteUpdate: (id: string, permission: DeletePermission) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [allOpen, setAllOpen] = useState(false);
@@ -64,11 +69,11 @@ export function TimelineRail({
       <UpdateDetailSheet
         update={open}
         onClose={() => setOpenId(null)}
-        canEdit={false}
-        canDelete={false}
-        onDelete={() => {
-          if (open) onDeleteUpdate(open.id);
+        currentUserId={currentUserId}
+        deletePermission={computeDeletePermission(open, currentUserId, userRole)}
+        onRequestDelete={(u, perm) => {
           setOpenId(null);
+          onDeleteUpdate(u.id, perm);
         }}
       />
       {allOpen && (
@@ -83,4 +88,16 @@ export function TimelineRail({
       )}
     </div>
   );
+}
+
+function computeDeletePermission(
+  update: EnrichedUpdate | null,
+  currentUserId: string | null,
+  role: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null
+): DeletePermission | null {
+  if (!update || !currentUserId) return null;
+  if (role === 'admin' || role === 'coordinator') return { kind: 'admin' };
+  const isAnon = !update.created_by || update.anon_name != null;
+  if (!isAnon && update.created_by === currentUserId) return { kind: 'author' };
+  return null;
 }
