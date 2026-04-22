@@ -1,9 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import type { EnrichedUpdate } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import { Attribution } from './Attribution';
 import { SpeciesRow } from '@/components/species/SpeciesRow';
+import { DropdownMenu, DropdownMenuDivider, DropdownMenuItem } from '@/components/ui/DropdownMenu';
+import { DeleteConfirmModal, type DeletePermission } from '@/components/delete/DeleteConfirmModal';
 import './timeline.css';
 
 function fmtDate(iso: string): string {
@@ -26,18 +29,22 @@ function fmtRel(iso: string): string {
 export function UpdateDetailSheet({
   update,
   onClose,
-  onDelete,
-  canEdit,
-  canDelete,
+  onRequestDelete,
+  deletePermission,
+  currentUserId,
 }: {
   update: EnrichedUpdate | null;
   onClose: () => void;
-  onDelete: () => void;
-  canEdit: boolean;
-  canDelete: boolean;
+  /** Called when user clicks "Delete permanently" in the confirm modal. */
+  onRequestDelete: (update: EnrichedUpdate, permission: DeletePermission) => void;
+  /** null = user cannot delete; menu item rendered disabled with "Only author or admin" */
+  deletePermission: DeletePermission | null;
+  currentUserId: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   if (!update) return null;
   const photos = update.photos ?? [];
   const species = update.species ?? [];
@@ -45,6 +52,8 @@ export function UpdateDetailSheet({
   const updateType = update.update_type ?? { id: '', name: 'Update', icon: '📝' };
   const firstPhoto = photos[0];
   const extraPhotos = photos.slice(1);
+  const photoCount = photos.length;
+  const speciesCount = species.length;
 
   return (
     <div className="fm-slide-up fixed inset-0 z-[100] flex flex-col bg-white">
@@ -62,18 +71,38 @@ export function UpdateDetailSheet({
         >
           <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-forest-dark"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        {(canEdit || canDelete) && (
+        <div className="absolute right-[14px] top-[58px]">
           <button
             type="button"
             aria-label="More"
-            className="absolute right-[14px] top-[58px] flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur"
-            onClick={canDelete ? onDelete : undefined}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur"
+            onClick={() => setMenuOpen((v) => !v)}
           >
             <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" className="text-forest-dark">
               <circle cx="12" cy="5" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="12" cy="19" r="2" />
             </svg>
           </button>
-        )}
+          <DropdownMenu open={menuOpen} onClose={() => setMenuOpen(false)}>
+            <DropdownMenuItem onSelect={() => { setMenuOpen(false); }}>Share</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => { setMenuOpen(false); }}>Copy link</DropdownMenuItem>
+            <DropdownMenuDivider />
+            {deletePermission ? (
+              <DropdownMenuItem
+                danger
+                badge={deletePermission.kind === 'admin' ? 'ADMIN' : undefined}
+                onSelect={() => { setMenuOpen(false); setConfirmOpen(true); }}
+              >
+                {deletePermission.kind === 'admin' ? 'Delete (admin)' : 'Delete'}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem disabled note="Only author or admin" danger onSelect={() => {}}>
+                Delete
+              </DropdownMenuItem>
+            )}
+          </DropdownMenu>
+        </div>
         <div className="absolute inset-x-4 bottom-3 text-white">
           <div className="flex items-center gap-[6px] font-mono text-[11px] uppercase tracking-[1px] opacity-90">
             <span>{updateType.icon}</span>
@@ -163,6 +192,20 @@ export function UpdateDetailSheet({
 
         <div className="mt-6 font-mono text-[11px] text-sage">Update · #{update.id.toUpperCase()}</div>
       </div>
+
+      {deletePermission && (
+        <DeleteConfirmModal
+          open={confirmOpen}
+          permission={deletePermission}
+          photoCount={photoCount}
+          speciesCount={speciesCount}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            onRequestDelete(update, deletePermission);
+          }}
+        />
+      )}
     </div>
   );
 }

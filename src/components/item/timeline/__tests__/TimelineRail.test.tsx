@@ -24,7 +24,16 @@ function make(i: number): EnrichedUpdate {
 describe('TimelineRail', () => {
   it('renders all updates when under cap', () => {
     const updates = [make(1), make(2), make(3)];
-    render(<TimelineRail updates={updates} maxItems={10} canAddUpdate={false} onDeleteUpdate={() => {}} />);
+    render(
+      <TimelineRail
+        updates={updates}
+        maxItems={10}
+        canAddUpdate={false}
+        currentUserId={null}
+        userRole={null}
+        onDeleteUpdate={() => {}}
+      />
+    );
     expect(screen.getByText('update 1')).toBeInTheDocument();
     expect(screen.getByText('update 3')).toBeInTheDocument();
     expect(screen.queryByText(/View all/i)).toBeNull();
@@ -32,7 +41,16 @@ describe('TimelineRail', () => {
 
   it('caps at maxItems and shows View all', () => {
     const updates = [make(1), make(2), make(3), make(4)];
-    render(<TimelineRail updates={updates} maxItems={2} canAddUpdate={false} onDeleteUpdate={() => {}} />);
+    render(
+      <TimelineRail
+        updates={updates}
+        maxItems={2}
+        canAddUpdate={false}
+        currentUserId={null}
+        userRole={null}
+        onDeleteUpdate={() => {}}
+      />
+    );
     expect(screen.getByText('update 1')).toBeInTheDocument();
     expect(screen.getByText('update 2')).toBeInTheDocument();
     expect(screen.queryByText('update 3')).toBeNull();
