@@ -48,7 +48,7 @@ export async function createMaintenanceProject(
     .single();
   if (error || !data) return { error: `Create failed: ${error?.message ?? 'unknown'}` };
 
-  revalidatePath(`/admin/properties/${prop.slug}/maintenance`);
+  revalidatePath(`/p/${prop.slug}/admin/maintenance`);
   return { success: true, id: data.id as string, propertySlug: prop.slug as string };
 }
 
@@ -85,8 +85,8 @@ export async function updateMaintenanceProject(
     .eq('id', project.property_id)
     .single();
   if (prop?.slug) {
-    revalidatePath(`/admin/properties/${prop.slug}/maintenance`);
-    revalidatePath(`/admin/properties/${prop.slug}/maintenance/${id}`);
+    revalidatePath(`/p/${prop.slug}/admin/maintenance`);
+    revalidatePath(`/p/${prop.slug}/admin/maintenance/${id}`);
   }
   return { success: true };
 }
@@ -111,7 +111,7 @@ export async function deleteMaintenanceProject(id: string): Promise<Ok<{}> | Err
       .select('slug')
       .eq('id', project.property_id)
       .single();
-    if (prop?.slug) revalidatePath(`/admin/properties/${prop.slug}/maintenance`);
+    if (prop?.slug) revalidatePath(`/p/${prop.slug}/admin/maintenance`);
   }
   return { success: true };
 }
@@ -128,7 +128,7 @@ async function revalidateForProject(supabase: ReturnType<typeof createClient>, p
     .select('slug')
     .eq('id', project.property_id)
     .single();
-  if (prop?.slug) revalidatePath(`/admin/properties/${prop.slug}/maintenance/${projectId}`);
+  if (prop?.slug) revalidatePath(`/p/${prop.slug}/admin/maintenance/${projectId}`);
 }
 
 export async function addItemsToProject(input: unknown): Promise<Ok<{}> | Err> {

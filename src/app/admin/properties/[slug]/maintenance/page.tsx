@@ -63,7 +63,7 @@ export default async function MaintenanceListPage({ params }: PageProps) {
   });
 
   const today = new Date().toISOString().slice(0, 10);
-  const newHref = `/admin/properties/${params.slug}/maintenance/new`;
+  const newHref = `/p/${params.slug}/admin/maintenance/new`;
 
   if (rows.length === 0) {
     return (

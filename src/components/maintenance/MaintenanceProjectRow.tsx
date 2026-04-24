@@ -21,7 +21,7 @@ function formatDate(iso: string | null): string {
 export function MaintenanceProjectRow({ row, today, propertySlug }: Props) {
   const schedule = classifyScheduled(row.scheduled_for, row.status, today);
   const progress = computeProgress(row.items_completed, row.items_total);
-  const href = `/admin/properties/${propertySlug}/maintenance/${row.id}`;
+  const href = `/p/${propertySlug}/admin/maintenance/${row.id}`;
 
   return (
     <Link

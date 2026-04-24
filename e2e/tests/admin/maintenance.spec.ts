@@ -8,7 +8,7 @@ test.describe.serial('Scheduled Maintenance admin', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test('create a project', async ({ page }) => {
-    await page.goto('/admin/properties/default/maintenance');
+    await page.goto('/p/default/admin/maintenance');
     await page.waitForLoadState('networkidle');
 
     await page.getByRole('link', { name: /\+ New project/i }).click();
@@ -24,7 +24,7 @@ test.describe.serial('Scheduled Maintenance admin', () => {
   });
 
   test('add an item and mark it complete', async ({ page }) => {
-    await page.goto('/admin/properties/default/maintenance');
+    await page.goto('/p/default/admin/maintenance');
     await page.waitForLoadState('networkidle');
     await page.getByText(TEST_TITLE).click();
 
@@ -38,7 +38,7 @@ test.describe.serial('Scheduled Maintenance admin', () => {
   });
 
   test('project row appears on list with completion progress', async ({ page }) => {
-    await page.goto('/admin/properties/default/maintenance');
+    await page.goto('/p/default/admin/maintenance');
     await page.waitForLoadState('networkidle');
 
     // Change status on detail to in_progress so progress bar surfaces on list
@@ -54,7 +54,7 @@ test.describe.serial('Scheduled Maintenance admin', () => {
   });
 
   test('delete the project', async ({ page }) => {
-    await page.goto('/admin/properties/default/maintenance');
+    await page.goto('/p/default/admin/maintenance');
     await page.waitForLoadState('networkidle');
     await page.getByText(TEST_TITLE).click();
 

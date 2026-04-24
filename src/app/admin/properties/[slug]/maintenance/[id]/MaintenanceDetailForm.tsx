@@ -73,7 +73,7 @@ export function MaintenanceDetailForm({
       setDeleting(false);
       return;
     }
-    router.push(`/admin/properties/${propertySlug}/maintenance`);
+    router.push(`/p/${propertySlug}/admin/maintenance`);
   }
 
   async function toggleItem(itemId: string, completed: boolean) {
@@ -99,7 +99,7 @@ export function MaintenanceDetailForm({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={() => router.push(`/admin/properties/${propertySlug}/maintenance`)}
+            onClick={() => router.push(`/p/${propertySlug}/admin/maintenance`)}
             className="text-sm text-golden hover:opacity-80"
           >
             ← Back

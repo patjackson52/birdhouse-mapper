@@ -34,7 +34,7 @@ export function MaintenanceCreateForm({ orgId, propertyId, propertySlug }: Props
       setError(result.error);
       return;
     }
-    router.push(`/admin/properties/${propertySlug}/maintenance/${result.id}`);
+    router.push(`/p/${propertySlug}/admin/maintenance/${result.id}`);
   }
 
   return (
@@ -79,7 +79,7 @@ export function MaintenanceCreateForm({ orgId, propertyId, propertySlug }: Props
       <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
-          onClick={() => router.push(`/admin/properties/${propertySlug}/maintenance`)}
+          onClick={() => router.push(`/p/${propertySlug}/admin/maintenance`)}
           className="btn-secondary"
           disabled={saving}
         >

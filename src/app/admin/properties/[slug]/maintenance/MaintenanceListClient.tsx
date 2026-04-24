@@ -60,7 +60,7 @@ export function MaintenanceListClient({ rows, today, propertySlug }: Props) {
           <div className="text-[11px] uppercase tracking-wider text-gray-500">Admin · Data</div>
           <h1 className="font-heading text-2xl font-semibold text-forest-dark">Scheduled Maintenance</h1>
         </div>
-        <Link href={`/admin/properties/${propertySlug}/maintenance/new`} className="btn-primary">
+        <Link href={`/p/${propertySlug}/admin/maintenance/new`} className="btn-primary">
           + New project
         </Link>
       </div>
