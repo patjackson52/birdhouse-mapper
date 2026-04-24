@@ -57,6 +57,15 @@
   .label {
     @apply block text-sm font-medium text-forest-dark mb-1.5;
   }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-sage-light cursor-pointer transition-colors border-0;
+    background-color: color-mix(in srgb, var(--color-surface-light) 60%, transparent);
+  }
+
+  .chip[aria-pressed="true"] {
+    @apply bg-forest text-white hover:bg-forest;
+  }
 }
 
 /* Leaflet overrides */
