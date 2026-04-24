@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { addItemsToProject } from '@/lib/maintenance/actions';
 import { classifyLastMaintained, type MaintenanceTone } from '@/lib/maintenance/logic';
+import { iconDisplayName, type IconValue } from '@/lib/types';
 import { useFocusTrap } from './useFocusTrap';
 
 interface ItemOption {
@@ -83,7 +84,7 @@ export function MaintenanceItemPicker({
         latitude: number;
         longitude: number;
         item_type_id: string;
-        item_types: { name?: string; icon?: string } | null;
+        item_types: { name?: string; icon?: IconValue | string | null } | null;
       }>;
       const itemIds = itemsRaw.map((i) => i.id);
 
@@ -112,7 +113,7 @@ export function MaintenanceItemPicker({
         lat: i.latitude,
         lng: i.longitude,
         typeName: i.item_types?.name ?? 'Unknown',
-        typeIcon: i.item_types?.icon ?? '📍',
+        typeIcon: iconDisplayName(i.item_types?.icon ?? null) || '📍',
         lastMaintainedAt: lastMaintById.get(i.id) ?? null,
       }));
 

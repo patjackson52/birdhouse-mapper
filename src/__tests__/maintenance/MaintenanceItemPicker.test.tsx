@@ -17,9 +17,9 @@ vi.mock('@/lib/maintenance/actions', () => ({
 //   1) from('items').select(...).eq('property_id', …).order('name')
 //   2) from('item_updates').select(...).in('item_id', [...]).eq('update_types.name', 'Maintenance').order(...)
 const itemsRows = [
-  { id: 'item-a', name: 'Alpha Box', latitude: 10, longitude: 20, item_type_id: 't1', item_types: { name: 'Bird Box', icon: '🐦' } },
-  { id: 'item-b', name: 'Beta Box', latitude: 11, longitude: 21, item_type_id: 't1', item_types: { name: 'Bird Box', icon: '🐦' } },
-  { id: 'item-c', name: 'Charlie Marker', latitude: 12, longitude: 22, item_type_id: 't2', item_types: { name: 'Trail Marker', icon: '📍' } },
+  { id: 'item-a', name: 'Alpha Box', latitude: 10, longitude: 20, item_type_id: 't1', item_types: { name: 'Bird Box', icon: { set: 'emoji', name: '🐦' } } },
+  { id: 'item-b', name: 'Beta Box', latitude: 11, longitude: 21, item_type_id: 't1', item_types: { name: 'Bird Box', icon: { set: 'emoji', name: '🐦' } } },
+  { id: 'item-c', name: 'Charlie Marker', latitude: 12, longitude: 22, item_type_id: 't2', item_types: { name: 'Trail Marker', icon: { set: 'emoji', name: '📍' } } },
 ];
 
 const updatesRows = [
