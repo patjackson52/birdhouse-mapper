@@ -10,8 +10,8 @@ import {
   removeKnowledgeFromProject,
 } from '@/lib/maintenance/actions';
 import { MaintenanceStatusPill } from '@/components/maintenance/MaintenanceStatusPill';
-import { MaintenanceItemPickerInterim } from '@/components/maintenance/MaintenanceItemPickerInterim';
-import { MaintenanceKnowledgePickerInterim } from '@/components/maintenance/MaintenanceKnowledgePickerInterim';
+import { MaintenanceItemPicker } from '@/components/maintenance/MaintenanceItemPicker';
+import { MaintenanceKnowledgePicker } from '@/components/maintenance/MaintenanceKnowledgePicker';
 import type {
   MaintenanceProject,
   MaintenanceStatus,
@@ -239,7 +239,7 @@ export function MaintenanceDetailForm({
       </section>
 
       {openPicker === 'items' && project.property_id && (
-        <MaintenanceItemPickerInterim
+        <MaintenanceItemPicker
           projectId={project.id}
           propertyId={project.property_id}
           alreadyLinkedIds={linkedItems.map((i) => i.item_id)}
@@ -247,7 +247,7 @@ export function MaintenanceDetailForm({
         />
       )}
       {openPicker === 'knowledge' && (
-        <MaintenanceKnowledgePickerInterim
+        <MaintenanceKnowledgePicker
           projectId={project.id}
           orgId={project.org_id}
           alreadyLinkedIds={linkedKnowledge.map((k) => k.knowledge_item_id)}

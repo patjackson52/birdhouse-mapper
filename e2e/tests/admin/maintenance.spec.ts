@@ -30,8 +30,9 @@ test.describe.serial('Scheduled Maintenance admin', () => {
 
     await page.getByRole('button', { name: /\+ Add items/i }).click();
     await expect(page.locator('[role="dialog"]')).toBeVisible();
-    await page.locator('[role="dialog"] input[type="checkbox"]').first().check();
-    await page.getByRole('button', { name: /^Add$/ }).click();
+    // Click the first item row (row is the <button>, the inner checkbox is aria-hidden)
+    await page.locator('[role="dialog"] li button').first().click();
+    await page.getByRole('button', { name: /^Add \d+ item/ }).click();
 
     await expect(page.getByText(/Linked items \(1\)/)).toBeVisible({ timeout: 10000 });
     // Use click() rather than check() — the checkbox is controlled by server state
