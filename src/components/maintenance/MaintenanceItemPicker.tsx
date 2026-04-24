@@ -106,17 +106,15 @@ export function MaintenanceItemPicker({
         }
       }
 
-      const options: ItemOption[] = itemsRaw
-        .filter((i) => !alreadyLinkedIds.includes(i.id))
-        .map((i) => ({
-          id: i.id,
-          name: i.name ?? 'Unnamed',
-          lat: i.lat,
-          lng: i.lng,
-          typeName: i.item_types?.name ?? 'Unknown',
-          typeIcon: i.item_types?.icon ?? '📍',
-          lastMaintainedAt: lastMaintById.get(i.id) ?? null,
-        }));
+      const options: ItemOption[] = itemsRaw.map((i) => ({
+        id: i.id,
+        name: i.name ?? 'Unnamed',
+        lat: i.lat,
+        lng: i.lng,
+        typeName: i.item_types?.name ?? 'Unknown',
+        typeIcon: i.item_types?.icon ?? '📍',
+        lastMaintainedAt: lastMaintById.get(i.id) ?? null,
+      }));
 
       // All types start selected (chip "active" = type is in the filter set)
       const types = new Set(options.map((o) => o.typeName));
@@ -127,7 +125,7 @@ export function MaintenanceItemPicker({
     return () => {
       cancelled = true;
     };
-  }, [propertyId, alreadyLinkedIds]);
+  }, [propertyId]);
 
   const allTypes = useMemo(() => {
     if (!items) return [] as string[];
@@ -140,6 +138,7 @@ export function MaintenanceItemPicker({
     const today = new Date().toISOString().slice(0, 10);
     return items
       .filter((i) => {
+        if (alreadyLinkedIds.includes(i.id)) return false;
         if (!selectedTypes.has(i.typeName)) return false;
         if (q && !i.name.toLowerCase().includes(q)) return false;
         if (lastMaint !== 'any') {
@@ -166,7 +165,7 @@ export function MaintenanceItemPicker({
         const bT = b.lastMaintainedAt ? Date.parse(b.lastMaintainedAt) : 0;
         return aT - bT;
       });
-  }, [items, search, selectedTypes, lastMaint, sortKey]);
+  }, [items, search, selectedTypes, lastMaint, sortKey, alreadyLinkedIds]);
 
   const allSelected = filtered.length > 0 && filtered.every((i) => selected.has(i.id));
   const someSelected = !allSelected && filtered.some((i) => selected.has(i.id));
@@ -345,6 +344,7 @@ export function MaintenanceItemPicker({
                     <button
                       type="button"
                       onClick={() => toggleItem(item.id)}
+                      aria-pressed={isSel}
                       className={`w-full grid grid-cols-[auto_1fr_auto_auto] gap-3.5 items-center px-5 py-3 border-b border-sage-light text-left transition-colors ${
                         isSel ? 'bg-forest/5' : 'hover:bg-sage-light/30'
                       }`}

@@ -71,23 +71,21 @@ export function MaintenanceKnowledgePicker({
         tags: string[] | null;
         updated_at: string;
       }>;
-      const options: KnowledgeOption[] = raw
-        .filter((k) => !alreadyLinkedIds.includes(k.id))
-        .map((k) => ({
-          id: k.id,
-          title: k.title,
-          excerpt: k.excerpt,
-          visibility: k.visibility,
-          tags: k.tags ?? [],
-          updatedAt: k.updated_at,
-        }));
+      const options: KnowledgeOption[] = raw.map((k) => ({
+        id: k.id,
+        title: k.title,
+        excerpt: k.excerpt,
+        visibility: k.visibility,
+        tags: k.tags ?? [],
+        updatedAt: k.updated_at,
+      }));
       setItems(options);
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [orgId, alreadyLinkedIds]);
+  }, [orgId]);
 
   const allTags = useMemo(() => {
     if (!items) return [] as string[];
@@ -98,6 +96,7 @@ export function MaintenanceKnowledgePicker({
     if (!items) return [] as KnowledgeOption[];
     const q = search.trim().toLowerCase();
     return items.filter((k) => {
+      if (alreadyLinkedIds.includes(k.id)) return false;
       if (visFilter !== 'all' && k.visibility !== visFilter) return false;
       if (tagFilter && !k.tags.includes(tagFilter)) return false;
       if (q) {
@@ -107,7 +106,7 @@ export function MaintenanceKnowledgePicker({
       }
       return true;
     });
-  }, [items, search, visFilter, tagFilter]);
+  }, [items, search, visFilter, tagFilter, alreadyLinkedIds]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -256,6 +255,7 @@ export function MaintenanceKnowledgePicker({
                     <button
                       type="button"
                       onClick={() => toggle(k.id)}
+                      aria-pressed={isSel}
                       className={`w-full text-left p-3 rounded-xl border transition-colors ${
                         isSel
                           ? 'border-forest bg-forest/5'
