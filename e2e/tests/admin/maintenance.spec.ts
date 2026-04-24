@@ -34,7 +34,10 @@ test.describe.serial('Scheduled Maintenance admin', () => {
     await page.getByRole('button', { name: /^Add$/ }).click();
 
     await expect(page.getByText(/Linked items \(1\)/)).toBeVisible({ timeout: 10000 });
-    await page.locator('[aria-label^="Mark "]').first().check();
+    // Use click() rather than check() — the checkbox is controlled by server state
+    // (completed_at), so React re-renders it back to unchecked until router.refresh()
+    // lands the update. click() fires the onChange without post-state assertion.
+    await page.locator('[aria-label^="Mark "]').first().click();
   });
 
   test('project row appears on list with completion progress', async ({ page }) => {
