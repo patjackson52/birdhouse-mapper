@@ -68,7 +68,7 @@ export function MaintenanceItemPicker({
       const supabase = createClient();
       const itemsRes = await supabase
         .from('items')
-        .select('id, name, lat, lng, item_type_id, item_types(name, icon)')
+        .select('id, name, latitude, longitude, item_type_id, item_types(name, icon)')
         .eq('property_id', propertyId)
         .order('name');
       if (cancelled) return;
@@ -80,8 +80,8 @@ export function MaintenanceItemPicker({
       const itemsRaw = (itemsRes.data ?? []) as Array<{
         id: string;
         name: string;
-        lat: number;
-        lng: number;
+        latitude: number;
+        longitude: number;
         item_type_id: string;
         item_types: { name?: string; icon?: string } | null;
       }>;
@@ -109,8 +109,8 @@ export function MaintenanceItemPicker({
       const options: ItemOption[] = itemsRaw.map((i) => ({
         id: i.id,
         name: i.name ?? 'Unnamed',
-        lat: i.lat,
-        lng: i.lng,
+        lat: i.latitude,
+        lng: i.longitude,
         typeName: i.item_types?.name ?? 'Unknown',
         typeIcon: i.item_types?.icon ?? '📍',
         lastMaintainedAt: lastMaintById.get(i.id) ?? null,
