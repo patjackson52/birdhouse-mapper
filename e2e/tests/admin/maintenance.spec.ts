@@ -57,6 +57,30 @@ test.describe.serial('Scheduled Maintenance admin', () => {
     await expect(page.getByText('1/1 done')).toBeVisible();
   });
 
+  test('public viewer renders anonymously', async ({ browser, baseURL }) => {
+    // Sign in with admin to discover the project id we created above.
+    const adminContext = await browser.newContext({ storageState: ADMIN_AUTH });
+    const adminPage = await adminContext.newPage();
+    await adminPage.goto('/p/default/admin/maintenance');
+    await adminPage.waitForLoadState('networkidle');
+    await adminPage.getByText(TEST_TITLE).click();
+    await adminPage.waitForURL(/\/maintenance\/([^/]+)$/);
+    const url = adminPage.url();
+    const match = url.match(/\/maintenance\/([^/]+)$/);
+    const projectId = match?.[1];
+    await adminContext.close();
+
+    expect(projectId).toBeTruthy();
+
+    // Anonymous context → hit the public viewer URL.
+    const anonContext = await browser.newContext();
+    const anonPage = await anonContext.newPage();
+    const response = await anonPage.goto(`/p/default/maintenance/${projectId}`);
+    expect(response?.status()).toBe(200);
+    await expect(anonPage.getByRole('heading', { name: TEST_TITLE })).toBeVisible({ timeout: 10000 });
+    await anonContext.close();
+  });
+
   test('delete the project', async ({ page }) => {
     await page.goto('/p/default/admin/maintenance');
     await page.waitForLoadState('networkidle');
