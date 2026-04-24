@@ -138,8 +138,11 @@ export function MaintenanceProjectsBlock({ itemId }: Props) {
       </ul>
 
       {lastCompleted && (
-        <div className="text-[11px] text-gray-600 mt-3">
-          {`Last maintained via · ${formatDate(lastCompleted.completed_at)}`}
+        <div className="text-[11px] text-gray-600 mt-3 flex items-center gap-1">
+          Last maintained via{' '}
+          <strong className="text-forest-dark font-medium">{lastCompleted.title}</strong>
+          {' · '}
+          {formatDate(lastCompleted.completed_at)}
         </div>
       )}
     </div>
