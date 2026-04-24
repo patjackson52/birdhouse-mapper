@@ -29,6 +29,10 @@ export interface DescriptionConfig {
   maxLines?: number;
 }
 
+export interface MaintenanceProjectsConfig {
+  /** Reserved for future filter/display options. Empty in PR 3. */
+}
+
 export type BlockTypeV2 =
   | 'field_display'
   | 'photo_gallery'
@@ -39,7 +43,8 @@ export type BlockTypeV2 =
   | 'action_buttons'
   | 'map_snippet'
   | 'timeline'
-  | 'description';
+  | 'description'
+  | 'maintenance_projects';
 
 export type BlockConfigV2 =
   | FieldDisplayConfig
@@ -51,7 +56,8 @@ export type BlockConfigV2 =
   | DividerConfig
   | MapSnippetConfig
   | ActionButtonsConfig
-  | DescriptionConfig;
+  | DescriptionConfig
+  | MaintenanceProjectsConfig;
 
 export interface LayoutBlockV2 {
   id: string;

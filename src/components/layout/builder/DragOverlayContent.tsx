@@ -18,6 +18,7 @@ const BLOCK_LABELS: Record<BlockTypeV2, { icon: string; label: string }> = {
   divider: { icon: '➖', label: 'Divider' },
   map_snippet: { icon: '📍', label: 'Map' },
   action_buttons: { icon: '🔘', label: 'Actions' },
+  maintenance_projects: { icon: '🔧', label: 'Maintenance' },
 };
 
 interface Props {

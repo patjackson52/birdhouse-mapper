@@ -125,6 +125,13 @@ const descriptionBlockV2Schema = z.object({
   ...v2CommonFields,
 });
 
+const maintenanceProjectsBlockV2Schema = z.object({
+  id: z.string().min(1),
+  type: z.literal('maintenance_projects'),
+  config: emptyConfigSchema,
+  ...v2CommonFields,
+});
+
 export const layoutBlockV2Schema = z.discriminatedUnion('type', [
   fieldDisplayBlockV2Schema,
   photoGalleryBlockV2Schema,
@@ -136,6 +143,7 @@ export const layoutBlockV2Schema = z.discriminatedUnion('type', [
   actionButtonsBlockV2Schema,
   mapSnippetBlockV2Schema,
   descriptionBlockV2Schema,
+  maintenanceProjectsBlockV2Schema,
 ]);
 
 // --- Row width map for validation ---
