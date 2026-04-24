@@ -18,6 +18,7 @@ import EntityListBlock from './blocks/EntityListBlock';
 import TimelineBlock from './blocks/TimelineBlock';
 import RowBlockV2 from './blocks/RowBlockV2';
 import DescriptionBlock from './blocks/DescriptionBlock';
+import { MaintenanceProjectsBlock } from './blocks/MaintenanceProjectsBlock';
 import type { EntityDisplay } from './blocks/EntityListBlock';
 import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
 
@@ -245,6 +246,10 @@ export function renderBlockContent(
     case 'description': {
       const config = block.config as import('@/lib/layout/types-v2').DescriptionConfig;
       return <DescriptionBlock config={config} description={item.description} />;
+    }
+
+    case 'maintenance_projects': {
+      return <MaintenanceProjectsBlock itemId={item.id} />;
     }
 
     default:
