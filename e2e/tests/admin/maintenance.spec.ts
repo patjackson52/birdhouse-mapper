@@ -4,7 +4,7 @@ import path from 'path';
 const ADMIN_AUTH = path.join(__dirname, '..', '..', '.auth', 'admin.json');
 const TEST_TITLE = `E2E Maintenance ${Date.now()}`;
 
-test.describe.serial('Scheduled Maintenance admin @smoke', () => {
+test.describe.serial('Scheduled Maintenance admin', () => {
   test.use({ storageState: ADMIN_AUTH });
 
   test('create a project', async ({ page }) => {

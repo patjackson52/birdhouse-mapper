@@ -141,10 +141,24 @@ export async function addItemsToProject(input: unknown): Promise<Ok<{}> | Err> {
 
   const { data: project } = await supabase
     .from('maintenance_projects')
-    .select('org_id')
+    .select('org_id, property_id')
     .eq('id', parsed.data.projectId)
     .single();
   if (!project) return { error: 'Project not found.' };
+  if (!project.property_id) {
+    return { error: 'Cannot add items to a project without a property.' };
+  }
+
+  const { data: verified, error: verifyErr } = await supabase
+    .from('items')
+    .select('id')
+    .in('id', parsed.data.itemIds)
+    .eq('org_id', project.org_id)
+    .eq('property_id', project.property_id);
+  if (verifyErr) return { error: `Add items failed: ${verifyErr.message}` };
+  if ((verified?.length ?? 0) !== parsed.data.itemIds.length) {
+    return { error: 'One or more items do not belong to this project\'s property.' };
+  }
 
   const rows = parsed.data.itemIds.map((item_id) => ({
     maintenance_project_id: parsed.data.projectId,
@@ -216,6 +230,16 @@ export async function addKnowledgeToProject(input: unknown): Promise<Ok<{}> | Er
     .eq('id', parsed.data.projectId)
     .single();
   if (!project) return { error: 'Project not found.' };
+
+  const { data: verified, error: verifyErr } = await supabase
+    .from('knowledge_items')
+    .select('id')
+    .in('id', parsed.data.knowledgeIds)
+    .eq('org_id', project.org_id);
+  if (verifyErr) return { error: `Add knowledge failed: ${verifyErr.message}` };
+  if ((verified?.length ?? 0) !== parsed.data.knowledgeIds.length) {
+    return { error: 'One or more articles do not belong to this project\'s org.' };
+  }
 
   const rows = parsed.data.knowledgeIds.map((knowledge_item_id) => ({
     maintenance_project_id: parsed.data.projectId,

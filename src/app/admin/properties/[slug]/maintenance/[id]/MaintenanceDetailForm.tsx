@@ -77,17 +77,20 @@ export function MaintenanceDetailForm({
   }
 
   async function toggleItem(itemId: string, completed: boolean) {
-    await setItemCompletion({ projectId: project.id, itemId, completed });
+    const result = await setItemCompletion({ projectId: project.id, itemId, completed });
+    if ('error' in result) { setError(result.error); return; }
     router.refresh();
   }
 
   async function removeItem(itemId: string) {
-    await removeItemFromProject(project.id, itemId);
+    const result = await removeItemFromProject(project.id, itemId);
+    if ('error' in result) { setError(result.error); return; }
     router.refresh();
   }
 
   async function removeKnowledge(knowledgeId: string) {
-    await removeKnowledgeFromProject(project.id, knowledgeId);
+    const result = await removeKnowledgeFromProject(project.id, knowledgeId);
+    if ('error' in result) { setError(result.error); return; }
     router.refresh();
   }
 
