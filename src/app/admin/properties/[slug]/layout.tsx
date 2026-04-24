@@ -46,6 +46,7 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
       label: `${iconDisplayName(et.icon)} ${et.name}`,
       href: `${base}/entities/${et.id}`,
     })),
+    { label: 'Maintenance', href: `${base}/maintenance` },
     { label: 'Knowledge', href: '/admin/knowledge' },
     { label: 'Data Vault', href: `${base}/vault` },
     { label: 'Members', href: `${base}/members` },
