@@ -39,3 +39,22 @@ export function classifyScheduled(
   if (delta <= 14) return { tone: 'soon', daysUntil: delta };
   return { tone: 'normal' };
 }
+
+export interface MaintenanceTone {
+  tone: 'fresh' | 'normal' | 'warn' | 'danger';
+  label: string;
+}
+
+export function classifyLastMaintained(
+  iso: string | null,
+  today: string = new Date().toISOString().slice(0, 10),
+): MaintenanceTone {
+  if (iso === null) return { tone: 'danger', label: 'Never' };
+  const days = Math.floor(
+    (Date.parse(today + 'T00:00:00Z') - Date.parse(iso.slice(0, 10) + 'T00:00:00Z')) / 86400000,
+  );
+  if (days > 365) return { tone: 'danger', label: `${Math.floor(days / 30)} mo ago` };
+  if (days > 180) return { tone: 'warn', label: `${Math.floor(days / 30)} mo ago` };
+  if (days > 60) return { tone: 'normal', label: `${Math.floor(days / 30)} mo ago` };
+  return { tone: 'fresh', label: `${days} d ago` };
+}
