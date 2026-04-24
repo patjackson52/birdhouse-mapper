@@ -16,6 +16,7 @@ const PALETTE_ITEMS: PaletteItem[] = [
   { type: 'status_badge', icon: '🏷', label: 'Status' },
   { type: 'entity_list', icon: '🔗', label: 'Entities' },
   { type: 'timeline', icon: '📋', label: 'Timeline' },
+  { type: 'maintenance_projects', icon: '🔧', label: 'Maintenance' },
   { type: 'text_label', icon: '✏️', label: 'Text' },
   { type: 'description', icon: '📝', label: 'Description' },
   { type: 'divider', icon: '➖', label: 'Divider' },

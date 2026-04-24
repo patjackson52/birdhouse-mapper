@@ -231,13 +231,19 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // --- Auth checks (only for protected routes) ---
+  // Public maintenance viewer at /p/[slug]/maintenance/[id] is anon-accessible
+  // (RLS gates by properties.is_active). Exempt it from the /p/ catch-all below.
+  const isPublicMaintenanceViewer = /^\/p\/[^/]+\/maintenance\/[^/]+$/.test(pathname);
+
   const isProtectedRoute =
-    pathname.startsWith('/manage') ||
-    pathname.startsWith('/admin') ||
-    pathname.startsWith('/org') ||
-    pathname.startsWith('/platform') ||
-    pathname.startsWith('/p/') ||
-    pathname.startsWith('/account');
+    !isPublicMaintenanceViewer && (
+      pathname.startsWith('/manage') ||
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/org') ||
+      pathname.startsWith('/platform') ||
+      pathname.startsWith('/p/') ||
+      pathname.startsWith('/account')
+    );
 
   if (!isProtectedRoute) {
     return supabaseResponse;
