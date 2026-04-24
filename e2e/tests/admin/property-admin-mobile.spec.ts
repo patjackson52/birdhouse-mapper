@@ -42,8 +42,10 @@ test.describe('Property Admin Mobile', () => {
     // Wait for drawer to open
     await expect(page.locator('.fixed.inset-0')).toBeVisible({ timeout: 5000 });
 
-    // Click the semi-transparent backdrop (the div with aria-hidden inside the overlay)
-    await page.locator('div[aria-hidden="true"]').click({ force: true });
+    // Click the semi-transparent backdrop. Force-click at a position that's
+    // guaranteed outside the 224px (w-56) sidebar so hit-testing lands on the
+    // backdrop itself, not on a link inside the overlay.
+    await page.locator('div[aria-hidden="true"]').click({ force: true, position: { x: 320, y: 100 } });
 
     // Drawer should be dismissed
     await expect(page.locator('.fixed.inset-0')).not.toBeVisible({ timeout: 5000 });
