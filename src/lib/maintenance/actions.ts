@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 import {
   createMaintenanceProjectSchema,
   updateMaintenanceProjectSchema,
+  linkItemsSchema,
+  linkKnowledgeSchema,
+  setItemCompletionSchema,
 } from './schemas';
 
 type Ok<T extends object> = { success: true } & T;
@@ -110,5 +113,140 @@ export async function deleteMaintenanceProject(id: string): Promise<Ok<{}> | Err
       .single();
     if (prop?.slug) revalidatePath(`/admin/properties/${prop.slug}/maintenance`);
   }
+  return { success: true };
+}
+
+async function revalidateForProject(supabase: ReturnType<typeof createClient>, projectId: string) {
+  const { data: project } = await supabase
+    .from('maintenance_projects')
+    .select('property_id')
+    .eq('id', projectId)
+    .single();
+  if (!project?.property_id) return;
+  const { data: prop } = await supabase
+    .from('properties')
+    .select('slug')
+    .eq('id', project.property_id)
+    .single();
+  if (prop?.slug) revalidatePath(`/admin/properties/${prop.slug}/maintenance/${projectId}`);
+}
+
+export async function addItemsToProject(input: unknown): Promise<Ok<{}> | Err> {
+  const parsed = linkItemsSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { data: project } = await supabase
+    .from('maintenance_projects')
+    .select('org_id')
+    .eq('id', parsed.data.projectId)
+    .single();
+  if (!project) return { error: 'Project not found.' };
+
+  const rows = parsed.data.itemIds.map((item_id) => ({
+    maintenance_project_id: parsed.data.projectId,
+    item_id,
+    org_id: project.org_id,
+  }));
+
+  const { error } = await supabase
+    .from('maintenance_project_items')
+    .upsert(rows, { onConflict: 'maintenance_project_id,item_id', ignoreDuplicates: true });
+  if (error) return { error: `Add items failed: ${error.message}` };
+
+  await revalidateForProject(supabase, parsed.data.projectId);
+  return { success: true };
+}
+
+export async function removeItemFromProject(
+  projectId: string,
+  itemId: string,
+): Promise<Ok<{}> | Err> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { error } = await supabase
+    .from('maintenance_project_items')
+    .delete()
+    .eq('maintenance_project_id', projectId)
+    .eq('item_id', itemId);
+  if (error) return { error: `Remove failed: ${error.message}` };
+
+  await revalidateForProject(supabase, projectId);
+  return { success: true };
+}
+
+export async function setItemCompletion(input: unknown): Promise<Ok<{}> | Err> {
+  const parsed = setItemCompletionSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { error } = await supabase
+    .from('maintenance_project_items')
+    .update({
+      completed_at: parsed.data.completed ? new Date().toISOString() : null,
+      completed_by: parsed.data.completed ? user.id : null,
+    })
+    .eq('maintenance_project_id', parsed.data.projectId)
+    .eq('item_id', parsed.data.itemId);
+  if (error) return { error: `Update failed: ${error.message}` };
+
+  await revalidateForProject(supabase, parsed.data.projectId);
+  return { success: true };
+}
+
+export async function addKnowledgeToProject(input: unknown): Promise<Ok<{}> | Err> {
+  const parsed = linkKnowledgeSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
+
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { data: project } = await supabase
+    .from('maintenance_projects')
+    .select('org_id')
+    .eq('id', parsed.data.projectId)
+    .single();
+  if (!project) return { error: 'Project not found.' };
+
+  const rows = parsed.data.knowledgeIds.map((knowledge_item_id) => ({
+    maintenance_project_id: parsed.data.projectId,
+    knowledge_item_id,
+    org_id: project.org_id,
+  }));
+
+  const { error } = await supabase
+    .from('maintenance_project_knowledge')
+    .upsert(rows, { onConflict: 'maintenance_project_id,knowledge_item_id', ignoreDuplicates: true });
+  if (error) return { error: `Add knowledge failed: ${error.message}` };
+
+  await revalidateForProject(supabase, parsed.data.projectId);
+  return { success: true };
+}
+
+export async function removeKnowledgeFromProject(
+  projectId: string,
+  knowledgeId: string,
+): Promise<Ok<{}> | Err> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: 'Not authenticated.' };
+
+  const { error } = await supabase
+    .from('maintenance_project_knowledge')
+    .delete()
+    .eq('maintenance_project_id', projectId)
+    .eq('knowledge_item_id', knowledgeId);
+  if (error) return { error: `Remove failed: ${error.message}` };
+
+  await revalidateForProject(supabase, projectId);
   return { success: true };
 }
