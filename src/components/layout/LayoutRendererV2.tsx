@@ -36,6 +36,7 @@ export interface LayoutRendererV2Props {
   canDeleteUpdate?: boolean;
   currentUserId?: string | null;
   userRole?: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null;
+  propertySlug?: string | null;
   onDeleteUpdate?: (updateId: string, permission: DeletePermission) => void;
   onEditUpdate?: (updateId: string) => void;
 }
@@ -249,7 +250,13 @@ export function renderBlockContent(
     }
 
     case 'maintenance_projects': {
-      return <UpcomingMaintenanceBlock itemId={item.id} />;
+      return (
+        <UpcomingMaintenanceBlock
+          itemId={item.id}
+          propertySlug={props.propertySlug ?? null}
+          isAuthenticated={props.isAuthenticated ?? false}
+        />
+      );
     }
 
     default:

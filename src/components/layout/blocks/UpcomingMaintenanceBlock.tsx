@@ -16,6 +16,8 @@ interface ProjectRow {
 
 interface Props {
   itemId: string;
+  propertySlug?: string | null;
+  isAuthenticated?: boolean;
 }
 
 function formatDate(iso: string | null): string {
@@ -24,7 +26,7 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function UpcomingMaintenanceBlock({ itemId }: Props) {
+export function UpcomingMaintenanceBlock({ itemId, propertySlug = null, isAuthenticated = false }: Props) {
   const [rows, setRows] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
