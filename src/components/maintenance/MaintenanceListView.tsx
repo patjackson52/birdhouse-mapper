@@ -152,21 +152,29 @@ export function MaintenanceListView({
           {filtered.length === 0 ? (
             <div className="text-center py-12 px-5">
               <div className="font-heading text-forest-dark text-base mb-2">
-                {TAB_LABELS[tab]}
+                {mode === 'org' && properties.length === 0
+                  ? 'No active properties yet'
+                  : TAB_LABELS[tab]}
               </div>
               <div className="text-sm text-gray-600 mb-4">
-                {rows.length === 0
+                {mode === 'org' && properties.length === 0
+                  ? 'Add a property to start planning maintenance.'
+                  : rows.length === 0
                   ? 'Plan seasonal work, repairs, and group efforts across your map items.'
                   : 'Try a different tab or clear your search.'}
               </div>
-              {rows.length === 0 && (
+              {mode === 'org' && properties.length === 0 ? (
+                <Link href="/admin/properties" className="btn-primary">
+                  Manage properties
+                </Link>
+              ) : rows.length === 0 ? (
                 <NewProjectButton
                   mode={mode}
                   properties={properties}
                   createHref={createHref}
                   buildCreateHref={buildCreateHref}
                 />
-              )}
+              ) : null}
             </div>
           ) : shouldGroup ? (
             (groups ?? []).map((g) => (

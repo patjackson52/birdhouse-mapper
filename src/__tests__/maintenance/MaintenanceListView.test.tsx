@@ -175,6 +175,26 @@ describe('MaintenanceListView', () => {
     expect(screen.queryByRole('link', { name: 'Cedar Loop' })).toBeNull();
   });
 
+  it('org mode + zero properties: shows "Manage properties" link instead of New project CTA', () => {
+    render(
+      <MaintenanceListView
+        mode="org"
+        rows={[]}
+        properties={[]}
+        stats={STATS}
+        today="2026-04-10"
+        buildDetailHref={buildDetailHref}
+        buildCreateHref={buildCreateHref}
+      />,
+    );
+    expect(screen.getByText('No active properties yet')).toBeInTheDocument();
+    expect(screen.getByText(/Add a property to start planning/i)).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Manage properties/i });
+    expect(link).toHaveAttribute('href', '/admin/properties');
+    expect(screen.queryByRole('link', { name: /New project/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /New project/i })).toBeNull();
+  });
+
   it('renders empty CTA when zero projects match', () => {
     render(
       <MaintenanceListView
