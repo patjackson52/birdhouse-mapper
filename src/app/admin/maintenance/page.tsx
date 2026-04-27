@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 export default async function OrgMaintenancePage() {
-  const orgId = headers().get('x-org-id');
+  const orgId = (await headers()).get('x-org-id');
   if (!orgId) redirect('/admin');
 
   const supabase = createClient();
