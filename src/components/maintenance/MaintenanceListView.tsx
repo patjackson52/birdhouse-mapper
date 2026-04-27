@@ -167,13 +167,6 @@ export function MaintenanceListView({
                 <Link href="/admin/properties" className="btn-primary">
                   Manage properties
                 </Link>
-              ) : rows.length === 0 ? (
-                <NewProjectButton
-                  mode={mode}
-                  properties={properties}
-                  createHref={createHref}
-                  createHrefBySlug={createHrefBySlug}
-                />
               ) : null}
             </div>
           ) : shouldGroup ? (
