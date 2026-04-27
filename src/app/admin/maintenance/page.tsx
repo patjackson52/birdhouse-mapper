@@ -26,34 +26,30 @@ export default async function OrgMaintenancePage() {
 
   const propertyList = (properties ?? []).map((p) => ({
     id: p.id as string,
-    name: (p.name as string) ?? p.slug as string,
+    name: (p.name as string) ?? (p.slug as string),
     slug: p.slug as string,
   }));
   const propertyIds = propertyList.map((p) => p.id);
 
-  const { data: projects } = propertyIds.length > 0
-    ? await supabase
-        .from('maintenance_projects')
-        .select('*')
-        .in('property_id', propertyIds)
-        .order('updated_at', { ascending: false })
-    : { data: [] as unknown[] };
+  const SENTINEL = '00000000-0000-0000-0000-000000000000';
+
+  const { data: projects } = await supabase
+    .from('maintenance_projects')
+    .select('*')
+    .in('property_id', propertyIds.length > 0 ? propertyIds : [SENTINEL])
+    .order('updated_at', { ascending: false });
 
   const projectIds = (projects ?? []).map((p) => (p as { id: string }).id);
 
   const [{ data: itemCounts }, { data: knowledgeCounts }] = await Promise.all([
-    projectIds.length > 0
-      ? supabase
-          .from('maintenance_project_items')
-          .select('maintenance_project_id, completed_at')
-          .in('maintenance_project_id', projectIds)
-      : Promise.resolve({ data: [] as Array<{ maintenance_project_id: string; completed_at: string | null }> }),
-    projectIds.length > 0
-      ? supabase
-          .from('maintenance_project_knowledge')
-          .select('maintenance_project_id')
-          .in('maintenance_project_id', projectIds)
-      : Promise.resolve({ data: [] as Array<{ maintenance_project_id: string }> }),
+    supabase
+      .from('maintenance_project_items')
+      .select('maintenance_project_id, completed_at')
+      .in('maintenance_project_id', projectIds.length > 0 ? projectIds : [SENTINEL]),
+    supabase
+      .from('maintenance_project_knowledge')
+      .select('maintenance_project_id')
+      .in('maintenance_project_id', projectIds.length > 0 ? projectIds : [SENTINEL]),
   ]);
 
   const byProject = new Map<string, { completed: number; total: number; knowledge: number }>();
