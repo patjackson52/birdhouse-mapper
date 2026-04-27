@@ -26,6 +26,7 @@ const ORG_NAV_ITEMS: SidebarItem[] = [
   { label: 'Data Vault', href: '/org/vault' },
   { label: 'AI Context', href: '/org/ai-context' },
   { label: 'Geo Layers', href: '/org/geo-layers' },
+  { label: 'Maintenance', href: '/admin/maintenance' },
   { type: 'section', label: 'Communications' },
   { label: 'Send Notification', href: '/org/notifications' },
   { label: 'Communications', href: '/org/settings/communications' },
