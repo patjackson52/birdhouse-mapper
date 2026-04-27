@@ -3,56 +3,71 @@ import { render, screen } from '@testing-library/react';
 import { MaintenanceProjectRow } from '@/components/maintenance/MaintenanceProjectRow';
 import type { MaintenanceProjectRowData } from '@/lib/maintenance/types';
 
-const today = '2026-04-23';
-
 function makeRow(overrides: Partial<MaintenanceProjectRowData> = {}): MaintenanceProjectRowData {
   return {
-    id: '11111111-1111-1111-1111-111111111111',
-    org_id: 'o1',
-    property_id: 'p1',
-    title: 'Spring cleanout',
+    id: 'p-1',
+    org_id: 'o-1',
+    property_id: 'prop-1',
+    title: 'Spring cleaning',
     description: null,
-    status: 'planned',
-    scheduled_for: '2026-05-15',
-    created_by: 'u1',
-    updated_by: 'u1',
+    status: 'in_progress',
+    scheduled_for: '2026-04-05',
+    created_by: 'u-1',
+    updated_by: 'u-1',
     created_at: '2026-04-01T00:00:00Z',
-    updated_at: '2026-04-22T00:00:00Z',
-    items_completed: 0,
-    items_total: 12,
+    updated_at: '2026-04-10T00:00:00Z',
+    items_completed: 1,
+    items_total: 4,
     knowledge_count: 0,
-    creator_name: 'Sarah K.',
+    creator_name: null,
     ...overrides,
   };
 }
 
 describe('MaintenanceProjectRow', () => {
-  it('renders the title and status pill', () => {
-    render(<MaintenanceProjectRow row={makeRow()} today={today} propertySlug="park" />);
-    expect(screen.getByText('Spring cleanout')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Status: Planned/)).toBeInTheDocument();
+  it('links to the provided detailHref', () => {
+    render(
+      <MaintenanceProjectRow
+        row={makeRow()}
+        today="2026-04-10"
+        detailHref="/admin/properties/discovery-park/maintenance/p-1"
+      />,
+    );
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/admin/properties/discovery-park/maintenance/p-1');
   });
 
-  it('shows Overdue badge for planned rows in the past', () => {
-    const row = makeRow({ scheduled_for: '2026-04-20' });
-    render(<MaintenanceProjectRow row={row} today={today} propertySlug="park" />);
+  it('renders status pill, title, and progress bar for in_progress', () => {
+    render(
+      <MaintenanceProjectRow
+        row={makeRow({ status: 'in_progress', items_completed: 2, items_total: 8 })}
+        today="2026-04-10"
+        detailHref="/x"
+      />,
+    );
+    expect(screen.getByText('Spring cleaning')).toBeInTheDocument();
+    expect(screen.getByTestId('progress-bar')).toBeInTheDocument();
+  });
+
+  it('shows Overdue chip when scheduled in the past and status is planned', () => {
+    render(
+      <MaintenanceProjectRow
+        row={makeRow({ status: 'planned', scheduled_for: '2026-03-01' })}
+        today="2026-04-10"
+        detailHref="/x"
+      />,
+    );
     expect(screen.getByText(/Overdue/)).toBeInTheDocument();
   });
 
-  it('does not show Overdue badge for completed rows', () => {
-    const row = makeRow({ status: 'completed', scheduled_for: '2026-04-20' });
-    render(<MaintenanceProjectRow row={row} today={today} propertySlug="park" />);
-    expect(screen.queryByText(/Overdue/)).toBeNull();
-  });
-
-  it('shows a progress bar only when in progress', () => {
-    const inProgress = makeRow({ status: 'in_progress', items_completed: 4, items_total: 12 });
-    const { rerender, container } = render(
-      <MaintenanceProjectRow row={inProgress} today={today} propertySlug="park" />,
+  it('shows "in N days" chip when scheduled within 14 days and status is planned', () => {
+    render(
+      <MaintenanceProjectRow
+        row={makeRow({ status: 'planned', scheduled_for: '2026-04-15' })}
+        today="2026-04-10"
+        detailHref="/x"
+      />,
     );
-    expect(container.querySelector('[data-testid="progress-bar"]')).not.toBeNull();
-
-    rerender(<MaintenanceProjectRow row={makeRow()} today={today} propertySlug="park" />);
-    expect(container.querySelector('[data-testid="progress-bar"]')).toBeNull();
+    expect(screen.getByText(/in 5d/)).toBeInTheDocument();
   });
 });

@@ -6,7 +6,7 @@ import type { MaintenanceProjectRowData } from '@/lib/maintenance/types';
 interface Props {
   row: MaintenanceProjectRowData;
   today: string;
-  propertySlug: string;
+  detailHref: string;
 }
 
 function formatDate(iso: string | null): string {
@@ -18,14 +18,13 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export function MaintenanceProjectRow({ row, today, propertySlug }: Props) {
+export function MaintenanceProjectRow({ row, today, detailHref }: Props) {
   const schedule = classifyScheduled(row.scheduled_for, row.status, today);
   const progress = computeProgress(row.items_completed, row.items_total);
-  const href = `/p/${propertySlug}/admin/maintenance/${row.id}`;
 
   return (
     <Link
-      href={href}
+      href={detailHref}
       className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-5 px-5 py-4 border-b border-sage-light hover:bg-sage-light/20 transition-colors"
     >
       <div className="min-w-0">

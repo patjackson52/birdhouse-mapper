@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { MaintenanceListClient } from './MaintenanceListClient';
-import { MaintenanceEmpty } from '@/components/maintenance/MaintenanceEmpty';
+import { MaintenanceListView } from '@/components/maintenance/MaintenanceListView';
+import { classifyScheduled } from '@/lib/maintenance/logic';
 import type { MaintenanceProjectRowData } from '@/lib/maintenance/types';
 
 interface PageProps {
@@ -13,7 +13,7 @@ export default async function MaintenanceListPage({ params }: PageProps) {
 
   const { data: property } = await supabase
     .from('properties')
-    .select('id, org_id')
+    .select('id, name, slug, org_id')
     .eq('slug', params.slug)
     .single();
   if (!property) notFound();
@@ -26,7 +26,6 @@ export default async function MaintenanceListPage({ params }: PageProps) {
 
   const projectIds = (projects ?? []).map((p) => p.id as string);
 
-  // Rollup: items_completed, items_total, knowledge_count
   const [{ data: itemCounts }, { data: knowledgeCounts }] = await Promise.all([
     supabase
       .from('maintenance_project_items')
@@ -63,15 +62,37 @@ export default async function MaintenanceListPage({ params }: PageProps) {
   });
 
   const today = new Date().toISOString().slice(0, 10);
-  const newHref = `/p/${params.slug}/admin/maintenance/new`;
+  const year = today.slice(0, 4);
 
-  if (rows.length === 0) {
-    return (
-      <div className="max-w-5xl mx-auto px-4 py-6">
-        <MaintenanceEmpty newProjectHref={newHref} />
-      </div>
-    );
+  let inProgress = 0;
+  let dueSoon = 0;
+  let overdue = 0;
+  let completedThisYear = 0;
+  for (const r of rows) {
+    if (r.status === 'in_progress') inProgress++;
+    const c = classifyScheduled(r.scheduled_for, r.status, today);
+    if (c.tone === 'overdue') overdue++;
+    else if (c.tone === 'soon') dueSoon++;
+    if (r.status === 'completed' && r.updated_at.slice(0, 4) === year) completedThisYear++;
   }
 
-  return <MaintenanceListClient rows={rows} today={today} propertySlug={params.slug} />;
+  const propertySlug = params.slug;
+
+  return (
+    <MaintenanceListView
+      mode="property"
+      rows={rows}
+      properties={[{ id: property.id, name: property.name, slug: property.slug }]}
+      stats={{
+        in_progress: inProgress,
+        due_soon: dueSoon,
+        overdue: overdue,
+        completed_this_year: completedThisYear,
+      }}
+      today={today}
+      buildDetailHref={(r) => `/p/${propertySlug}/admin/maintenance/${r.id}`}
+      buildCreateHref={(slug) => `/p/${slug}/admin/maintenance/new`}
+      createHref={`/p/${propertySlug}/admin/maintenance/new`}
+    />
+  );
 }
