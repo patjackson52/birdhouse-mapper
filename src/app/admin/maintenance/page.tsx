@@ -1,6 +1,6 @@
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getTenantContext } from '@/lib/tenant/server';
 import { MaintenanceListView } from '@/components/maintenance/MaintenanceListView';
 import { classifyScheduled } from '@/lib/maintenance/logic';
 import type { MaintenanceProjectRowData } from '@/lib/maintenance/types';
@@ -10,8 +10,9 @@ export const metadata = {
 };
 
 export default async function OrgMaintenancePage() {
-  const orgId = (await headers()).get('x-org-id');
-  if (!orgId) redirect('/admin');
+  const tenant = await getTenantContext();
+  if (tenant.source === 'platform' || !tenant.orgId) redirect('/');
+  const orgId = tenant.orgId;
 
   const supabase = createClient();
 
