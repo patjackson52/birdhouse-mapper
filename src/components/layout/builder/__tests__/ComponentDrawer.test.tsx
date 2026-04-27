@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ComponentDrawer from '../ComponentDrawer';
+import type { BlockTypeV2 } from '@/lib/layout/types-v2';
 
 vi.mock('@dnd-kit/core', () => ({
   useDraggable: vi.fn(() => ({
@@ -51,5 +52,30 @@ describe('ComponentDrawer', () => {
     render(<ComponentDrawer {...defaultProps} disabledTypes={new Set(['description'])} />);
     const descChip = screen.getByText('Description').closest('[aria-label]');
     expect(descChip?.className).toContain('opacity-40');
+  });
+
+  describe('palette parity with BlockTypeV2', () => {
+    // Static list of every value in the BlockTypeV2 union. Keep in sync with
+    // src/lib/layout/types-v2.ts. If you add a new BlockTypeV2 value, you must
+    // either add a PALETTE_ITEMS entry in ComponentDrawer.tsx or add an opt-out here.
+    const allBlockTypes: BlockTypeV2[] = [
+      'field_display',
+      'photo_gallery',
+      'status_badge',
+      'entity_list',
+      'timeline',
+      'text_label',
+      'description',
+      'divider',
+      'map_snippet',
+      'action_buttons',
+      'maintenance_projects',
+    ];
+
+    it('renders a draggable chip for every BlockTypeV2', () => {
+      render(<ComponentDrawer {...defaultProps} isMobile={false} />);
+      const chips = screen.getAllByLabelText(/Drag to add /i);
+      expect(chips.length).toBe(allBlockTypes.length);
+    });
   });
 });
