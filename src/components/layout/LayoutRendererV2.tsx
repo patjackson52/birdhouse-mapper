@@ -18,7 +18,7 @@ import EntityListBlock from './blocks/EntityListBlock';
 import TimelineBlock from './blocks/TimelineBlock';
 import RowBlockV2 from './blocks/RowBlockV2';
 import DescriptionBlock from './blocks/DescriptionBlock';
-import { MaintenanceProjectsBlock } from './blocks/MaintenanceProjectsBlock';
+import { UpcomingMaintenanceBlock } from './blocks/UpcomingMaintenanceBlock';
 import type { EntityDisplay } from './blocks/EntityListBlock';
 import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
 
@@ -249,7 +249,7 @@ export function renderBlockContent(
     }
 
     case 'maintenance_projects': {
-      return <MaintenanceProjectsBlock itemId={item.id} />;
+      return <UpcomingMaintenanceBlock itemId={item.id} />;
     }
 
     default:

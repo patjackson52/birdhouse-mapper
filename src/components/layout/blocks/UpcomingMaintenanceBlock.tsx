@@ -24,7 +24,7 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-export function MaintenanceProjectsBlock({ itemId }: Props) {
+export function UpcomingMaintenanceBlock({ itemId }: Props) {
   const [rows, setRows] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 

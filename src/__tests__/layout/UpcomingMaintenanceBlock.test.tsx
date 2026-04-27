@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { MaintenanceProjectsBlock } from '@/components/layout/blocks/MaintenanceProjectsBlock';
+import { UpcomingMaintenanceBlock } from '@/components/layout/blocks/UpcomingMaintenanceBlock';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), back: vi.fn() }),
@@ -60,14 +60,14 @@ vi.mock('@/lib/supabase/client', () => ({
   }),
 }));
 
-describe('MaintenanceProjectsBlock', () => {
+describe('UpcomingMaintenanceBlock', () => {
   it('renders skeleton initially', () => {
-    render(<MaintenanceProjectsBlock itemId="item-a" />);
+    render(<UpcomingMaintenanceBlock itemId="item-a" />);
     expect(screen.getByTestId('mp-block-skeleton')).toBeInTheDocument();
   });
 
   it('renders linked projects', async () => {
-    render(<MaintenanceProjectsBlock itemId="item-a" />);
+    render(<UpcomingMaintenanceBlock itemId="item-a" />);
     await waitFor(() =>
       expect(screen.getAllByText('Winter damage assessment').length).toBeGreaterThanOrEqual(1),
     );
@@ -75,14 +75,14 @@ describe('MaintenanceProjectsBlock', () => {
   });
 
   it('shows the project count', async () => {
-    render(<MaintenanceProjectsBlock itemId="item-a" />);
+    render(<UpcomingMaintenanceBlock itemId="item-a" />);
     await waitFor(() =>
       expect(screen.getByText(/2 projects/i)).toBeInTheDocument(),
     );
   });
 
   it('renders last-maintained footer from most recent completed_at', async () => {
-    render(<MaintenanceProjectsBlock itemId="item-a" />);
+    render(<UpcomingMaintenanceBlock itemId="item-a" />);
     await waitFor(() =>
       expect(screen.getByText(/Last maintained via/i)).toBeInTheDocument(),
     );
@@ -93,8 +93,8 @@ describe('MaintenanceProjectsBlock', () => {
   });
 
   it('renders nothing when no projects linked', async () => {
-    const { container, rerender } = render(<MaintenanceProjectsBlock itemId="item-a" />);
-    rerender(<MaintenanceProjectsBlock itemId="item-a" />);
+    const { container, rerender } = render(<UpcomingMaintenanceBlock itemId="item-a" />);
+    rerender(<UpcomingMaintenanceBlock itemId="item-a" />);
     expect(container).toBeInTheDocument();
   });
 });
