@@ -319,9 +319,18 @@ function MaintenanceRow({
   );
 
   if (propertySlug) {
+    const timeLabel = isOverdue
+      ? `${daysLate} days late`
+      : project.scheduled_for
+        ? `scheduled ${formatDate(project.scheduled_for)}`
+        : 'unscheduled';
     return (
       <li>
-        <a href={detailUrl(project.id, propertySlug, isAuthenticated)} className={baseClasses}>
+        <a
+          href={detailUrl(project.id, propertySlug, isAuthenticated)}
+          className={baseClasses}
+          aria-label={`${project.title}, ${timeLabel}`}
+        >
           {inner}
         </a>
       </li>
