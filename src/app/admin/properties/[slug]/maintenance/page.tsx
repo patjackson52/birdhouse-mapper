@@ -78,6 +78,14 @@ export default async function MaintenanceListPage({ params }: PageProps) {
 
   const propertySlug = params.slug;
 
+  const detailHrefByRowId: Record<string, string> = {};
+  for (const r of rows) {
+    detailHrefByRowId[r.id] = `/p/${propertySlug}/admin/maintenance/${r.id}`;
+  }
+  const createHrefBySlug: Record<string, string> = {
+    [property.slug]: `/p/${property.slug}/admin/maintenance/new`,
+  };
+
   return (
     <MaintenanceListView
       mode="property"
@@ -90,8 +98,8 @@ export default async function MaintenanceListPage({ params }: PageProps) {
         completed_this_year: completedThisYear,
       }}
       today={today}
-      buildDetailHref={(r) => `/p/${propertySlug}/admin/maintenance/${r.id}`}
-      buildCreateHref={(slug) => `/p/${slug}/admin/maintenance/new`}
+      detailHrefByRowId={detailHrefByRowId}
+      createHrefBySlug={createHrefBySlug}
       createHref={`/p/${propertySlug}/admin/maintenance/new`}
     />
   );

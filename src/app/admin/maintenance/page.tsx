@@ -92,7 +92,19 @@ export default async function OrgMaintenancePage() {
     if (r.status === 'completed' && r.updated_at.slice(0, 4) === year) completedThisYear++;
   }
 
-  const slugById = new Map(propertyList.map((p) => [p.id, p.slug]));
+  const slugById: Record<string, string> = {};
+  for (const p of propertyList) slugById[p.id] = p.slug;
+
+  const detailHrefByRowId: Record<string, string> = {};
+  for (const r of rows) {
+    const slug = slugById[r.property_id ?? ''] ?? '';
+    detailHrefByRowId[r.id] = `/admin/properties/${slug}/maintenance/${r.id}`;
+  }
+
+  const createHrefBySlug: Record<string, string> = {};
+  for (const p of propertyList) {
+    createHrefBySlug[p.slug] = `/admin/properties/${p.slug}/maintenance/new`;
+  }
 
   return (
     <MaintenanceListView
@@ -106,11 +118,8 @@ export default async function OrgMaintenancePage() {
         completed_this_year: completedThisYear,
       }}
       today={today}
-      buildDetailHref={(r) => {
-        const slug = slugById.get(r.property_id ?? '') ?? '';
-        return `/admin/properties/${slug}/maintenance/${r.id}`;
-      }}
-      buildCreateHref={(slug) => `/admin/properties/${slug}/maintenance/new`}
+      detailHrefByRowId={detailHrefByRowId}
+      createHrefBySlug={createHrefBySlug}
     />
   );
 }

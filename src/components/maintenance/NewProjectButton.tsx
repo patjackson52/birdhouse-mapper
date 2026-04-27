@@ -15,11 +15,11 @@ interface Props {
   properties: Property[];
   /** Property mode: required href to the create form. */
   createHref?: string;
-  /** Builds /admin/properties/<slug>/maintenance/new for the org-mode chooser. */
-  buildCreateHref: (slug: string) => string;
+  /** Per-property create-form URL keyed by slug; pre-computed server-side. */
+  createHrefBySlug: Record<string, string>;
 }
 
-export function NewProjectButton({ mode, properties, createHref, buildCreateHref }: Props) {
+export function NewProjectButton({ mode, properties, createHref, createHrefBySlug }: Props) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   useFocusTrap(dialogRef, open, () => setOpen(false));
@@ -28,7 +28,7 @@ export function NewProjectButton({ mode, properties, createHref, buildCreateHref
 
   // Property mode: direct link.
   if (mode === 'property') {
-    const href = createHref ?? buildCreateHref(properties[0].slug);
+    const href = createHref ?? createHrefBySlug[properties[0].slug] ?? '#';
     return (
       <Link href={href} className="btn-primary">
         + New project
@@ -39,7 +39,7 @@ export function NewProjectButton({ mode, properties, createHref, buildCreateHref
   // Org mode + 1 property: skip chooser, direct link.
   if (properties.length === 1) {
     return (
-      <Link href={buildCreateHref(properties[0].slug)} className="btn-primary">
+      <Link href={createHrefBySlug[properties[0].slug] ?? '#'} className="btn-primary">
         + New project
       </Link>
     );
@@ -76,7 +76,7 @@ export function NewProjectButton({ mode, properties, createHref, buildCreateHref
                     type="button"
                     onClick={() => {
                       setOpen(false);
-                      window.location.assign(buildCreateHref(p.slug));
+                      window.location.assign(createHrefBySlug[p.slug] ?? '#');
                     }}
                     className="w-full text-left px-3 py-2 rounded-lg border border-sage-light hover:bg-sage-light/30 text-sm font-medium text-forest-dark"
                   >

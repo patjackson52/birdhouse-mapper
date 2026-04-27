@@ -28,10 +28,10 @@ interface Props {
   properties: Property[];
   stats: Stats;
   today: string;
-  /** Builds the URL each row links to. */
-  buildDetailHref: (row: MaintenanceProjectRowData) => string;
-  /** Builds the URL the chooser modal sends a property to. */
-  buildCreateHref: (slug: string) => string;
+  /** Per-row detail URL, keyed by row id. Pre-computed server-side. */
+  detailHrefByRowId: Record<string, string>;
+  /** Per-property create URL, keyed by property slug. Pre-computed server-side. */
+  createHrefBySlug: Record<string, string>;
   /** Property mode only: direct create-form URL. Required when mode === 'property'. */
   createHref?: string;
 }
@@ -56,8 +56,8 @@ export function MaintenanceListView({
   properties,
   stats,
   today,
-  buildDetailHref,
-  buildCreateHref,
+  detailHrefByRowId,
+  createHrefBySlug,
   createHref,
 }: Props) {
   const [tab, setTab] = useState<Tab>('active');
@@ -103,7 +103,7 @@ export function MaintenanceListView({
           mode={mode}
           properties={properties}
           createHref={createHref}
-          buildCreateHref={buildCreateHref}
+          createHrefBySlug={createHrefBySlug}
         />
       </div>
 
@@ -172,7 +172,7 @@ export function MaintenanceListView({
                   mode={mode}
                   properties={properties}
                   createHref={createHref}
-                  buildCreateHref={buildCreateHref}
+                  createHrefBySlug={createHrefBySlug}
                 />
               ) : null}
             </div>
@@ -195,7 +195,7 @@ export function MaintenanceListView({
                     key={r.id}
                     row={r}
                     today={today}
-                    detailHref={buildDetailHref(r)}
+                    detailHref={detailHrefByRowId[r.id] ?? '#'}
                   />
                 ))}
               </div>
@@ -206,7 +206,7 @@ export function MaintenanceListView({
                 key={r.id}
                 row={r}
                 today={today}
-                detailHref={buildDetailHref(r)}
+                detailHref={detailHrefByRowId[r.id] ?? '#'}
               />
             ))
           )}
