@@ -61,6 +61,7 @@ interface DetailPanelProps {
 export default function DetailPanel({ item, onClose, isAuthenticated, canEditItem, canAddUpdate, onSheetStateChange }: DetailPanelProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [itemPropertySlug, setItemPropertySlug] = useState<string | null>(null);
   const params = useParams();
   const router = useRouter();
   const slug = typeof params?.slug === 'string' ? params.slug : null;
@@ -98,6 +99,29 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       onSheetStateChange?.(null);
     }
   }, [item?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resolve the item's property slug from the offline cache so child blocks
+  // (e.g. UpcomingMaintenanceBlock) can build property-scoped URLs even on
+  // routes without a [slug] segment (e.g. /map on the default org).
+  useEffect(() => {
+    const propertyId = item?.property_id;
+    if (!propertyId) {
+      setItemPropertySlug(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const property = await getOfflineDb().properties.get(propertyId);
+        if (!cancelled) setItemPropertySlug(property?.slug ?? null);
+      } catch {
+        if (!cancelled) setItemPropertySlug(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [item?.property_id]);
 
   const { position } = useUserLocation();
 
@@ -201,7 +225,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         canDeleteUpdate={canEditItem}
         currentUserId={currentUserId}
         userRole={userRole}
-        propertySlug={slug}
+        propertySlug={itemPropertySlug ?? slug}
         onDeleteUpdate={handleDeleteUpdate}
       />
     </div>
