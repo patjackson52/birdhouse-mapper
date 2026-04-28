@@ -21,6 +21,7 @@ interface Props {
   canDeleteUpdate?: boolean;
   currentUserId?: string | null;
   userRole?: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null;
+  propertySlug?: string | null;
   onDeleteUpdate?: (updateId: string, permission: DeletePermission) => void;
   onEditUpdate?: (updateId: string) => void;
 }

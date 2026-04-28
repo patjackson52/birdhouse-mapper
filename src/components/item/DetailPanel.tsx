@@ -201,6 +201,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
         canDeleteUpdate={canEditItem}
         currentUserId={currentUserId}
         userRole={userRole}
+        propertySlug={slug}
         onDeleteUpdate={handleDeleteUpdate}
       />
     </div>

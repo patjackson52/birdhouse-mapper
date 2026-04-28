@@ -18,7 +18,7 @@ import EntityListBlock from './blocks/EntityListBlock';
 import TimelineBlock from './blocks/TimelineBlock';
 import RowBlockV2 from './blocks/RowBlockV2';
 import DescriptionBlock from './blocks/DescriptionBlock';
-import { MaintenanceProjectsBlock } from './blocks/MaintenanceProjectsBlock';
+import { UpcomingMaintenanceBlock } from './blocks/UpcomingMaintenanceBlock';
 import type { EntityDisplay } from './blocks/EntityListBlock';
 import type { DeletePermission } from '@/components/delete/DeleteConfirmModal';
 
@@ -36,6 +36,7 @@ export interface LayoutRendererV2Props {
   canDeleteUpdate?: boolean;
   currentUserId?: string | null;
   userRole?: 'admin' | 'coordinator' | 'member' | 'public_contributor' | null;
+  propertySlug?: string | null;
   onDeleteUpdate?: (updateId: string, permission: DeletePermission) => void;
   onEditUpdate?: (updateId: string) => void;
 }
@@ -249,7 +250,13 @@ export function renderBlockContent(
     }
 
     case 'maintenance_projects': {
-      return <MaintenanceProjectsBlock itemId={item.id} />;
+      return (
+        <UpcomingMaintenanceBlock
+          itemId={item.id}
+          propertySlug={props.propertySlug ?? null}
+          isAuthenticated={props.isAuthenticated ?? false}
+        />
+      );
     }
 
     default:
