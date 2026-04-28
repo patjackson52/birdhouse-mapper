@@ -7,6 +7,16 @@ const TEST_TITLE = `E2E Maintenance ${Date.now()}`;
 test.describe.serial('Scheduled Maintenance admin', () => {
   test.use({ storageState: ADMIN_AUTH });
 
+  test('navigates to /admin/maintenance from the org sidebar', async ({ page }) => {
+    await page.goto('/admin');
+    await page.waitForLoadState('networkidle');
+    await page.getByRole('link', { name: /^Maintenance$/ }).click();
+    await page.waitForURL(/\/admin\/maintenance$/);
+    await expect(page.getByRole('heading', { name: /Scheduled Maintenance/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('In progress')).toBeVisible();
+    await expect(page.getByText('Due in 2 weeks')).toBeVisible();
+  });
+
   test('create a project', async ({ page }) => {
     await page.goto('/p/default/admin/maintenance');
     await page.waitForLoadState('networkidle');

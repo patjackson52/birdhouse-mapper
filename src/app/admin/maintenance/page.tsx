@@ -1,40 +1,55 @@
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getTenantContext } from '@/lib/tenant/server';
 import { MaintenanceListView } from '@/components/maintenance/MaintenanceListView';
 import { classifyScheduled } from '@/lib/maintenance/logic';
 import type { MaintenanceProjectRowData } from '@/lib/maintenance/types';
 
-interface PageProps {
-  params: { slug: string };
-}
+export const metadata = {
+  title: 'Scheduled Maintenance',
+};
 
-export default async function MaintenanceListPage({ params }: PageProps) {
+export default async function OrgMaintenancePage() {
+  const tenant = await getTenantContext();
+  if (tenant.source === 'platform' || !tenant.orgId) redirect('/');
+  const orgId = tenant.orgId;
+
   const supabase = createClient();
 
-  const { data: property } = await supabase
+  const { data: properties } = await supabase
     .from('properties')
-    .select('id, name, slug, org_id')
-    .eq('slug', params.slug)
-    .single();
-  if (!property) notFound();
+    .select('id, name, slug')
+    .eq('org_id', orgId)
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .order('name');
+
+  const propertyList = (properties ?? []).map((p) => ({
+    id: p.id as string,
+    name: (p.name as string) ?? (p.slug as string),
+    slug: p.slug as string,
+  }));
+  const propertyIds = propertyList.map((p) => p.id);
+
+  const SENTINEL = '00000000-0000-0000-0000-000000000000';
 
   const { data: projects } = await supabase
     .from('maintenance_projects')
     .select('*')
-    .eq('property_id', property.id)
+    .in('property_id', propertyIds.length > 0 ? propertyIds : [SENTINEL])
     .order('updated_at', { ascending: false });
 
-  const projectIds = (projects ?? []).map((p) => p.id as string);
+  const projectIds = (projects ?? []).map((p) => (p as { id: string }).id);
 
   const [{ data: itemCounts }, { data: knowledgeCounts }] = await Promise.all([
     supabase
       .from('maintenance_project_items')
       .select('maintenance_project_id, completed_at')
-      .in('maintenance_project_id', projectIds.length > 0 ? projectIds : ['00000000-0000-0000-0000-000000000000']),
+      .in('maintenance_project_id', projectIds.length > 0 ? projectIds : [SENTINEL]),
     supabase
       .from('maintenance_project_knowledge')
       .select('maintenance_project_id')
-      .in('maintenance_project_id', projectIds.length > 0 ? projectIds : ['00000000-0000-0000-0000-000000000000']),
+      .in('maintenance_project_id', projectIds.length > 0 ? projectIds : [SENTINEL]),
   ]);
 
   const byProject = new Map<string, { completed: number; total: number; knowledge: number }>();
@@ -51,9 +66,10 @@ export default async function MaintenanceListPage({ params }: PageProps) {
   }
 
   const rows: MaintenanceProjectRowData[] = (projects ?? []).map((p) => {
-    const agg = byProject.get(p.id as string) ?? { completed: 0, total: 0, knowledge: 0 };
+    const proj = p as unknown as MaintenanceProjectRowData;
+    const agg = byProject.get(proj.id) ?? { completed: 0, total: 0, knowledge: 0 };
     return {
-      ...(p as unknown as MaintenanceProjectRowData),
+      ...proj,
       items_completed: agg.completed,
       items_total: agg.total,
       knowledge_count: agg.knowledge,
@@ -76,31 +92,34 @@ export default async function MaintenanceListPage({ params }: PageProps) {
     if (r.status === 'completed' && r.updated_at.slice(0, 4) === year) completedThisYear++;
   }
 
-  const propertySlug = params.slug;
+  const slugById: Record<string, string> = {};
+  for (const p of propertyList) slugById[p.id] = p.slug;
 
   const detailHrefByRowId: Record<string, string> = {};
   for (const r of rows) {
-    detailHrefByRowId[r.id] = `/p/${propertySlug}/admin/maintenance/${r.id}`;
+    const slug = slugById[r.property_id ?? ''] ?? '';
+    detailHrefByRowId[r.id] = `/admin/properties/${slug}/maintenance/${r.id}`;
   }
-  const createHrefBySlug: Record<string, string> = {
-    [property.slug]: `/p/${property.slug}/admin/maintenance/new`,
-  };
+
+  const createHrefBySlug: Record<string, string> = {};
+  for (const p of propertyList) {
+    createHrefBySlug[p.slug] = `/admin/properties/${p.slug}/maintenance/new`;
+  }
 
   return (
     <MaintenanceListView
-      mode="property"
+      mode="org"
       rows={rows}
-      properties={[{ id: property.id, name: property.name, slug: property.slug }]}
+      properties={propertyList}
       stats={{
         in_progress: inProgress,
         due_soon: dueSoon,
-        overdue: overdue,
+        overdue,
         completed_this_year: completedThisYear,
       }}
       today={today}
       detailHrefByRowId={detailHrefByRowId}
       createHrefBySlug={createHrefBySlug}
-      createHref={`/p/${propertySlug}/admin/maintenance/new`}
     />
   );
 }

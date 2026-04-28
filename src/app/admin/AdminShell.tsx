@@ -26,6 +26,7 @@ const BASE_NAV_ITEMS: SidebarItem[] = [
   { label: 'Data Vault', href: '/admin/vault' },
   { label: 'AI Context', href: '/admin/ai-context' },
   { label: 'Geo Layers', href: '/admin/geo-layers' },
+  { label: 'Maintenance', href: '/admin/maintenance' },
   { type: 'section', label: 'Settings' },
   { label: 'Domains', href: '/admin/domains' },
   { label: 'Access & Tokens', href: '/admin/access' },
