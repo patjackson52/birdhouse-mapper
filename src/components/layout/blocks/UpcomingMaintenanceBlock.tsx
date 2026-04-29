@@ -149,23 +149,17 @@ export function UpcomingMaintenanceBlock({
   const { overdue, upcoming, unscheduled, lastCompleted } = buckets!;
   const totalUpcoming = overdue.length + upcoming.length + unscheduled.length;
   const hasUpcoming = totalUpcoming > 0;
-  const countLine = hasUpcoming
-    ? `${totalUpcoming} upcoming${overdue.length > 0 ? ` · ${overdue.length} overdue` : ''}`
-    : null;
 
   return (
     <div className="card p-4">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden
-            className="w-7 h-7 rounded-lg bg-sage-light/60 text-forest flex items-center justify-center text-sm"
-          >
-            🔧
-          </span>
-          <h3 className="font-heading text-forest-dark text-[15px]">Upcoming Maintenance</h3>
-        </div>
-        {countLine && <span className="text-xs text-gray-600">{countLine}</span>}
+      <div className="flex items-center gap-2 mb-3">
+        <span
+          aria-hidden
+          className="w-7 h-7 rounded-lg bg-sage-light/60 text-forest flex items-center justify-center text-sm"
+        >
+          🔧
+        </span>
+        <h3 className="font-heading text-forest-dark text-[15px]">Upcoming Maintenance</h3>
       </div>
 
       {error && (
@@ -189,7 +183,7 @@ export function UpcomingMaintenanceBlock({
             propertySlug={propertySlug}
           />
           <Subgroup
-            label="Upcoming"
+            label={null}
             tone="default"
             rows={upcoming}
             propertySlug={propertySlug}
@@ -221,7 +215,7 @@ function Subgroup({
   rows,
   propertySlug,
 }: {
-  label: 'Overdue' | 'Upcoming' | 'Unscheduled';
+  label: 'Overdue' | 'Unscheduled' | null;
   tone: 'overdue' | 'default';
   rows: ProjectRow[];
   propertySlug: string | null;
@@ -229,13 +223,15 @@ function Subgroup({
   if (rows.length === 0) return null;
   return (
     <div className="mt-2 first:mt-0">
-      <div
-        className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
-          tone === 'overdue' ? 'text-red-700' : 'text-gray-600'
-        }`}
-      >
-        {label}
-      </div>
+      {label && (
+        <div
+          className={`text-[10px] uppercase tracking-wide font-semibold mb-1 ${
+            tone === 'overdue' ? 'text-red-700' : 'text-gray-600'
+          }`}
+        >
+          {label}
+        </div>
+      )}
       <ul className="space-y-1.5">
         {rows.map((p) => (
           <MaintenanceRow
