@@ -157,4 +157,38 @@ describe('MaintenancePublicViewer', () => {
     expect(screen.getByText(/Reference material/i)).toBeInTheDocument();
     expect(screen.getByText('Spring Cleaning Protocol')).toBeInTheDocument();
   });
+
+  it('renders an Edit link to the admin edit form when canEdit is true', () => {
+    render(
+      <MaintenancePublicViewer
+        project={project}
+        propertySlug="default"
+        propertyName="Discovery Park"
+        items={items}
+        knowledge={[]}
+        progress={{ completed: 0, total: 2 }}
+        isOrgMember={true}
+        canEdit={true}
+      />,
+    );
+    const editLink = screen.getByTestId('mpv-edit');
+    expect(editLink).toBeInTheDocument();
+    expect(editLink.getAttribute('href')).toBe('/p/default/admin/maintenance/p-1');
+  });
+
+  it('does not render an Edit link when canEdit is false', () => {
+    render(
+      <MaintenancePublicViewer
+        project={project}
+        propertySlug="default"
+        propertyName="Discovery Park"
+        items={items}
+        knowledge={[]}
+        progress={{ completed: 0, total: 2 }}
+        isOrgMember={false}
+        canEdit={false}
+      />,
+    );
+    expect(screen.queryByTestId('mpv-edit')).toBeNull();
+  });
 });

@@ -102,18 +102,24 @@ async function loadData(slug: string, id: string) {
   const completed = (itemLinks ?? []).filter((l) => l.completed_at !== null).length;
   const total = itemLinks?.length ?? 0;
 
-  // isOrgMember: current user has active membership in this property's org
+  // isOrgMember: current user has active membership in this property's org.
+  // canEdit: membership role is org_admin or org_staff (mirrors RLS update policy
+  // in 049_scheduled_maintenance.sql).
   const { data: { user } } = await supabase.auth.getUser();
   let isOrgMember = false;
+  let canEdit = false;
   if (user) {
     const { data: membership } = await supabase
       .from('org_memberships')
-      .select('id')
+      .select('id, roles!inner(base_role)')
       .eq('user_id', user.id)
       .eq('org_id', property.org_id)
       .eq('status', 'active')
       .maybeSingle();
     isOrgMember = !!membership;
+    const baseRole = (membership as { roles?: { base_role?: string } } | null)
+      ?.roles?.base_role;
+    canEdit = baseRole === 'org_admin' || baseRole === 'org_staff';
   }
 
   return {
@@ -123,6 +129,7 @@ async function loadData(slug: string, id: string) {
     knowledge,
     progress: { completed, total },
     isOrgMember,
+    canEdit,
   };
 }
 
@@ -148,6 +155,7 @@ export default async function PublicMaintenanceProjectPage({ params }: PageProps
       knowledge={data.knowledge}
       progress={data.progress}
       isOrgMember={data.isOrgMember}
+      canEdit={data.canEdit}
     />
   );
 }
