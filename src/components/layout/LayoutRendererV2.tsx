@@ -254,7 +254,6 @@ export function renderBlockContent(
         <UpcomingMaintenanceBlock
           itemId={item.id}
           propertySlug={props.propertySlug ?? null}
-          isAuthenticated={props.isAuthenticated ?? false}
         />
       );
     }

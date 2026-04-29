@@ -30,7 +30,6 @@ interface ProjectRow {
 interface Props {
   itemId: string;
   propertySlug?: string | null;
-  isAuthenticated?: boolean;
 }
 
 const ACTIVE_STATUSES: MaintenanceStatus[] = ['planned', 'in_progress'];
@@ -51,16 +50,13 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
-function detailUrl(projectId: string, slug: string, isAuthenticated: boolean): string {
-  return isAuthenticated
-    ? `/p/${slug}/admin/maintenance/${projectId}`
-    : `/p/${slug}/maintenance/${projectId}`;
+function detailUrl(projectId: string, slug: string): string {
+  return `/p/${slug}/maintenance/${projectId}`;
 }
 
 export function UpcomingMaintenanceBlock({
   itemId,
   propertySlug = null,
-  isAuthenticated = false,
 }: Props) {
   const [rows, setRows] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -191,21 +187,18 @@ export function UpcomingMaintenanceBlock({
             tone="overdue"
             rows={overdue}
             propertySlug={propertySlug}
-            isAuthenticated={isAuthenticated}
           />
           <Subgroup
             label="Upcoming"
             tone="default"
             rows={upcoming}
             propertySlug={propertySlug}
-            isAuthenticated={isAuthenticated}
           />
           <Subgroup
             label="Unscheduled"
             tone="default"
             rows={unscheduled}
             propertySlug={propertySlug}
-            isAuthenticated={isAuthenticated}
           />
         </>
       )}
@@ -227,13 +220,11 @@ function Subgroup({
   tone,
   rows,
   propertySlug,
-  isAuthenticated,
 }: {
   label: 'Overdue' | 'Upcoming' | 'Unscheduled';
   tone: 'overdue' | 'default';
   rows: ProjectRow[];
   propertySlug: string | null;
-  isAuthenticated: boolean;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -252,7 +243,6 @@ function Subgroup({
             project={p}
             tone={tone}
             propertySlug={propertySlug}
-            isAuthenticated={isAuthenticated}
           />
         ))}
       </ul>
@@ -264,12 +254,10 @@ function MaintenanceRow({
   project,
   tone,
   propertySlug,
-  isAuthenticated,
 }: {
   project: ProjectRow;
   tone: 'overdue' | 'default';
   propertySlug: string | null;
-  isAuthenticated: boolean;
 }) {
   const isOverdue = tone === 'overdue';
   const baseClasses = `block rounded-lg px-3 py-2 transition-colors ${
@@ -327,7 +315,7 @@ function MaintenanceRow({
     return (
       <li>
         <a
-          href={detailUrl(project.id, propertySlug, isAuthenticated)}
+          href={detailUrl(project.id, propertySlug)}
           className={baseClasses}
           aria-label={`${project.title}, ${timeLabel}`}
         >

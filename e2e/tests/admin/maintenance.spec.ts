@@ -13,7 +13,8 @@ test.describe.serial('Scheduled Maintenance admin', () => {
     await page.getByRole('link', { name: /^Maintenance$/ }).click();
     await page.waitForURL(/\/admin\/maintenance$/);
     await expect(page.getByRole('heading', { name: /Scheduled Maintenance/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('In progress')).toBeVisible();
+    // "In progress" appears in both the stat card and any status pill — scope to first match.
+    await expect(page.getByText('In progress').first()).toBeVisible();
     await expect(page.getByText('Due in 2 weeks')).toBeVisible();
   });
 
@@ -45,10 +46,12 @@ test.describe.serial('Scheduled Maintenance admin', () => {
     await page.getByRole('button', { name: /^Add \d+ item/ }).click();
 
     await expect(page.getByText(/Linked items \(1\)/)).toBeVisible({ timeout: 10000 });
-    // Use click() rather than check() — the checkbox is controlled by server state
-    // (completed_at), so React re-renders it back to unchecked until router.refresh()
-    // lands the update. click() fires the onChange without post-state assertion.
-    await page.locator('[aria-label^="Mark "]').first().click();
+    // The checkbox is controlled by server state (completed_at); React re-renders
+    // it to checked only after router.refresh() lands. Wait for that flip so the
+    // next test sees "1/1 done" on the list.
+    const checkbox = page.locator('[aria-label^="Mark "]').first();
+    await checkbox.click();
+    await expect(checkbox).toBeChecked({ timeout: 10000 });
   });
 
   test('project row appears on list with completion progress', async ({ page }) => {

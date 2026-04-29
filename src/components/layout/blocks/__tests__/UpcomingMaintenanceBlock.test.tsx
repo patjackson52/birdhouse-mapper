@@ -74,16 +74,12 @@ describe('UpcomingMaintenanceBlock', () => {
   it('renders the loading skeleton before data arrives', () => {
     // Supabase resolves on next microtask; the first synchronous render shows the skeleton.
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug="property-a"
-        isAuthenticated={true}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug="property-a" />,
     );
     expect(screen.getByTestId('mp-block-skeleton')).toBeInTheDocument();
   });
 
-  it('renders the mixed state (overdue + upcoming + unscheduled + footer) for staff', async () => {
+  it('renders the mixed state (overdue + upcoming + unscheduled + footer)', async () => {
     supabaseResult = {
       data: [
         row({
@@ -130,11 +126,7 @@ describe('UpcomingMaintenanceBlock', () => {
     };
 
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug="property-a"
-        isAuthenticated={true}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug="property-a" />,
     );
 
     await screen.findByText('Upcoming Maintenance');
@@ -150,7 +142,7 @@ describe('UpcomingMaintenanceBlock', () => {
 
     const overdueLink = screen.getByText('Spring nestbox inspection').closest('a');
     expect(overdueLink).not.toBeNull();
-    expect(overdueLink?.getAttribute('href')).toBe('/p/property-a/admin/maintenance/p-overdue');
+    expect(overdueLink?.getAttribute('href')).toBe('/p/property-a/maintenance/p-overdue');
 
     const desc = screen.getByText(/Annual check for damage/i);
     expect(desc.className).toMatch(/line-clamp-1/);
@@ -174,11 +166,7 @@ describe('UpcomingMaintenanceBlock', () => {
     };
 
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug="property-a"
-        isAuthenticated={true}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug="property-a" />,
     );
 
     await screen.findByText('Upcoming Maintenance');
@@ -191,11 +179,7 @@ describe('UpcomingMaintenanceBlock', () => {
     supabaseResult = { data: [], error: null };
 
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug="property-a"
-        isAuthenticated={true}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug="property-a" />,
     );
 
     await screen.findByText('Upcoming Maintenance');
@@ -203,12 +187,12 @@ describe('UpcomingMaintenanceBlock', () => {
     expect(screen.queryByText(/Last maintained via/)).not.toBeInTheDocument();
   });
 
-  it('uses the public viewer URL for anonymous viewers', async () => {
+  it('always routes to the detail viewer URL (never the admin edit form)', async () => {
     supabaseResult = {
       data: [
         row({
-          id: 'p-anon',
-          title: 'Public view check',
+          id: 'p-x',
+          title: 'Detail view check',
           status: 'planned',
           scheduled_for: '2026-05-02',
           completed_at: null,
@@ -218,15 +202,11 @@ describe('UpcomingMaintenanceBlock', () => {
     };
 
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug="property-a"
-        isAuthenticated={false}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug="property-a" />,
     );
 
-    const link = (await screen.findByText('Public view check')).closest('a');
-    expect(link?.getAttribute('href')).toBe('/p/property-a/maintenance/p-anon');
+    const link = (await screen.findByText('Detail view check')).closest('a');
+    expect(link?.getAttribute('href')).toBe('/p/property-a/maintenance/p-x');
   });
 
   it('renders rows as non-anchor when propertySlug is null', async () => {
@@ -244,11 +224,7 @@ describe('UpcomingMaintenanceBlock', () => {
     };
 
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug={null}
-        isAuthenticated={true}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug={null} />,
     );
 
     const titleEl = await screen.findByText('Should not link');
@@ -259,11 +235,7 @@ describe('UpcomingMaintenanceBlock', () => {
     supabaseResult = { data: null, error: { message: 'network down' } };
 
     render(
-      <UpcomingMaintenanceBlock
-        itemId="item-1"
-        propertySlug="property-a"
-        isAuthenticated={true}
-      />,
+      <UpcomingMaintenanceBlock itemId="item-1" propertySlug="property-a" />,
     );
 
     await screen.findByText('Upcoming Maintenance');

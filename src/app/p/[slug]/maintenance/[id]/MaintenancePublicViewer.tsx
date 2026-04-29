@@ -28,6 +28,7 @@ interface Props {
   knowledge: KnowledgeRow[];
   progress: { completed: number; total: number };
   isOrgMember: boolean;
+  canEdit?: boolean;
 }
 
 function formatDate(iso: string | null, withYear = false): string {
@@ -55,6 +56,7 @@ export function MaintenancePublicViewer({
   knowledge,
   progress,
   isOrgMember,
+  canEdit = false,
 }: Props) {
   const percent =
     progress.total === 0 ? 0 : Math.floor((progress.completed / progress.total) * 100);
@@ -100,9 +102,20 @@ export function MaintenancePublicViewer({
           <MaintenanceStatusPill status={project.status} size="sm" />
         </div>
 
-        <h1 className="font-heading text-forest-dark text-2xl md:text-4xl font-semibold leading-tight mb-4">
-          {project.title}
-        </h1>
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <h1 className="font-heading text-forest-dark text-2xl md:text-4xl font-semibold leading-tight">
+            {project.title}
+          </h1>
+          {canEdit && (
+            <Link
+              href={`/p/${propertySlug}/admin/maintenance/${project.id}`}
+              className="btn-secondary shrink-0"
+              data-testid="mpv-edit"
+            >
+              Edit
+            </Link>
+          )}
+        </div>
 
         {project.description && (
           <p className="text-[15px] md:text-[17px] leading-relaxed text-gray-700 mb-5">
