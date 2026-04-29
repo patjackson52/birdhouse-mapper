@@ -130,10 +130,11 @@ describe('UpcomingMaintenanceBlock', () => {
     );
 
     await screen.findByText('Upcoming Maintenance');
-    expect(screen.getByText('4 upcoming · 1 overdue')).toBeInTheDocument();
+    expect(screen.queryByText(/\d+ upcoming/)).not.toBeInTheDocument();
 
     expect(screen.getByText('Overdue')).toBeInTheDocument();
-    expect(screen.getByText('Upcoming')).toBeInTheDocument();
+    // The "Upcoming" subgroup label is intentionally suppressed — the card header already says it.
+    expect(screen.queryByText('Upcoming', { selector: 'div' })).not.toBeInTheDocument();
     expect(screen.getByText('Unscheduled')).toBeInTheDocument();
 
     expect(screen.getByText('3d late')).toBeInTheDocument();
