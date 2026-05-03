@@ -137,9 +137,22 @@ export async function publishPuckPages() {
     return { error: `Failed to read draft: ${readError?.message ?? 'not found'}` };
   }
 
+  // Defense-in-depth: re-sanitize even though draft was sanitized on save.
+  // Idempotent — clean data passes through unchanged.
+  const draft = property.puck_pages_draft as Record<string, unknown> | null;
+  let sanitizedPages: Record<string, unknown> | null = null;
+  if (draft && typeof draft === 'object') {
+    sanitizedPages = {};
+    for (const [pagePath, pageData] of Object.entries(draft)) {
+      sanitizedPages[pagePath] = sanitizePuckDataForWrite(
+        pageData as Parameters<typeof sanitizePuckDataForWrite>[0]
+      );
+    }
+  }
+
   const { error } = await supabase
     .from('properties')
-    .update({ puck_pages: property.puck_pages_draft })
+    .update({ puck_pages: sanitizedPages })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
@@ -164,9 +177,16 @@ export async function publishPuckRoot() {
     return { error: `Failed to read draft: ${readError?.message ?? 'not found'}` };
   }
 
+  // Defense-in-depth: re-sanitize. Idempotent.
+  const sanitizedRoot = property.puck_root_draft
+    ? sanitizePuckDataForWrite(
+        property.puck_root_draft as Parameters<typeof sanitizePuckDataForWrite>[0]
+      )
+    : null;
+
   const { error } = await supabase
     .from('properties')
-    .update({ puck_root: property.puck_root_draft })
+    .update({ puck_root: sanitizedRoot as unknown as Record<string, unknown> | null })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
