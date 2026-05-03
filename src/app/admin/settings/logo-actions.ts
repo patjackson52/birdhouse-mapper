@@ -79,7 +79,10 @@ export async function uploadLogo(
     .toBuffer();
   variants.push({ name: 'apple-touch-icon-180.png', buffer: appleTouch });
 
-  // Favicon
+  // Favicon (32x32). Letterboxing wide wordmark logos with white gutters at
+  // this tiny size is intentional — preserves the full logo at the cost of
+  // shrinking it. The alternative (fit: 'cover') would crop wide logos to
+  // an unreadable center slice.
   const favicon = await sharp(buffer)
     .resize(32, 32, { fit: 'contain', background: white })
     .png()
