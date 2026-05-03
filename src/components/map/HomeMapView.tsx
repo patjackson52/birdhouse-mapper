@@ -97,6 +97,16 @@ function HomeMapViewContent() {
 
   mark('ttrc:hydrate-start');
 
+  // Safety net: if loading work hangs (e.g. IDB versionchange upgrade blocked
+  // by another connection — Dexie's db.open() can wait indefinitely with no
+  // throw), force the spinner off after 8s so the user isn't stuck. The map
+  // will render with whatever state we have (typically empty), and any later
+  // success path will populate it.
+  useEffect(() => {
+    const safetyNet = setTimeout(() => setLoading(false), 8000);
+    return () => clearTimeout(safetyNet);
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       if (!propertyId) { setLoading(false); return; }

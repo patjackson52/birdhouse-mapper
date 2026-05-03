@@ -89,6 +89,17 @@ let dbInstance: OfflineDatabase | null = null;
 export function getOfflineDb(): OfflineDatabase {
   if (!dbInstance) {
     dbInstance = new OfflineDatabase();
+    if (typeof window !== 'undefined') {
+      // If a Dexie schema upgrade is blocked by another open connection (e.g.
+      // a stale service worker holding the prior schema version), `db.open()`
+      // hangs indefinitely with no resolution and no throw — the page renders
+      // a spinner forever. Reload to drop our connection so the upgrade can
+      // proceed; on the second load the new SW has activated.
+      dbInstance.on('blocked', () => {
+        console.warn('[offline-db] schema upgrade blocked; reloading');
+        window.location.reload();
+      });
+    }
   }
   return dbInstance;
 }
