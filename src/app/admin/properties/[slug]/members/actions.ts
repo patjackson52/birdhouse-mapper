@@ -49,7 +49,7 @@ export async function getPropertyMembers(propertySlug: string): Promise<{
     .select(`
       id,
       user_id,
-      users ( id, display_name, email ),
+      users!user_id ( id, display_name, email ),
       roles ( id, name, base_role )
     `)
     .eq('org_id', tenant.orgId)
