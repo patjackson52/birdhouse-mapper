@@ -346,7 +346,7 @@ export default function DetailPanel({ item, onClose, isAuthenticated, canEditIte
       )}
 
       {/* Updates timeline */}
-      <div>
+      <div className="pb-24">
         <h3 className="text-xs font-medium text-sage uppercase tracking-wide mb-3">
           Updates
         </h3>
