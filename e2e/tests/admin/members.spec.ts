@@ -9,23 +9,18 @@ test.describe('Admin Members @smoke', () => {
 
   test('property-scoped members page loads', async ({ page }) => {
     await page.goto(`/p/${TEST_DATA.property.slug}/admin/members`);
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=Members').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 10000 });
   });
 
   test('org-level /admin/members renders without PostgREST embed error', async ({ page }) => {
     await page.goto('/admin/members');
-    await page.waitForLoadState('networkidle');
 
-    // Heading present
+    // Heading present.
     await expect(page.getByRole('heading', { name: 'Members' })).toBeVisible({ timeout: 10000 });
 
-    // No PostgREST ambiguity error visible anywhere on the page
-    await expect(
-      page.locator('text=/Could not embed|more than one relationship was found/i'),
-    ).toHaveCount(0);
-
-    // At least one member row rendered (the seeded admin user is itself a member)
-    await expect(page.locator('table tbody tr')).not.toHaveCount(0);
+    // At least one member row rendered. The query failure (issue #305) leaves
+    // the table empty because the page swallows the error and shows EmptyState
+    // — so the row visibility check is the regression signal.
+    await expect(page.locator('table tbody tr').first()).toBeVisible({ timeout: 10000 });
   });
 });
