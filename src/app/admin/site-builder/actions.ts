@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
 import { puckDataSchema } from '@/lib/puck/schemas';
+import { sanitizePuckDataForWrite } from '@/lib/puck/sanitize-data';
 import { validatePageSlug, type PageMeta } from '@/lib/puck/page-utils';
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,8 @@ export async function savePuckPageDraft(path: string, data: unknown) {
       ? (property.puck_pages_draft as Record<string, unknown>)
       : {};
 
-  const merged = { ...existing, [path]: parseResult.data };
+  const sanitized = sanitizePuckDataForWrite(parseResult.data as Parameters<typeof sanitizePuckDataForWrite>[0]);
+  const merged = { ...existing, [path]: sanitized };
 
   const { error } = await supabase
     .from('properties')
@@ -104,9 +106,10 @@ export async function savePuckRootDraft(data: unknown) {
   if ('error' in result) return result;
 
   const supabase = createClient();
+  const sanitized = sanitizePuckDataForWrite(parseResult.data as Parameters<typeof sanitizePuckDataForWrite>[0]);
   const { error } = await supabase
     .from('properties')
-    .update({ puck_root_draft: parseResult.data as unknown as Record<string, unknown> })
+    .update({ puck_root_draft: sanitized as unknown as Record<string, unknown> })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
