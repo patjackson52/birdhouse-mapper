@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { sanitizePuckData } from '../sanitize-data';
+import { sanitizePuckData, sanitizePuckDataForWrite } from '../sanitize-data';
 import type { Data } from '@puckeditor/core';
 
 describe('sanitizePuckData', () => {
@@ -152,5 +152,72 @@ describe('sanitizePuckData', () => {
 
     const result = sanitizePuckData(data);
     expect((result.root as any).content[0].props.text).toBeNull();
+  });
+});
+
+describe('sanitizePuckDataForWrite', () => {
+  it('runs HTML sanitization on richtext props', () => {
+    const data = {
+      content: [
+        { type: 'RichText', props: { content: '<p>hi<script>alert(1)</script></p>' } },
+      ],
+      root: {},
+    };
+    const result = sanitizePuckDataForWrite(data as any);
+    expect((result.content[0] as any).props.content).not.toContain('script');
+    expect((result.content[0] as any).props.content).toContain('hi');
+  });
+
+  it('still nullifies empty richtext strings', () => {
+    const data = {
+      content: [{ type: 'RichText', props: { content: '' } }],
+      root: {},
+    };
+    const result = sanitizePuckDataForWrite(data as any);
+    expect((result.content[0] as any).props.content).toBeNull();
+  });
+
+  it('walks nested slot components recursively', () => {
+    const data = {
+      content: [
+        {
+          type: 'Container',
+          props: {
+            children: [
+              { type: 'Card', props: { text: '<div>x</div><span>y</span>' } },
+            ],
+          },
+        },
+      ],
+      root: {},
+    };
+    const result = sanitizePuckDataForWrite(data as any);
+    const inner = (result.content[0] as any).props.children[0].props.text;
+    expect(inner).toBe('xy');
+  });
+
+  it('leaves non-richtext props untouched', () => {
+    const data = {
+      content: [
+        { type: 'Custom', props: { customProp: '<p>html</p>', alt: 'pic' } },
+      ],
+      root: {},
+    };
+    const result = sanitizePuckDataForWrite(data as any);
+    expect((result.content[0] as any).props.customProp).toBe('<p>html</p>');
+    expect((result.content[0] as any).props.alt).toBe('pic');
+  });
+
+  it('processes root.content blocks', () => {
+    const data = {
+      content: [],
+      root: {
+        content: [
+          { type: 'Card', props: { quote: '<p onclick="x">q</p>' } },
+        ],
+      },
+    };
+    const result = sanitizePuckDataForWrite(data as any);
+    expect(((result.root as any).content[0] as any).props.quote).not.toContain('onclick');
   });
 });
