@@ -40,12 +40,50 @@ async function globalSetup(config: FullConfig) {
   await loginAndSave(TEST_DATA.admin.email, TEST_DATA.admin.password, path.join(AUTH_DIR, 'admin.json'));
   await loginAndSave(TEST_DATA.editor.email, TEST_DATA.editor.password, path.join(AUTH_DIR, 'editor.json'));
 
+  const supabaseAdmin = createTestClient();
+
+  // Fetch all auth users once — reused for both the admin membership upsert and
+  // the onboard-user clean-up below.
+  const { data: allAuthUsers } = await supabaseAdmin.auth.admin.listUsers();
+
+  // Ensure admin has active org_membership in the test org so /admin/members
+  // has rows to render. Idempotent — no-op if the row already exists.
+  {
+    const { data: org } = await supabaseAdmin
+      .from('orgs')
+      .select('id')
+      .eq('slug', TEST_DATA.org.slug)
+      .single();
+
+    const adminAuthUser = allAuthUsers?.users?.find((u: any) => u.email === TEST_DATA.admin.email);
+
+    const { data: adminRole } = await supabaseAdmin
+      .from('roles')
+      .select('id')
+      .eq('org_id', org!.id)
+      .eq('base_role', 'org_admin')
+      .single();
+
+    if (org && adminAuthUser && adminRole) {
+      await supabaseAdmin
+        .from('org_memberships')
+        .upsert(
+          {
+            org_id: org.id,
+            user_id: adminAuthUser.id,
+            role_id: adminRole.id,
+            status: 'active',
+            joined_at: new Date().toISOString(),
+          },
+          { onConflict: 'org_id,user_id' },
+        );
+    }
+  }
+
   // Onboard user: ensure clean state by removing any org memberships from prior runs.
   // We do NOT delete/recreate the user — the CI workflow pre-creates them via psql
   // and the handle_new_user trigger ensures they exist in public.users.
-  const supabaseAdmin = createTestClient();
-  const { data: existingUserData } = await supabaseAdmin.auth.admin.listUsers();
-  const existingOnboard = existingUserData?.users?.find((u: any) => u.email === TEST_DATA.onboard.email);
+  const existingOnboard = allAuthUsers?.users?.find((u: any) => u.email === TEST_DATA.onboard.email);
 
   if (!existingOnboard) {
     // User doesn't exist yet — create them and upsert into public.users
