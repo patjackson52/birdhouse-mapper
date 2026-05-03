@@ -20,7 +20,13 @@ describe('getLogoUrlServer', () => {
     expect(getLogoUrlServer(null, 'icon-512.png')).toBe('/defaults/logos/icon-512.png');
     expect(getLogoUrlServer(null, 'icon-512-maskable.png')).toBe('/defaults/logos/icon-512-maskable.png');
     expect(getLogoUrlServer(null, 'favicon-32.png')).toBe('/defaults/logos/favicon-32.png');
+    expect(getLogoUrlServer(null, 'apple-touch-icon-180.png')).toBe('/defaults/logos/icon-192.png');
     expect(getLogoUrlServer(null, 'original.png')).toBe('/defaults/logos/fieldmapper.png');
+  });
+
+  it('builds storage URL for apple-touch-icon-180 variant', () => {
+    const url = getLogoUrlServer('org-123', 'apple-touch-icon-180.png');
+    expect(url).toBe('https://storage.test/vault-public/org-123/apple-touch-icon-180.png');
   });
 
   it('builds storage URL for org logo with variant', () => {
