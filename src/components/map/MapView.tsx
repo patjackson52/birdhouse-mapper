@@ -19,6 +19,7 @@ import FeaturePopup from "@/components/geo/FeaturePopup";
 import LayerControlPanel from "@/components/geo/LayerControlPanel";
 import type { GeoLayerSummary } from "@/lib/geo/types";
 import type { FeatureCollection, Feature } from "geojson";
+import { mark } from '@/lib/perf/marks';
 
 interface MapViewProps {
   items: Item[];
@@ -41,6 +42,28 @@ function FlyToUser({ trigger }: { trigger: number }) {
       map.flyTo([position.lat, position.lng], map.getZoom(), { duration: 1 });
     }
   }, [trigger, position, map]);
+  return null;
+}
+
+/** Marks first user interaction with the map */
+function InteractiveMarker() {
+  const map = useMap();
+  useEffect(() => {
+    function onInput() {
+      mark('ttrc:interactive');
+      map.off('movestart', onInput);
+      map.off('zoomstart', onInput);
+      map.off('click', onInput);
+    }
+    map.on('movestart', onInput);
+    map.on('zoomstart', onInput);
+    map.on('click', onInput);
+    return () => {
+      map.off('movestart', onInput);
+      map.off('zoomstart', onInput);
+      map.off('click', onInput);
+    };
+  }, [map]);
   return null;
 }
 
@@ -75,6 +98,12 @@ export default function MapView({
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<{ feature: Feature; layerName: string } | null>(null);
 
+  useEffect(() => {
+    if (items.length === 0) return;
+    mark('ttrc:first-marker');
+    mark('ttrc:all-markers');
+  }, [items.length]);
+
   // Build a lookup map for item types
   const typeMap = new Map(itemTypes.map((t) => [t.id, t]));
 
@@ -105,7 +134,14 @@ export default function MapView({
         zoomControl={false}
       >
         <MapResizer fullscreen={fullscreen} />
-        <TileLayer attribution={theme.tileAttribution} url={theme.tileUrl} />
+        <InteractiveMarker />
+        <TileLayer
+          attribution={theme.tileAttribution}
+          url={theme.tileUrl}
+          eventHandlers={{
+            tileload: () => mark('ttrc:first-paint-tile'),
+          }}
+        />
         {config.customMap && (
           <ImageOverlay
             url={config.customMap.url}
