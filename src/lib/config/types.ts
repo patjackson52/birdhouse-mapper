@@ -1,4 +1,3 @@
-import type { LandingPageConfig } from './landing-types';
 import { resolveMapDisplayConfig, type ResolvedMapDisplayConfig, type MapDisplayConfig } from './map-display';
 
 export interface SiteConfig {
@@ -33,7 +32,6 @@ export interface SiteConfig {
   mapStyle: string | null; // map tile source ID, null = use theme default
   customNavItems: { label: string; href: string }[];
   setupComplete: boolean;
-  landingPage: LandingPageConfig | null;
   platformDomain: string | null;
   // Puck site builder (null = legacy mode)
   puckPages: Record<string, unknown> | null;
@@ -77,7 +75,6 @@ export function buildSiteConfig(
     footer_text: string | null;
     footer_links: unknown | null;
     custom_nav_items: unknown | null;
-    landing_page: unknown | null;
     logo_url: string | null;
     puck_pages: unknown | null;
     puck_root: unknown | null;
@@ -112,7 +109,6 @@ export function buildSiteConfig(
     mapStyle: property.map_style,
     customNavItems: (property.custom_nav_items as { label: string; href: string }[]) ?? [],
     setupComplete: org.setup_complete,
-    landingPage: property.landing_page as LandingPageConfig | null,
     platformDomain: process.env.PLATFORM_DOMAIN ?? null,
     puckPages: property.puck_pages as Record<string, unknown> | null ?? null,
     puckRoot: property.puck_root as Record<string, unknown> | null ?? null,

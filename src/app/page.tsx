@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { getConfig } from '@/lib/config/server';
-import { LandingRenderer } from '@/components/landing/LandingRenderer';
 import { HomeMapView } from '@/components/map/HomeMapView';
 import { PerfOverlay } from '@/components/perf/PerfOverlay';
 import { PlatformLanding } from '@/components/platform/PlatformLanding';
@@ -17,15 +16,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const headersList = await headers();
   const isPlatform = headersList.get('x-tenant-source') === 'platform';
 
-  // Platform context — render platform landing page
+  // Platform context — render platform home page
   if (isPlatform) {
     return <PlatformLanding />;
   }
 
-  // Org context — existing behavior
   const config = await getConfig();
 
-  // Check for preview mode
   const isPreview = searchParams?.preview === 'true';
 
   // Forward non-preview query params to /map (preserves deep links like ?item=123)
@@ -41,8 +38,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     redirect(`/map?${query.toString()}`);
   }
 
-  // Puck landing page (new system) — takes priority over legacy
-  // In preview mode, use draft data if available
+  // Puck home page — in preview mode use draft data if available
   const puckLandingData = isPreview
     ? (config.puckPagesDraft?.['/'] ?? config.puckPages?.['/'])
     : config.puckPages?.['/'];
@@ -62,16 +58,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     );
   }
 
-  // Landing page enabled — render blocks
-  if (config.landingPage?.enabled && config.landingPage.blocks.length > 0) {
-    return (
-      <main className="pb-20 md:pb-0">
-        <LandingRenderer blocks={config.landingPage.blocks} />
-      </main>
-    );
-  }
-
-  // Fallback — render map (current behavior)
+  // Fallback — render map
   return (
     <>
       <HomeMapView />

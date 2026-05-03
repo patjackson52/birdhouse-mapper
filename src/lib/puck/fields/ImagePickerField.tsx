@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { resizeImage } from '@/lib/utils';
-import { uploadLandingAsset } from '@/app/admin/landing/actions';
+import { uploadImageAsset } from './actions';
 import { useConfig } from '@/lib/config/client';
 import { isGooglePhotosConfigured, getGooglePhotosPickerUrl } from '@/lib/google/picker';
 
@@ -115,7 +115,7 @@ function ImagePickerModal({
       const formData = new FormData();
       formData.append('file', resized);
       formData.append('category', 'image');
-      const { asset, error } = await uploadLandingAsset(formData);
+      const { asset, error } = await uploadImageAsset(formData);
       if (error || !asset) {
         setUploadError(error ?? 'Upload failed');
       } else {
@@ -162,7 +162,7 @@ function ImagePickerModal({
         const formData = new FormData();
         formData.append('file', new File([resized], result.name, { type: 'image/jpeg' }));
         formData.append('category', 'image');
-        const { asset, error } = await uploadLandingAsset(formData);
+        const { asset, error } = await uploadImageAsset(formData);
         if (error || !asset) throw new Error(error ?? 'Upload failed');
         onSelect(asset.publicUrl);
       } catch {

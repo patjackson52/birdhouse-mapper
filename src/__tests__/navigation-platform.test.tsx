@@ -18,7 +18,7 @@ vi.mock('@/lib/config/client', () => ({
   useConfig: () => ({
     siteName: 'Test Site',
     tagline: 'Test Tagline',
-    landingPage: { enabled: true, blocks: [] },
+    puckPages: null,
     customNavItems: [],
   }),
 }));

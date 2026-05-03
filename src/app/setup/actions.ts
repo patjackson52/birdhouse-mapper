@@ -2,7 +2,6 @@
 
 import { createServiceClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
-import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
 
 /** Keys that map to columns on the orgs table */
 const ORG_KEY_TO_COLUMN: Record<string, string> = {
@@ -237,39 +236,6 @@ export async function setupCreateCustomField(
   }
 
   return { success: true };
-}
-
-/**
- * Create a default landing page during setup.
- */
-export async function setupSaveLandingPage(
-  siteName: string,
-  tagline: string,
-  locationName: string
-) {
-  const supabase = createServiceClient();
-  const landingPage = createDefaultLandingPage(siteName, tagline, locationName, true);
-
-  // Get the single org's default property
-  const { data: org, error: orgError } = await supabase
-    .from('orgs')
-    .select('id, default_property_id')
-    .limit(1)
-    .single();
-
-  if (orgError || !org?.default_property_id) {
-    return { error: `Failed to find property: ${orgError?.message ?? 'no default property'}` };
-  }
-
-  const { error } = await supabase
-    .from('properties')
-    .update({ landing_page: landingPage })
-    .eq('id', org.default_property_id);
-
-  if (error) {
-    return { error: error.message };
-  }
-  return { error: null };
 }
 
 /**

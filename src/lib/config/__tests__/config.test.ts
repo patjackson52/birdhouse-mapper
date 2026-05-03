@@ -25,7 +25,6 @@ describe('buildSiteConfig', () => {
       footer_text: 'Footer here',
       footer_links: [{ label: 'Home', url: '/' }],
       custom_nav_items: [{ label: 'Blog', href: '/blog' }],
-      landing_page: null,
       logo_url: null,
       puck_pages: null,
       puck_root: null,
@@ -51,7 +50,6 @@ describe('buildSiteConfig', () => {
     expect(config.mapStyle).toBe('satellite');
     expect(config.customMap).toBeNull();
     expect(config.setupComplete).toBe(true);
-    expect(config.landingPage).toBeNull();
   });
 
   it('uses property logo_url over org logo_url when present', () => {
@@ -75,7 +73,6 @@ describe('buildSiteConfig', () => {
       footer_text: null,
       footer_links: null,
       custom_nav_items: null,
-      landing_page: null,
       logo_url: 'https://example.com/prop-logo.png',
       puck_pages: null,
       puck_root: null,
@@ -110,7 +107,6 @@ describe('buildSiteConfig', () => {
       footer_text: null,
       footer_links: null,
       custom_nav_items: null,
-      landing_page: null,
       logo_url: null,
       puck_pages: null,
       puck_root: null,
@@ -146,7 +142,6 @@ describe('buildSiteConfig', () => {
       footer_text: null,
       footer_links: null,
       custom_nav_items: null,
-      landing_page: null,
       logo_url: null,
       puck_pages: null,
       puck_root: null,
@@ -185,7 +180,6 @@ describe('buildSiteConfig', () => {
       footer_text: null,
       footer_links: null,
       custom_nav_items: null,
-      landing_page: null,
       logo_url: null,
       puck_pages: null,
       puck_root: null,

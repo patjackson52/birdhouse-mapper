@@ -8,8 +8,8 @@ vi.mock('@/lib/config/client', () => ({
 }));
 
 // Mock the upload action
-vi.mock('@/app/admin/landing/actions', () => ({
-  uploadLandingAsset: vi.fn().mockResolvedValue({
+vi.mock('@/lib/puck/fields/actions', () => ({
+  uploadImageAsset: vi.fn().mockResolvedValue({
     asset: { id: '1', publicUrl: 'https://example.com/img.jpg', fileName: 'img.jpg' },
     error: null,
   }),

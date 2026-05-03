@@ -36,7 +36,7 @@ export default function Navigation({
     return null;
   }
 
-  const baseLinks = config.landingPage?.enabled
+  const baseLinks = config.puckPages?.['/']
     ? [
         { href: '/', label: 'Home', icon: HomeIcon },
         { href: '/map', label: 'Map', icon: MapIcon },

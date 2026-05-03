@@ -9,7 +9,7 @@ export interface AssetItem {
 }
 
 /** Fetch image assets from the vault for the Puck editor */
-export async function fetchLandingAssets(): Promise<AssetItem[]> {
+export async function fetchImageAssets(): Promise<AssetItem[]> {
   const supabase = createClient();
 
   // Get org_id from membership
