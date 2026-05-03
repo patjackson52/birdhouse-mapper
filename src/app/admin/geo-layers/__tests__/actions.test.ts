@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getGeoLayerPublicIfNewer } from '../actions';
 
 let mockUser: any = { id: 'user-1' };
 let mockIsAdmin = true;
@@ -121,5 +122,60 @@ describe('geo layer actions', () => {
     const { assignLayerToProperties } = await import('../actions');
     const result = await assignLayerToProperties('layer-1', 'org-1', ['prop-1']);
     expect(result).toEqual({ error: 'Not authenticated' });
+  });
+});
+
+describe('getGeoLayerPublicIfNewer', () => {
+  it('returns { unchanged: true } when no newer row exists', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          gt: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        }),
+      }),
+    } as any);
+    const result = await getGeoLayerPublicIfNewer('layer-1', '2026-05-01T00:00:00Z');
+    expect(result).toEqual({ unchanged: true });
+    expect(mockFrom).toHaveBeenCalledWith('geo_layers');
+  });
+
+  it('returns full layer when DB has a newer row', async () => {
+    const newerLayer = {
+      id: 'layer-1',
+      org_id: 'org-1',
+      name: 'Layer 1',
+      geojson: { type: 'FeatureCollection', features: [] },
+      updated_at: '2026-05-02T00:00:00Z',
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          gt: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: newerLayer, error: null }),
+          }),
+        }),
+      }),
+    } as any);
+    const result = await getGeoLayerPublicIfNewer('layer-1', '2026-05-01T00:00:00Z');
+    expect(result).toEqual({ success: true, layer: newerLayer });
+  });
+
+  it('returns error when the query fails', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    mockFrom.mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          gt: vi.fn().mockReturnValue({
+            maybeSingle: vi.fn().mockResolvedValue({ data: null, error: { message: 'rls denied' } }),
+          }),
+        }),
+      }),
+    } as any);
+    const result = await getGeoLayerPublicIfNewer('layer-1', '2026-05-01T00:00:00Z');
+    expect(result).toEqual({ error: 'rls denied' });
   });
 });

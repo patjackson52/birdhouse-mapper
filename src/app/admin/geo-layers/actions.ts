@@ -297,6 +297,29 @@ export async function getGeoLayerPublic(
   return { success: true, layer: data as GeoLayer };
 }
 
+/**
+ * Public (no-auth) revalidation variant of getGeoLayer. Returns { unchanged: true }
+ * when the DB row's updated_at is <= knownVersion, otherwise returns the full layer.
+ * Used by the offline cache layer to avoid sending the full GeoJSON when nothing changed.
+ */
+export async function getGeoLayerPublicIfNewer(
+  layerId: string,
+  knownVersion: string
+): Promise<{ unchanged: true } | { success: true; layer: GeoLayer } | { error: string }> {
+  const supabase = createClient();
+
+  const { data, error } = await supabase
+    .from('geo_layers')
+    .select('*')
+    .eq('id', layerId)
+    .gt('updated_at', knownVersion)
+    .maybeSingle();
+
+  if (error) return { error: error.message };
+  if (!data) return { unchanged: true };
+  return { success: true, layer: data as GeoLayer };
+}
+
 export async function publishGeoLayer(
   layerId: string
 ): Promise<{ success: true } | { error: string }> {
