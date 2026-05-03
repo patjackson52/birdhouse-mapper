@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { getConfig } from '@/lib/config/server';
 import { LandingRenderer } from '@/components/landing/LandingRenderer';
 import { HomeMapView } from '@/components/map/HomeMapView';
+import { PerfOverlay } from '@/components/perf/PerfOverlay';
 import { PlatformLanding } from '@/components/platform/PlatformLanding';
 import { PuckPageRenderer } from '@/components/puck/PuckPageRenderer';
 import { PreviewReloadListener } from '@/components/puck/PreviewReloadListener';
@@ -71,5 +72,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   }
 
   // Fallback — render map (current behavior)
-  return <HomeMapView />;
+  return (
+    <>
+      <HomeMapView />
+      <PerfOverlay />
+    </>
+  );
 }
