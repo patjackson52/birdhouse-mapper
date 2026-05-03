@@ -39,7 +39,7 @@ export function TimelineRail({
   const open = updates.find((u) => u.id === openId) ?? null;
 
   return (
-    <div className="pb-24">
+    <div>
       {showScheduled && scheduled.length > 0 && (
         <ScheduledUpdatesSection
           updates={scheduled as any}
