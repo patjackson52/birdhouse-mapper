@@ -205,13 +205,21 @@ function HomeMapViewContent() {
       );
       setVisibleGeoLayerIds(defaultVisible);
 
-      // Load GeoJSON for default visible layers
-      for (const layerId of Array.from(defaultVisible)) {
-        const layerResult = await getGeoLayerPublic(layerId);
-        if ('success' in layerResult) {
-          setGeoLayerData((prev) => new Map(prev).set(layerId, layerResult.layer.geojson));
+      // Load GeoJSON for default visible layers in parallel
+      const layerResults = await Promise.all(
+        Array.from(defaultVisible).map((layerId) =>
+          getGeoLayerPublic(layerId).then((r) => ({ layerId, result: r })),
+        ),
+      );
+      setGeoLayerData((prev) => {
+        const next = new Map(prev);
+        for (const { layerId, result } of layerResults) {
+          if ('success' in result) {
+            next.set(layerId, result.layer.geojson);
+          }
         }
-      }
+        return next;
+      });
 
       mark('ttrc:geolayers-resolved');
 
