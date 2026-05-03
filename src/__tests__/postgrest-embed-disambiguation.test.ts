@@ -59,6 +59,30 @@ function deriveMultiFkTables(): Map<string, Set<string>> {
         perParent.set(child, (perParent.get(child) ?? 0) + 1);
       }
     }
+
+    // Second pass: ALTER TABLE ... REFERENCES (multi-line statements supported)
+    // Strip inline comments first, then split on `;` to get statements.
+    const noLineComments = content
+      .split('\n')
+      .map((l) => l.replace(/--.*$/, ''))
+      .join('\n');
+
+    for (const stmt of noLineComments.split(';')) {
+      const alterMatch = stmt.match(/ALTER\s+TABLE\s+(?:public\.)?([a-zA-Z_][a-zA-Z0-9_]*)/i);
+      if (!alterMatch) continue;
+      const parent = alterMatch[1];
+      const refRe = /REFERENCES\s+(?:public\.)?([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/gi;
+      let m: RegExpExecArray | null;
+      while ((m = refRe.exec(stmt)) !== null) {
+        const child = m[1];
+        let perParent = counts.get(parent);
+        if (!perParent) {
+          perParent = new Map<string, number>();
+          counts.set(parent, perParent);
+        }
+        perParent.set(child, (perParent.get(child) ?? 0) + 1);
+      }
+    }
   }
 
   for (const [parent, perChild] of counts) {
@@ -122,6 +146,12 @@ function findViolations(
       const tableName = node.arguments[0].text;
       const childSet = multiFk.get(tableName);
       if (childSet) {
+        // NOTE: Detection assumes .from('<table>') and .select(...) appear in the
+        // same expression chain (the canonical Supabase usage). If a query is
+        // destructured into a variable first (`const q = client.from('x'); q.select(...)`),
+        // the .select call is in a different chain and won't be linked back to .from.
+        // The codebase doesn't currently use that pattern, but be aware if violations
+        // suddenly disappear after a refactor.
         // Walk up the chain to find the .select(...) sibling call
         let current: ts.Node = node.parent;
         while (current) {
