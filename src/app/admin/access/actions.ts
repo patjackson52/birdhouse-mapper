@@ -232,7 +232,7 @@ export async function getGrants() {
       revoked_by,
       granted_by,
       note,
-      users ( id, display_name, email ),
+      users!user_id ( id, display_name, email ),
       properties ( id, name, slug ),
       roles ( id, name, base_role )
     `)
