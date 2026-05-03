@@ -3,10 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
-import type { Item, ItemType, ItemStatus } from '@/lib/types';
-import type { IconValue } from '@/lib/types';
-import { statusLabels, statusColors } from '@/lib/utils';
-import { iconToHtml, IconRenderer } from '@/components/shared/IconPicker';
+import type { Item, ItemType } from '@/lib/types';
+import { statusColors } from '@/lib/utils';
+import { iconToHtml } from '@/components/shared/IconPicker';
 
 function createDivIcon(iconHtml: string, color: string) {
   return L.divIcon({
@@ -66,16 +65,6 @@ export default function ItemMarker({ item, itemType, onClick }: ItemMarkerProps)
       <Popup>
         <div className="text-center">
           <strong className="text-forest-dark">{item.name}</strong>
-          <br />
-          <span className="text-xs text-sage">{statusLabels[item.status]}</span>
-          {itemType && (
-            <>
-              <br />
-              <span className="text-xs text-forest">
-                <IconRenderer icon={itemType.icon} size={12} /> {itemType.name}
-              </span>
-            </>
-          )}
         </div>
       </Popup>
     </Marker>
