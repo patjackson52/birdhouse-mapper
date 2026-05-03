@@ -68,6 +68,7 @@ export default async function RootLayout({
       <head>
         <style dangerouslySetInnerHTML={{ __html: `:root { ${cssVars} }` }} />
         <link rel="manifest" href="/api/manifest.json" />
+        <link rel="preconnect" href="https://basemaps.cartocdn.com" crossOrigin="anonymous" />
         <meta name="theme-color" content="#2563eb" />
         <link rel="icon" type="image/png" sizes="32x32" href="/defaults/logos/favicon-32.png" />
         <meta name="mobile-web-app-capable" content="yes" />
