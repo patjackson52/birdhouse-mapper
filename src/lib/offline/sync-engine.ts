@@ -179,8 +179,8 @@ export async function syncPropertyData(
 
     let query = supabase.from(tableName).select('*');
 
-    const propertyScoped = ['items', 'item_updates', 'photos', 'geo_layers'];
-    const orgScoped = ['item_types', 'custom_fields', 'update_types', 'update_type_fields', 'entities', 'entity_types', 'roles', 'org_memberships'];
+    const propertyScoped = ['items', 'item_updates', 'photos'];
+    const orgScoped = ['item_types', 'custom_fields', 'update_types', 'update_type_fields', 'entities', 'entity_types', 'geo_layers', 'roles', 'org_memberships'];
 
     if (propertyScoped.includes(tableName)) {
       query = query.eq('property_id', propertyId);
