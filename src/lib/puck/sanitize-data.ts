@@ -47,8 +47,9 @@ function walkRichTextProps(
       walkComponents(zone as Component[]);
     }
   }
-  if ((data.root as any)?.content) {
-    walkComponents((data.root as any).content as Component[]);
+  const rootContent = (data.root as { content?: Component[] } | undefined)?.content;
+  if (rootContent) {
+    walkComponents(rootContent);
   }
 }
 

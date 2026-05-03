@@ -471,15 +471,31 @@ export async function applyTemplate(
   const result = await getPropertyId();
   if ('error' in result) return result;
 
+  const sanitizedRoot = sanitizePuckDataForWrite(
+    rootParse.data as Parameters<typeof sanitizePuckDataForWrite>[0]
+  );
+
+  const sanitizedPages: Record<string, unknown> = {};
+  for (const [pagePath, pageData] of Object.entries(pagesData)) {
+    const pageParse = puckDataSchema.safeParse(pageData);
+    if (pageParse.success) {
+      sanitizedPages[pagePath] = sanitizePuckDataForWrite(
+        pageParse.data as Parameters<typeof sanitizePuckDataForWrite>[0]
+      );
+    } else {
+      sanitizedPages[pagePath] = pageData;
+    }
+  }
+
   const supabase = createClient();
   const { error } = await supabase
     .from('properties')
     .update({
       puck_template: templateId,
-      puck_root: rootParse.data as unknown as Record<string, unknown>,
-      puck_root_draft: rootParse.data as unknown as Record<string, unknown>,
-      puck_pages: pagesData as Record<string, unknown>,
-      puck_pages_draft: pagesData as Record<string, unknown>,
+      puck_root: sanitizedRoot as unknown as Record<string, unknown>,
+      puck_root_draft: sanitizedRoot as unknown as Record<string, unknown>,
+      puck_pages: sanitizedPages as Record<string, unknown>,
+      puck_pages_draft: sanitizedPages as Record<string, unknown>,
     })
     .eq('id', result.propertyId);
 

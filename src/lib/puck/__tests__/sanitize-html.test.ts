@@ -78,4 +78,24 @@ describe('sanitizeRichTextHtml', () => {
   it('returns empty string for empty input', () => {
     expect(sanitizeRichTextHtml('')).toBe('');
   });
+
+  it('returns literal U+00A0 (not entity) in output', () => {
+    const result = sanitizeRichTextHtml(`<p>10${NBSP}km</p>`);
+    expect(result).toContain(NBSP);           // literal NBSP present
+    expect(result).not.toContain('&nbsp;');   // no entity reference
+  });
+
+  it('is idempotent — sanitize(sanitize(x)) === sanitize(x)', () => {
+    const inputs = [
+      '<p>hi</p>',
+      `<p>a${NBSP}${NBSP}b</p>`,
+      '<a href="https://example.com" target="_blank">x</a>',
+      '<div>x<script>y</script></div>',
+      '',
+    ];
+    for (const input of inputs) {
+      const once = sanitizeRichTextHtml(input);
+      expect(sanitizeRichTextHtml(once)).toBe(once);
+    }
+  });
 });
