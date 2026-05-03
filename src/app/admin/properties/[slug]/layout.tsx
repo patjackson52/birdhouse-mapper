@@ -37,7 +37,6 @@ export default function PropertyAdminLayout({ children }: { children: React.Reac
     { label: 'Geo Layers', href: `${base}/geo-layers/discover` },
     { label: 'Parcel Lookup', href: `${base}/parcel-lookup` },
     { label: 'Settings', href: `${base}/settings` },
-    { label: 'Landing Page', href: `${base}/landing` },
     { label: 'Site Builder', href: `${base}/site-builder/templates` },
     { label: 'QR Codes', href: `${base}/qr-codes` },
     { label: 'Types', href: `${base}/types` },

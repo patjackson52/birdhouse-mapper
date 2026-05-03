@@ -71,7 +71,6 @@ export function PropertyAdminShell({
     { type: 'section', label: 'Content' },
     { label: 'Data Vault', href: `${base}/vault` },
     { type: 'section', label: 'Site' },
-    { label: 'Landing Page', href: `${base}/landing` },
     { label: 'Site Builder', href: `${base}/site-builder/templates` },
     { label: 'QR Codes', href: `${base}/qr-codes` },
     ...entityTypes.map((et) => ({

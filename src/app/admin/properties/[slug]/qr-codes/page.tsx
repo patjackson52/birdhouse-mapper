@@ -146,7 +146,7 @@ export default function QrCodesPage() {
         QR Codes
       </h1>
       <p className="text-sm text-sage mb-6">
-        Create QR codes for physical placements that link visitors to this property&apos;s landing page.
+        Create QR codes for physical placements that link visitors to this property&apos;s home page.
       </p>
 
       {/* Error message */}

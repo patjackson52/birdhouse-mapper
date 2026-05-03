@@ -15,7 +15,7 @@ import { FooterColumns } from './components/chrome/FooterColumns';
 import { SocialLinks } from './components/chrome/SocialLinks';
 import { SimpleFooter } from './components/chrome/SimpleFooter';
 import { imagePickerField, iconPickerField, linkField, colorPickerField } from './fields';
-import { fetchLandingAssets } from './fields/fetch-assets';
+import { fetchImageAssets } from './fields/fetch-assets';
 
 type ChromeComponents = {
   HeaderBar: HeaderBarProps;
@@ -45,7 +45,7 @@ export const chromeConfig: Config<ChromeComponents> = {
             { label: 'Centered', value: 'centered' },
           ],
         },
-        logoUrl: imagePickerField('Logo', fetchLandingAssets),
+        logoUrl: imagePickerField('Logo', fetchImageAssets),
         icon: iconPickerField('Icon'),
         iconPosition: {
           type: 'radio',

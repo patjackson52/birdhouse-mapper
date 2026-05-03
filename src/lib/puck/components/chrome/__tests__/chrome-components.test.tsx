@@ -11,7 +11,6 @@ vi.mock('@/lib/config/client', () => ({
     siteName: 'Test Reserve',
     tagline: 'A test site',
     logoUrl: null,
-    landingPage: null,
     puckPages: null,
     aboutPageEnabled: true,
     customNavItems: [],

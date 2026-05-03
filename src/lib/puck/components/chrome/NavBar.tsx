@@ -12,7 +12,7 @@ export function NavBar({ style, position, showMobileBottomBar, showAuthActions }
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navItems = [
-    ...(config.landingPage?.enabled || config.puckPages?.['/'] ? [{ label: 'Home', href: '/' }] : []),
+    ...(config.puckPages?.['/'] ? [{ label: 'Home', href: '/' }] : []),
     { label: 'Map', href: '/map' },
     { label: 'List', href: '/list' },
     ...(config.aboutPageEnabled ? [{ label: 'About', href: '/about' }] : []),

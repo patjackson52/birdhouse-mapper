@@ -2,7 +2,6 @@ import { unstable_cache, revalidateTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { DEFAULT_CONFIG } from './defaults';
 import { buildSiteConfig, type SiteConfig } from './types';
-import { createDefaultLandingPage } from './landing-defaults';
 
 const CACHE_TAG = 'site-config';
 
@@ -46,7 +45,7 @@ export const getConfig = unstable_cache(
 
     const { data: property, error: propError } = await supabase
       .from('properties')
-      .select('id, name, pwa_name, description, map_default_lat, map_default_lng, map_default_zoom, map_style, custom_map, about_content, about_page_enabled, footer_text, footer_links, custom_nav_items, landing_page, logo_url, puck_pages, puck_root, puck_template, puck_pages_draft, puck_root_draft, puck_page_meta, map_display_config')
+      .select('id, name, pwa_name, description, map_default_lat, map_default_lng, map_default_zoom, map_style, custom_map, about_content, about_page_enabled, footer_text, footer_links, custom_nav_items, logo_url, puck_pages, puck_root, puck_template, puck_pages_draft, puck_root_draft, puck_page_meta, map_display_config')
       .eq('id', propertyId)
       .single();
 
@@ -55,19 +54,7 @@ export const getConfig = unstable_cache(
       return { ...DEFAULT_CONFIG };
     }
 
-    const config = buildSiteConfig(org, property);
-
-    // Backfill landing page for existing sites
-    if (config.landingPage === null && config.setupComplete) {
-      config.landingPage = createDefaultLandingPage(
-        config.siteName,
-        config.tagline,
-        config.locationName,
-        false
-      );
-    }
-
-    return config;
+    return buildSiteConfig(org, property);
   },
   [CACHE_TAG],
   { revalidate: 60, tags: [CACHE_TAG] }

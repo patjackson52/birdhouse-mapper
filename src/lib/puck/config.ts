@@ -1,7 +1,7 @@
 import type { Config } from '@puckeditor/core';
 import { imagePickerField, iconPickerField, linkField, knowledgePickerField, knowledgeTagPickerField } from './fields';
 import { textSizeField } from './text-styles';
-import { fetchLandingAssets } from './fields/fetch-assets';
+import { fetchImageAssets } from './fields/fetch-assets';
 import type {
   HeroProps,
   RichTextProps,
@@ -84,7 +84,7 @@ export const pageConfig: Config<PageComponents> = {
         title: { type: 'text', label: 'Title' },
         subtitle: { type: 'text', label: 'Subtitle' },
         textSize: textSizeField(),
-        backgroundImageUrl: imagePickerField('Background Image', fetchLandingAssets),
+        backgroundImageUrl: imagePickerField('Background Image', fetchImageAssets),
         overlay: {
           type: 'select',
           label: 'Overlay',
@@ -142,7 +142,7 @@ export const pageConfig: Config<PageComponents> = {
         linkHref: '',
       },
       fields: {
-        url: imagePickerField('Image', fetchLandingAssets),
+        url: imagePickerField('Image', fetchImageAssets),
         alt: { type: 'text', label: 'Alt Text' },
         caption: { type: 'text', label: 'Caption' },
         width: {
@@ -278,7 +278,7 @@ export const pageConfig: Config<PageComponents> = {
           type: 'array',
           label: 'Images',
           arrayFields: {
-            url: imagePickerField('Image', fetchLandingAssets),
+            url: imagePickerField('Image', fetchImageAssets),
             alt: { type: 'text', label: 'Alt Text' },
             caption: { type: 'text', label: 'Caption' },
           },
@@ -357,7 +357,7 @@ export const pageConfig: Config<PageComponents> = {
           label: 'Background Color',
           options: themeColorOptions,
         },
-        backgroundImageUrl: imagePickerField('Background Image', fetchLandingAssets),
+        backgroundImageUrl: imagePickerField('Background Image', fetchImageAssets),
         paddingY: {
           type: 'radio',
           label: 'Vertical Padding',
@@ -382,7 +382,7 @@ export const pageConfig: Config<PageComponents> = {
         textSize: 'small',
       },
       fields: {
-        imageUrl: imagePickerField('Image', fetchLandingAssets),
+        imageUrl: imagePickerField('Image', fetchImageAssets),
         title: { type: 'text', label: 'Title' },
         text: { type: 'richtext', label: 'Text' },
         textSize: textSizeField(),
@@ -440,7 +440,7 @@ export const pageConfig: Config<PageComponents> = {
       fields: {
         quote: { type: 'richtext', label: 'Quote' },
         attribution: { type: 'text', label: 'Attribution' },
-        photoUrl: imagePickerField('Photo', fetchLandingAssets),
+        photoUrl: imagePickerField('Photo', fetchImageAssets),
         textSize: textSizeField(),
         style: {
           type: 'radio',

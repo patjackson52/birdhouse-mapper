@@ -1,7 +1,6 @@
 'use server';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
-import { createDefaultLandingPage } from '@/lib/config/landing-defaults';
 import { buildOrgContextBlock } from '@/lib/ai-context/context-provider';
 import type { AiContextSummary } from '@/lib/ai-context/types';
 import type { FeatureCollection } from 'geojson';
@@ -328,24 +327,7 @@ export async function onboardCreateOrg(
     }
   }
 
-  // Step 9: Generate default landing page
-  const landingPage = createDefaultLandingPage(
-    config.orgName,
-    config.tagline,
-    config.locationName,
-    true
-  );
-
-  const { error: landingError } = await service
-    .from('properties')
-    .update({ landing_page: landingPage })
-    .eq('id', propertyId);
-
-  if (landingError) {
-    return { error: `Failed to create landing page: ${landingError.message}` };
-  }
-
-  // Step 10: Create geo layers
+  // Step 9: Create geo layers
   if (config.geoLayers && config.geoLayers.length > 0) {
     const { createGeoLayerService, assignLayerToPropertyService } = await import('@/app/admin/geo-layers/actions');
 
