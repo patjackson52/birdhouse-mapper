@@ -85,8 +85,8 @@ function deriveMultiFkTables(): Map<string, Set<string>> {
     }
   }
 
-  for (const [parent, perChild] of counts) {
-    for (const [child, n] of perChild) {
+  for (const [parent, perChild] of Array.from(counts)) {
+    for (const [child, n] of Array.from(perChild)) {
       if (n > 1) {
         let set = result.get(parent);
         if (!set) {
@@ -169,7 +169,7 @@ function findViolations(
               selectText = arg.head.text + arg.templateSpans.map((s) => s.literal.text).join('');
             }
             if (selectText) {
-              for (const child of childSet) {
+              for (const child of Array.from(childSet)) {
                 // Match `<child>(` not preceded by `!<word>` (i.e. bare embed).
                 const re = new RegExp(`(?<![!\\w])${child}\\s*\\(`, 'g');
                 let m: RegExpExecArray | null;
