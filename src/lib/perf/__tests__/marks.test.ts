@@ -57,4 +57,26 @@ describe('perf marks', () => {
     expect(() => mark('test:ssr')).not.toThrow();
     (globalThis as any).performance = originalPerf;
   });
+
+  it('getReport() returns [] when performance is undefined (SSR safety)', () => {
+    const originalPerf = (globalThis as any).performance;
+    (globalThis as any).performance = undefined;
+    expect(getReport()).toEqual([]);
+    (globalThis as any).performance = originalPerf;
+  });
+
+  it('measure() swallows throw when startMark is missing', () => {
+    expect(() => measure('test:bad', 'never-marked')).not.toThrow();
+    const entries = performance.getEntriesByName('test:bad', 'measure');
+    expect(entries.length).toBe(0);
+  });
+
+  it('getReport() excludes third-party marks not emitted via our mark()', () => {
+    performance.mark('thirdparty:x');
+    mark('ttrc:y');
+    const report = getReport();
+    const names = report.map((e) => e.name);
+    expect(names).toContain('ttrc:y');
+    expect(names).not.toContain('thirdparty:x');
+  });
 });

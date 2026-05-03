@@ -7,6 +7,7 @@
  */
 
 const seen = new Set<string>();
+const emittedNames = new Set<string>();
 
 function hasPerf(): boolean {
   return typeof globalThis !== 'undefined' && typeof globalThis.performance !== 'undefined';
@@ -16,6 +17,7 @@ export function mark(name: string): void {
   if (!hasPerf()) return;
   if (seen.has(name)) return;
   seen.add(name);
+  emittedNames.add(name);
   try {
     performance.mark(name);
   } catch {
@@ -26,11 +28,12 @@ export function mark(name: string): void {
 export function measure(name: string, startMark: string, endMark?: string): void {
   if (!hasPerf()) return;
   try {
-    if (endMark) {
+    if (endMark !== undefined) {
       performance.measure(name, startMark, endMark);
     } else {
       performance.measure(name, startMark);
     }
+    emittedNames.add(name);
   } catch {
     // measure throws if either mark is missing; swallow so callers don't have to guard.
   }
@@ -57,10 +60,13 @@ export function getReport(): PerfEntry[] {
     startTime: e.startTime,
     type: 'measure' as const,
   }));
-  return [...marks, ...measures].sort((a, b) => a.startTime - b.startTime);
+  return [...marks, ...measures]
+    .filter((e) => emittedNames.has(e.name))
+    .sort((a, b) => a.startTime - b.startTime);
 }
 
 /** Test-only: clear the idempotency set so a single test run can re-mark names. */
 export function _resetForTest(): void {
   seen.clear();
+  emittedNames.clear();
 }
