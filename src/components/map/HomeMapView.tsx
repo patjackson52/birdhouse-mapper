@@ -31,6 +31,16 @@ import type { FeatureCollection } from "geojson";
 import type { SheetState } from "@/components/ui/MultiSnapBottomSheet";
 import { mark } from '@/lib/perf/marks';
 
+function runWhenIdle(fn: () => void, timeoutMs = 2000): void {
+  if (typeof window === 'undefined') return;
+  const ric = (window as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+  if (typeof ric === 'function') {
+    ric(fn, { timeout: timeoutMs });
+  } else {
+    window.setTimeout(fn, 0);
+  }
+}
+
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
@@ -146,38 +156,42 @@ function HomeMapViewContent() {
         setCustomFields(fieldData);
         mark('ttrc:idb-resolved');
 
-        // Check authentication via cached session, and load org contribution settings
+        // Check authentication and org settings in parallel
         try {
           const { createClient } = await import("@/lib/supabase/client");
           const supabase = createClient();
-          const { data: { user } } = await supabase.auth.getUser();
+          const [{ data: { user } }, orgSettingsResult] = await Promise.all([
+            supabase.auth.getUser(),
+            resolvedOrgId
+              ? supabase
+                  .from('orgs')
+                  .select('allow_public_contributions')
+                  .eq('id', resolvedOrgId)
+                  .single()
+              : Promise.resolve({ data: null }),
+          ]);
           setIsAuthenticated(!!user);
-
-          // Fetch org public-contribution settings
           if (resolvedOrgId) {
             setOrgId(resolvedOrgId);
-            const { data: orgSettings } = await supabase
-              .from('orgs')
-              .select('allow_public_contributions')
-              .eq('id', resolvedOrgId)
-              .single();
-            setAllowPublicContributions(orgSettings?.allow_public_contributions ?? false);
+            setAllowPublicContributions(orgSettingsResult.data?.allow_public_contributions ?? false);
           }
         } catch {
           setIsAuthenticated(false);
         }
 
-        // Trigger background sync and refresh data when done
+        // Trigger background sync after the browser is idle so it doesn't compete with first-paint
         if (resolvedOrgId && offlineStore.isOnline) {
-          offlineStore.syncProperty(propertyId, resolvedOrgId).then(async () => {
-            const [freshItems, freshTypes, freshFields] = await Promise.all([
-              offlineStore.getItems(propertyId),
-              offlineStore.getItemTypes(resolvedOrgId!),
-              offlineStore.getCustomFields(resolvedOrgId!),
-            ]);
-            setItems(freshItems);
-            setItemTypes(freshTypes);
-            setCustomFields(freshFields);
+          runWhenIdle(() => {
+            offlineStore.syncProperty(propertyId, resolvedOrgId).then(async () => {
+              const [freshItems, freshTypes, freshFields] = await Promise.all([
+                offlineStore.getItems(propertyId),
+                offlineStore.getItemTypes(resolvedOrgId!),
+                offlineStore.getCustomFields(resolvedOrgId!),
+              ]);
+              setItems(freshItems);
+              setItemTypes(freshTypes);
+              setCustomFields(freshFields);
+            });
           });
         }
       } catch (err) {
@@ -205,13 +219,21 @@ function HomeMapViewContent() {
       );
       setVisibleGeoLayerIds(defaultVisible);
 
-      // Load GeoJSON for default visible layers
-      for (const layerId of Array.from(defaultVisible)) {
-        const layerResult = await getGeoLayerPublic(layerId);
-        if ('success' in layerResult) {
-          setGeoLayerData((prev) => new Map(prev).set(layerId, layerResult.layer.geojson));
+      // Load GeoJSON for default visible layers in parallel
+      const layerResults = await Promise.all(
+        Array.from(defaultVisible).map((layerId) =>
+          getGeoLayerPublic(layerId).then((r) => ({ layerId, result: r })),
+        ),
+      );
+      setGeoLayerData((prev) => {
+        const next = new Map(prev);
+        for (const { layerId, result } of layerResults) {
+          if ('success' in result) {
+            next.set(layerId, result.layer.geojson);
+          }
         }
-      }
+        return next;
+      });
 
       mark('ttrc:geolayers-resolved');
 
