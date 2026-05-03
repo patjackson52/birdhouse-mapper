@@ -37,15 +37,17 @@ export function PerfOverlay() {
     return () => window.clearInterval(id);
   }, [enabled]);
 
-  if (!enabled) return null;
-
   function copyJson() {
     const payload = JSON.stringify({ cacheState, entries }, null, 2);
     navigator.clipboard?.writeText(payload).catch(() => {});
   }
 
+  if (!enabled) return null;
+
   return (
     <div
+      role="region"
+      aria-label="Performance overlay"
       data-testid="perf-overlay"
       style={{
         position: 'fixed',
@@ -68,6 +70,7 @@ export function PerfOverlay() {
         <button
           type="button"
           onClick={copyJson}
+          aria-label="Copy performance data"
           style={{ background: '#444', color: '#fff', border: 0, padding: '2px 6px', borderRadius: 3, cursor: 'pointer' }}
         >
           copy
@@ -76,14 +79,14 @@ export function PerfOverlay() {
       <table style={{ borderCollapse: 'collapse', width: '100%' }}>
         <thead>
           <tr>
-            <th style={{ textAlign: 'left', padding: '2px 4px' }}>name</th>
-            <th style={{ textAlign: 'right', padding: '2px 4px' }}>start</th>
-            <th style={{ textAlign: 'right', padding: '2px 4px' }}>dur</th>
+            <th scope="col" style={{ textAlign: 'left', padding: '2px 4px' }}>name</th>
+            <th scope="col" style={{ textAlign: 'right', padding: '2px 4px' }}>start</th>
+            <th scope="col" style={{ textAlign: 'right', padding: '2px 4px' }}>dur</th>
           </tr>
         </thead>
         <tbody>
-          {entries.map((e, i) => (
-            <tr key={`${e.name}-${i}`}>
+          {entries.map((e) => (
+            <tr key={e.name}>
               <td style={{ padding: '1px 4px', whiteSpace: 'nowrap' }}>{e.name}</td>
               <td style={{ padding: '1px 4px', textAlign: 'right' }}>{e.startTime.toFixed(0)}</td>
               <td style={{ padding: '1px 4px', textAlign: 'right' }}>{e.duration.toFixed(0)}</td>
