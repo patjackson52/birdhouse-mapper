@@ -146,22 +146,24 @@ function HomeMapViewContent() {
         setCustomFields(fieldData);
         mark('ttrc:idb-resolved');
 
-        // Check authentication via cached session, and load org contribution settings
+        // Check authentication and org settings in parallel
         try {
           const { createClient } = await import("@/lib/supabase/client");
           const supabase = createClient();
-          const { data: { user } } = await supabase.auth.getUser();
+          const [{ data: { user } }, orgSettingsResult] = await Promise.all([
+            supabase.auth.getUser(),
+            resolvedOrgId
+              ? supabase
+                  .from('orgs')
+                  .select('allow_public_contributions')
+                  .eq('id', resolvedOrgId)
+                  .single()
+              : Promise.resolve({ data: null }),
+          ]);
           setIsAuthenticated(!!user);
-
-          // Fetch org public-contribution settings
           if (resolvedOrgId) {
             setOrgId(resolvedOrgId);
-            const { data: orgSettings } = await supabase
-              .from('orgs')
-              .select('allow_public_contributions')
-              .eq('id', resolvedOrgId)
-              .single();
-            setAllowPublicContributions(orgSettings?.allow_public_contributions ?? false);
+            setAllowPublicContributions(orgSettingsResult.data?.allow_public_contributions ?? false);
           }
         } catch {
           setIsAuthenticated(false);
