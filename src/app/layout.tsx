@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/server';
 import type { Data } from '@puckeditor/core';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
@@ -43,6 +44,7 @@ export default async function RootLayout({
         <body className="antialiased">
           {children}
           {modal}
+          <SpeedInsights />
         </body>
       </html>
     );
@@ -91,6 +93,7 @@ export default async function RootLayout({
             </OfflineProvider>
           </UserLocationProvider>
         </ConfigProvider>
+        <SpeedInsights />
         <script
           dangerouslySetInnerHTML={{
             __html: `
