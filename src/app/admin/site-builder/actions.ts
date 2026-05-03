@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
 import { puckDataSchema } from '@/lib/puck/schemas';
+import { sanitizePuckDataForWrite } from '@/lib/puck/sanitize-data';
 import { validatePageSlug, type PageMeta } from '@/lib/puck/page-utils';
 
 // ---------------------------------------------------------------------------
@@ -82,7 +83,8 @@ export async function savePuckPageDraft(path: string, data: unknown) {
       ? (property.puck_pages_draft as Record<string, unknown>)
       : {};
 
-  const merged = { ...existing, [path]: parseResult.data };
+  const sanitized = sanitizePuckDataForWrite(parseResult.data as Parameters<typeof sanitizePuckDataForWrite>[0]);
+  const merged = { ...existing, [path]: sanitized };
 
   const { error } = await supabase
     .from('properties')
@@ -104,9 +106,10 @@ export async function savePuckRootDraft(data: unknown) {
   if ('error' in result) return result;
 
   const supabase = createClient();
+  const sanitized = sanitizePuckDataForWrite(parseResult.data as Parameters<typeof sanitizePuckDataForWrite>[0]);
   const { error } = await supabase
     .from('properties')
-    .update({ puck_root_draft: parseResult.data as unknown as Record<string, unknown> })
+    .update({ puck_root_draft: sanitized as unknown as Record<string, unknown> })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
@@ -134,9 +137,22 @@ export async function publishPuckPages() {
     return { error: `Failed to read draft: ${readError?.message ?? 'not found'}` };
   }
 
+  // Defense-in-depth: re-sanitize even though draft was sanitized on save.
+  // Idempotent — clean data passes through unchanged.
+  const draft = property.puck_pages_draft as Record<string, unknown> | null;
+  let sanitizedPages: Record<string, unknown> | null = null;
+  if (draft && typeof draft === 'object') {
+    sanitizedPages = {};
+    for (const [pagePath, pageData] of Object.entries(draft)) {
+      sanitizedPages[pagePath] = sanitizePuckDataForWrite(
+        pageData as Parameters<typeof sanitizePuckDataForWrite>[0]
+      );
+    }
+  }
+
   const { error } = await supabase
     .from('properties')
-    .update({ puck_pages: property.puck_pages_draft })
+    .update({ puck_pages: sanitizedPages })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
@@ -161,9 +177,16 @@ export async function publishPuckRoot() {
     return { error: `Failed to read draft: ${readError?.message ?? 'not found'}` };
   }
 
+  // Defense-in-depth: re-sanitize. Idempotent.
+  const sanitizedRoot = property.puck_root_draft
+    ? sanitizePuckDataForWrite(
+        property.puck_root_draft as Parameters<typeof sanitizePuckDataForWrite>[0]
+      )
+    : null;
+
   const { error } = await supabase
     .from('properties')
-    .update({ puck_root: property.puck_root_draft })
+    .update({ puck_root: sanitizedRoot as unknown as Record<string, unknown> | null })
     .eq('id', result.propertyId);
 
   if (error) return { error: error.message };
@@ -448,15 +471,31 @@ export async function applyTemplate(
   const result = await getPropertyId();
   if ('error' in result) return result;
 
+  const sanitizedRoot = sanitizePuckDataForWrite(
+    rootParse.data as Parameters<typeof sanitizePuckDataForWrite>[0]
+  );
+
+  const sanitizedPages: Record<string, unknown> = {};
+  for (const [pagePath, pageData] of Object.entries(pagesData)) {
+    const pageParse = puckDataSchema.safeParse(pageData);
+    if (pageParse.success) {
+      sanitizedPages[pagePath] = sanitizePuckDataForWrite(
+        pageParse.data as Parameters<typeof sanitizePuckDataForWrite>[0]
+      );
+    } else {
+      sanitizedPages[pagePath] = pageData;
+    }
+  }
+
   const supabase = createClient();
   const { error } = await supabase
     .from('properties')
     .update({
       puck_template: templateId,
-      puck_root: rootParse.data as unknown as Record<string, unknown>,
-      puck_root_draft: rootParse.data as unknown as Record<string, unknown>,
-      puck_pages: pagesData as Record<string, unknown>,
-      puck_pages_draft: pagesData as Record<string, unknown>,
+      puck_root: sanitizedRoot as unknown as Record<string, unknown>,
+      puck_root_draft: sanitizedRoot as unknown as Record<string, unknown>,
+      puck_pages: sanitizedPages as Record<string, unknown>,
+      puck_pages_draft: sanitizedPages as Record<string, unknown>,
     })
     .eq('id', result.propertyId);
 
