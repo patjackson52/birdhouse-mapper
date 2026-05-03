@@ -127,7 +127,6 @@ describe('geo layer actions', () => {
 
 describe('getGeoLayerPublicIfNewer', () => {
   it('returns { unchanged: true } when no newer row exists', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -150,7 +149,6 @@ describe('getGeoLayerPublicIfNewer', () => {
       geojson: { type: 'FeatureCollection', features: [] },
       updated_at: '2026-05-02T00:00:00Z',
     };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
@@ -165,7 +163,6 @@ describe('getGeoLayerPublicIfNewer', () => {
   });
 
   it('returns error when the query fails', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockFrom.mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
