@@ -90,18 +90,19 @@ describe('uploadLogo', () => {
     expect(result.error).toBe('Image must be under 5MB');
   });
 
-  it('uploads 5 variants for org scope', async () => {
+  it('uploads 6 variants for org scope', async () => {
     const result = await uploadLogo(makeFormData(), 'org');
 
     expect(result.success).toBe(true);
     expect(result.basePath).toBe('test-org-id');
-    expect(uploadedFiles).toHaveLength(5);
+    expect(uploadedFiles).toHaveLength(6);
 
     const paths = uploadedFiles.map((f) => f.path);
     expect(paths).toContain('test-org-id/original.png');
     expect(paths).toContain('test-org-id/icon-192.png');
     expect(paths).toContain('test-org-id/icon-512.png');
     expect(paths).toContain('test-org-id/icon-512-maskable.png');
+    expect(paths).toContain('test-org-id/apple-touch-icon-180.png');
     expect(paths).toContain('test-org-id/favicon-32.png');
   });
 

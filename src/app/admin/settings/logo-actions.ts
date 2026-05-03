@@ -36,29 +36,57 @@ export async function uploadLogo(
   // Generate variants
   const variants: { name: string; buffer: Buffer }[] = [];
 
-  // Original (max 1024px, preserve aspect ratio)
-  const original = await sharp(buffer).resize(1024, 1024, { fit: 'inside', withoutEnlargement: true }).png().toBuffer();
+  // Solid white background applied to every square variant so non-square
+  // logos render letterboxed (not cropped) and platform masks (Android
+  // adaptive icons, iOS rounded-rect) don't expose colored padding.
+  const white = { r: 255, g: 255, b: 255, alpha: 1 } as const;
+
+  // Original (max 1024px, preserve aspect ratio, no background fill)
+  const original = await sharp(buffer)
+    .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+    .png()
+    .toBuffer();
   variants.push({ name: 'original.png', buffer: original });
 
-  // PWA icons (square, cover)
-  const icon192 = await sharp(buffer).resize(192, 192, { fit: 'cover' }).png().toBuffer();
+  // PWA icons (square, contain on white so non-square logos aren't cropped)
+  const icon192 = await sharp(buffer)
+    .resize(192, 192, { fit: 'contain', background: white })
+    .png()
+    .toBuffer();
   variants.push({ name: 'icon-192.png', buffer: icon192 });
 
-  const icon512 = await sharp(buffer).resize(512, 512, { fit: 'cover' }).png().toBuffer();
+  const icon512 = await sharp(buffer)
+    .resize(512, 512, { fit: 'contain', background: white })
+    .png()
+    .toBuffer();
   variants.push({ name: 'icon-512.png', buffer: icon512 });
 
-  // Maskable icon (20% safe zone padding)
+  // Maskable icon: 80% inner safe zone, 10% padding on each side, white fill
   const maskableInner = Math.floor(512 * 0.8);
   const padding = Math.floor((512 - maskableInner) / 2);
   const maskable = await sharp(buffer)
-    .resize(maskableInner, maskableInner, { fit: 'cover' })
-    .extend({ top: padding, bottom: padding, left: padding, right: padding, background: { r: 37, g: 99, b: 235, alpha: 1 } })
+    .resize(maskableInner, maskableInner, { fit: 'contain', background: white })
+    .extend({ top: padding, bottom: padding, left: padding, right: padding, background: white })
     .png()
     .toBuffer();
   variants.push({ name: 'icon-512-maskable.png', buffer: maskable });
 
-  // Favicon
-  const favicon = await sharp(buffer).resize(32, 32, { fit: 'cover' }).png().toBuffer();
+  // Apple touch icon (180x180 retina, white background — iOS does not honor
+  // PNG transparency on home-screen icons)
+  const appleTouch = await sharp(buffer)
+    .resize(180, 180, { fit: 'contain', background: white })
+    .png()
+    .toBuffer();
+  variants.push({ name: 'apple-touch-icon-180.png', buffer: appleTouch });
+
+  // Favicon (32x32). Letterboxing wide wordmark logos with white gutters at
+  // this tiny size is intentional — preserves the full logo at the cost of
+  // shrinking it. The alternative (fit: 'cover') would crop wide logos to
+  // an unreadable center slice.
+  const favicon = await sharp(buffer)
+    .resize(32, 32, { fit: 'contain', background: white })
+    .png()
+    .toBuffer();
   variants.push({ name: 'favicon-32.png', buffer: favicon });
 
   // Upload all variants to vault-public bucket

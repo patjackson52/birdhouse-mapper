@@ -1,12 +1,19 @@
 import { createClient } from '@/lib/supabase/server';
 
-export type LogoVariant = 'original.png' | 'icon-192.png' | 'icon-512.png' | 'icon-512-maskable.png' | 'favicon-32.png';
+export type LogoVariant =
+  | 'original.png'
+  | 'icon-192.png'
+  | 'icon-512.png'
+  | 'icon-512-maskable.png'
+  | 'favicon-32.png'
+  | 'apple-touch-icon-180.png';
 
-const DEFAULT_ICONS: Record<string, string> = {
+const DEFAULT_ICONS: Record<LogoVariant, string> = {
   'icon-192.png': '/defaults/logos/icon-192.png',
   'icon-512.png': '/defaults/logos/icon-512.png',
   'icon-512-maskable.png': '/defaults/logos/icon-512-maskable.png',
   'favicon-32.png': '/defaults/logos/favicon-32.png',
+  'apple-touch-icon-180.png': '/defaults/logos/icon-192.png', // iOS downscales 192→180; reuse existing default asset
   'original.png': '/defaults/logos/fieldmapper.png',
 };
 

@@ -3,6 +3,7 @@ import Navigation from '@/components/layout/Navigation';
 import { PuckRootRenderer } from '@/components/puck/PuckRootRenderer';
 import { ConfigProvider } from '@/lib/config/client';
 import { getConfig } from '@/lib/config/server';
+import { getLogoUrlServer } from '@/lib/config/logo-server';
 import { resolveTheme, themeToCssVars } from '@/lib/config/themes';
 import { UserLocationProvider } from '@/lib/location/provider';
 import QueryProvider from '@/components/QueryProvider';
@@ -70,7 +71,17 @@ export default async function RootLayout({
         <link rel="manifest" href="/api/manifest.json" />
         <link rel="preconnect" href="https://basemaps.cartocdn.com" crossOrigin="anonymous" />
         <meta name="theme-color" content="#2563eb" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/defaults/logos/favicon-32.png" />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="32x32"
+          href={getLogoUrlServer(config.logoUrl, 'favicon-32.png')}
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href={getLogoUrlServer(config.logoUrl, 'apple-touch-icon-180.png')}
+        />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
