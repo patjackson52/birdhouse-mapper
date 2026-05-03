@@ -102,6 +102,13 @@ describe('RichText', () => {
     const prose = container.querySelector('.prose') as HTMLElement;
     expect(prose.className).toContain('prose-xl');
   });
+
+  it('applies overflow-wrap:anywhere so nbsp-joined paste content wraps (e.g. from Quill)', () => {
+    const nbspJoined = '<p>Eagle&nbsp;Scout&nbsp;Fairbanks&nbsp;Jackson&nbsp;of&nbsp;Troop&nbsp;1564</p>';
+    const { container } = render(<RichText content={nbspJoined} alignment="left" columns={1} />);
+    const prose = container.querySelector('.prose') as HTMLElement;
+    expect(prose.className).toContain('[overflow-wrap:anywhere]');
+  });
 });
 
 // ImageBlock

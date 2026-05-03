@@ -8,7 +8,7 @@ export function RichText({ content, alignment, columns, textSize = 'large' }: Ri
 
   return (
     <div className={`mx-auto max-w-4xl px-4 py-8 ${alignClass} ${colClass}`}>
-      <div className={`prose ${proseSize} max-w-none prose-headings:text-[var(--color-primary-dark)] prose-a:text-[var(--color-primary)]`}>
+      <div className={`prose ${proseSize} max-w-none prose-headings:text-[var(--color-primary-dark)] prose-a:text-[var(--color-primary)] [overflow-wrap:anywhere]`}>
         <RichTextContent content={content} />
       </div>
     </div>
