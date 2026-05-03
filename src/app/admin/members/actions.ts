@@ -140,7 +140,7 @@ export async function getMemberDetail(userId: string) {
       id,
       status,
       joined_at,
-      users ( id, display_name, email ),
+      users!user_id ( id, display_name, email ),
       roles ( id, name, base_role )
     `)
     .eq('org_id', tenant.orgId)
