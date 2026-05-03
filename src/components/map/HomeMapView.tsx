@@ -31,6 +31,16 @@ import type { FeatureCollection } from "geojson";
 import type { SheetState } from "@/components/ui/MultiSnapBottomSheet";
 import { mark } from '@/lib/perf/marks';
 
+function runWhenIdle(fn: () => void, timeoutMs = 2000): void {
+  if (typeof window === 'undefined') return;
+  const ric = (window as { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback;
+  if (typeof ric === 'function') {
+    ric(fn, { timeout: timeoutMs });
+  } else {
+    window.setTimeout(fn, 0);
+  }
+}
+
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
@@ -169,17 +179,19 @@ function HomeMapViewContent() {
           setIsAuthenticated(false);
         }
 
-        // Trigger background sync and refresh data when done
+        // Trigger background sync after the browser is idle so it doesn't compete with first-paint
         if (resolvedOrgId && offlineStore.isOnline) {
-          offlineStore.syncProperty(propertyId, resolvedOrgId).then(async () => {
-            const [freshItems, freshTypes, freshFields] = await Promise.all([
-              offlineStore.getItems(propertyId),
-              offlineStore.getItemTypes(resolvedOrgId!),
-              offlineStore.getCustomFields(resolvedOrgId!),
-            ]);
-            setItems(freshItems);
-            setItemTypes(freshTypes);
-            setCustomFields(freshFields);
+          runWhenIdle(() => {
+            offlineStore.syncProperty(propertyId, resolvedOrgId).then(async () => {
+              const [freshItems, freshTypes, freshFields] = await Promise.all([
+                offlineStore.getItems(propertyId),
+                offlineStore.getItemTypes(resolvedOrgId!),
+                offlineStore.getCustomFields(resolvedOrgId!),
+              ]);
+              setItems(freshItems);
+              setItemTypes(freshTypes);
+              setCustomFields(freshFields);
+            });
           });
         }
       } catch (err) {
