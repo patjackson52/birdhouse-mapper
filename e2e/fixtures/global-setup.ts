@@ -57,27 +57,35 @@ async function globalSetup(config: FullConfig) {
 
     const adminAuthUser = allAuthUsers?.users?.find((u: any) => u.email === TEST_DATA.admin.email);
 
+    if (!org || !adminAuthUser) {
+      throw new Error(
+        `global-setup: cannot upsert admin org_membership — org=${!!org} adminAuthUser=${!!adminAuthUser}`,
+      );
+    }
+
     const { data: adminRole } = await supabaseAdmin
       .from('roles')
       .select('id')
-      .eq('org_id', org!.id)
+      .eq('org_id', org.id)
       .eq('base_role', 'org_admin')
       .single();
 
-    if (org && adminAuthUser && adminRole) {
-      await supabaseAdmin
-        .from('org_memberships')
-        .upsert(
-          {
-            org_id: org.id,
-            user_id: adminAuthUser.id,
-            role_id: adminRole.id,
-            status: 'active',
-            joined_at: new Date().toISOString(),
-          },
-          { onConflict: 'org_id,user_id' },
-        );
+    if (!adminRole) {
+      throw new Error(`global-setup: no org_admin role found for org ${org.id}`);
     }
+
+    await supabaseAdmin
+      .from('org_memberships')
+      .upsert(
+        {
+          org_id: org.id,
+          user_id: adminAuthUser.id,
+          role_id: adminRole.id,
+          status: 'active',
+          joined_at: new Date().toISOString(),
+        },
+        { onConflict: 'org_id,user_id' },
+      );
   }
 
   // Onboard user: ensure clean state by removing any org memberships from prior runs.
