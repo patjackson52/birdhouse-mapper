@@ -50,6 +50,7 @@
     "@turf/intersect": "^7.3.4",
     "@turf/union": "^7.3.4",
     "@types/leaflet-draw": "^1.0.13",
+    "@vercel/speed-insights": "^2.0.0",
     "ai": "^6.0.138",
     "dexie": "^4.4.2",
     "framer-motion": "^12.38.0",
