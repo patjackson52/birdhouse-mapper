@@ -46,6 +46,7 @@ export class OfflineDatabase extends Dexie {
   photo_blobs!: EntityTable<PhotoBlob, 'id'>;
   sync_metadata!: EntityTable<SyncMetadata, 'id'>;
   tile_cache_metadata!: EntityTable<TileCacheMetadata, 'id'>;
+  geo_layer_cache!: EntityTable<{ id: string; version: string; geojson: import('geojson').FeatureCollection; fetchedAt: string }, 'id'>;
 
   constructor() {
     super('birdhousemapper-offline');
@@ -75,6 +76,10 @@ export class OfflineDatabase extends Dexie {
 
     this.version(2).stores({
       update_type_fields: 'id, update_type_id, org_id',
+    });
+
+    this.version(3).stores({
+      geo_layer_cache: '&id, version, fetchedAt',
     });
   }
 }
