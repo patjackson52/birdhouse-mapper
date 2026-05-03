@@ -17,6 +17,7 @@ describe('OfflineDatabase', () => {
       'custom_fields',
       'entities',
       'entity_types',
+      'geo_layer_cache',
       'geo_layers',
       'item_entities',
       'item_types',

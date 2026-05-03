@@ -24,7 +24,12 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import PublicContributeButton from "@/components/map/PublicContributeButton";
 import { usePermissions } from "@/lib/permissions/hooks";
 import { useConfig } from "@/lib/config/client";
-import { getPropertyGeoLayersPublic, getGeoLayerPublic } from "@/app/admin/geo-layers/actions";
+import { getPropertyGeoLayersPublic, getGeoLayerPublic, getGeoLayerPublicIfNewer } from "@/app/admin/geo-layers/actions";
+import {
+  bulkGetCachedLayers,
+  getCachedLayer,
+  putCachedLayer,
+} from "@/lib/offline/geo-layer-cache";
 import { clipLayerToBoundary, filterItemsByBoundary } from "@/lib/geo/spatial";
 import type { GeoLayerSummary, GeoLayerProperty } from "@/lib/geo/types";
 import type { FeatureCollection } from "geojson";
@@ -207,46 +212,107 @@ function HomeMapViewContent() {
   // Fetch geo layers for this property
   useEffect(() => {
     if (!propertyId) return;
+    const offlineDb = offlineStore.db;
+
     getPropertyGeoLayersPublic(propertyId).then(async (result) => {
       if (!('success' in result)) return;
       setGeoLayers(result.layers);
 
-      // Set default visible layers
+      // Map layer-id -> server's current updated_at, from the manifest the action just returned.
+      const versionByLayerId = new Map(
+        result.layers.map((l) => [l.id, l.updated_at] as const),
+      );
+
       const defaultVisible = new Set(
         result.assignments
           .filter((a: GeoLayerProperty) => a.visible_default)
-          .map((a: GeoLayerProperty) => a.geo_layer_id)
+          .map((a: GeoLayerProperty) => a.geo_layer_id),
       );
       setVisibleGeoLayerIds(defaultVisible);
 
-      // Load GeoJSON for default visible layers in parallel
-      const layerResults = await Promise.all(
-        Array.from(defaultVisible).map((layerId) =>
-          getGeoLayerPublic(layerId).then((r) => ({ layerId, result: r })),
-        ),
-      );
-      setGeoLayerData((prev) => {
-        const next = new Map(prev);
-        for (const { layerId, result } of layerResults) {
-          if ('success' in result) {
-            next.set(layerId, result.layer.geojson);
+      const defaultIds = Array.from(defaultVisible);
+
+      // 1. Read cache for default-visible layers — render immediately.
+      const cached = await bulkGetCachedLayers(offlineDb, defaultIds);
+      if (cached.size > 0) {
+        setGeoLayerData((prev) => {
+          const next = new Map(prev);
+          for (const [id, row] of Array.from(cached)) {
+            next.set(id, row.geojson);
           }
-        }
-        return next;
-      });
+          return next;
+        });
+      }
+
+      // 2. Revalidate / fetch in parallel.
+      const settled = await Promise.all(
+        defaultIds.map(async (layerId) => {
+          const cachedRow = cached.get(layerId);
+          const serverVersion = versionByLayerId.get(layerId);
+          if (cachedRow && serverVersion && cachedRow.version === serverVersion) {
+            // Local cache already matches server's manifest version — no network needed.
+            return { layerId, replaced: false as const };
+          }
+          if (cachedRow) {
+            const r = await getGeoLayerPublicIfNewer(layerId, cachedRow.version);
+            if ('unchanged' in r) {
+              return { layerId, replaced: false as const };
+            }
+            if ('success' in r) {
+              await putCachedLayer(offlineDb, layerId, r.layer.updated_at, r.layer.geojson);
+              return { layerId, replaced: true as const, geojson: r.layer.geojson };
+            }
+            return { layerId, replaced: false as const };
+          }
+          // No cache row — full fetch.
+          const r = await getGeoLayerPublic(layerId);
+          if ('success' in r) {
+            await putCachedLayer(offlineDb, layerId, r.layer.updated_at, r.layer.geojson);
+            return { layerId, replaced: true as const, geojson: r.layer.geojson };
+          }
+          return { layerId, replaced: false as const };
+        }),
+      );
+
+      const newGeoJsonByLayerId = new Map<string, FeatureCollection>();
+      for (const s of settled) {
+        if (s.replaced) newGeoJsonByLayerId.set(s.layerId, s.geojson);
+      }
+      if (newGeoJsonByLayerId.size > 0) {
+        setGeoLayerData((prev) => {
+          const next = new Map(prev);
+          for (const [id, geojson] of Array.from(newGeoJsonByLayerId)) {
+            next.set(id, geojson);
+          }
+          return next;
+        });
+      }
 
       mark('ttrc:geolayers-resolved');
 
-      // Load boundary layer if one is marked as property boundary
+      // 3. Boundary layer (separate from default-visible flow).
       const boundaryLayer = result.layers.find((l) => l.is_property_boundary);
       if (boundaryLayer) {
-        const boundaryResult = await getGeoLayerPublic(boundaryLayer.id);
-        if ('success' in boundaryResult) {
-          setBoundaryGeoJSON(boundaryResult.layer.geojson);
+        const cachedBoundary = await getCachedLayer(offlineDb, boundaryLayer.id);
+        if (cachedBoundary) {
+          setBoundaryGeoJSON(cachedBoundary.geojson);
+          if (cachedBoundary.version !== boundaryLayer.updated_at) {
+            const r = await getGeoLayerPublicIfNewer(boundaryLayer.id, cachedBoundary.version);
+            if ('success' in r) {
+              await putCachedLayer(offlineDb, boundaryLayer.id, r.layer.updated_at, r.layer.geojson);
+              setBoundaryGeoJSON(r.layer.geojson);
+            }
+          }
+        } else {
+          const r = await getGeoLayerPublic(boundaryLayer.id);
+          if ('success' in r) {
+            await putCachedLayer(offlineDb, boundaryLayer.id, r.layer.updated_at, r.layer.geojson);
+            setBoundaryGeoJSON(r.layer.geojson);
+          }
         }
       }
     });
-  }, [propertyId]);
+  }, [propertyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-open detail panel when navigating with ?item=id
   useEffect(() => {
@@ -267,20 +333,43 @@ function HomeMapViewContent() {
         next.delete(layerId);
       } else {
         next.add(layerId);
-        // Fetch GeoJSON if not already loaded
         if (!geoLayerData.has(layerId)) {
-          getGeoLayerPublic(layerId).then((result) => {
-            if ('success' in result) {
-              const geojson = boundaryGeoJSON
-                ? clipLayerToBoundary(result.layer.geojson, boundaryGeoJSON)
-                : result.layer.geojson;
-              setGeoLayerData((prev) => new Map(prev).set(layerId, geojson));
-            }
-          });
+          loadLayerCacheFirst(layerId);
         }
       }
       return next;
     });
+  }
+
+  async function loadLayerCacheFirst(layerId: string) {
+    const offlineDb = offlineStore.db;
+    // 1. Cache read — render immediately if present.
+    const cached = await getCachedLayer(offlineDb, layerId);
+    if (cached) {
+      const geojson = boundaryGeoJSON
+        ? clipLayerToBoundary(cached.geojson, boundaryGeoJSON)
+        : cached.geojson;
+      setGeoLayerData((prev) => new Map(prev).set(layerId, geojson));
+      // Background revalidate — replace if newer.
+      const r = await getGeoLayerPublicIfNewer(layerId, cached.version);
+      if ('success' in r) {
+        await putCachedLayer(offlineDb, layerId, r.layer.updated_at, r.layer.geojson);
+        const fresh = boundaryGeoJSON
+          ? clipLayerToBoundary(r.layer.geojson, boundaryGeoJSON)
+          : r.layer.geojson;
+        setGeoLayerData((prev) => new Map(prev).set(layerId, fresh));
+      }
+      return;
+    }
+    // 2. No cache — full fetch.
+    const result = await getGeoLayerPublic(layerId);
+    if ('success' in result) {
+      await putCachedLayer(offlineDb, layerId, result.layer.updated_at, result.layer.geojson);
+      const geojson = boundaryGeoJSON
+        ? clipLayerToBoundary(result.layer.geojson, boundaryGeoJSON)
+        : result.layer.geojson;
+      setGeoLayerData((prev) => new Map(prev).set(layerId, geojson));
+    }
   }
 
   async function handleMarkerClick(item: Item) {
