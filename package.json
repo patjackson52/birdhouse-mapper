@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "backfill:puck-sanitize": "tsx scripts/backfill-puck-sanitize.ts",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "test:e2e:smoke": "playwright test --config=e2e/playwright.config.ts --grep @smoke --reporter=line",
     "visual:comment": "bash scripts/visual-comment.sh",
