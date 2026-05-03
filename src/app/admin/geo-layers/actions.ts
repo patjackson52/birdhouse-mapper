@@ -61,7 +61,7 @@ export async function listGeoLayers(
 
   const { data, error } = await supabase
     .from('geo_layers')
-    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by, status, source')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, updated_at, created_by, status, source')
     .eq('org_id', orgId)
     .order('created_at', { ascending: false });
 
@@ -194,7 +194,7 @@ export async function getPropertyGeoLayers(
 
   const { data: layers, error: layerError } = await supabase
     .from('geo_layers')
-    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by, status, source')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, updated_at, created_by, status, source')
     .in('id', layerIds);
 
   if (layerError) return { error: layerError.message };
@@ -271,7 +271,7 @@ export async function getPropertyGeoLayersPublic(
 
   const { data: layers, error: layerError } = await supabase
     .from('geo_layers')
-    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, created_by, status, source')
+    .select('id, org_id, name, description, color, opacity, source_format, source_filename, feature_count, bbox, is_property_boundary, created_at, updated_at, created_by, status, source')
     .in('id', layerIds);
 
   if (layerError) return { error: layerError.message };

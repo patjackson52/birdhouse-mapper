@@ -17,6 +17,7 @@ describe('geo layer types', () => {
       bbox: null,
       is_property_boundary: false,
       created_at: '2026-01-01',
+      updated_at: '2026-05-03T00:00:00Z',
       created_by: null,
       status: 'draft',
       source: 'manual',

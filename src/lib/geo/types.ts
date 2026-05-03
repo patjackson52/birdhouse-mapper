@@ -19,6 +19,7 @@ export interface GeoLayer {
   bbox: [number, number, number, number] | null; // [minLng, minLat, maxLng, maxLat]
   is_property_boundary: boolean;
   created_at: string;
+  updated_at: string;
   created_by: string | null;
   status: GeoLayerStatus;
   source: GeoLayerSource;
@@ -45,6 +46,7 @@ export interface GeoLayerSummary {
   bbox: [number, number, number, number] | null;
   is_property_boundary: boolean;
   created_at: string;
+  updated_at: string;
   created_by: string | null;
   status: GeoLayerStatus;
   source: GeoLayerSource;
