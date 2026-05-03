@@ -29,6 +29,7 @@ import { clipLayerToBoundary, filterItemsByBoundary } from "@/lib/geo/spatial";
 import type { GeoLayerSummary, GeoLayerProperty } from "@/lib/geo/types";
 import type { FeatureCollection } from "geojson";
 import type { SheetState } from "@/components/ui/MultiSnapBottomSheet";
+import { mark } from '@/lib/perf/marks';
 
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
@@ -79,6 +80,8 @@ function HomeMapViewContent() {
   const [geoLayerData, setGeoLayerData] = useState<Map<string, FeatureCollection>>(new Map());
   const [boundaryGeoJSON, setBoundaryGeoJSON] = useState<FeatureCollection | null>(null);
 
+  mark('ttrc:hydrate-start');
+
   useEffect(() => {
     async function fetchData() {
       if (!propertyId) { setLoading(false); return; }
@@ -109,6 +112,7 @@ function HomeMapViewContent() {
                 setItems(itemData);
                 setItemTypes(typeData);
                 setCustomFields(fieldData);
+                mark('ttrc:idb-resolved');
               }
               // Fetch org public-contribution settings
               if (propData.org_id) {
@@ -140,6 +144,7 @@ function HomeMapViewContent() {
         setItems(itemData);
         setItemTypes(typeData);
         setCustomFields(fieldData);
+        mark('ttrc:idb-resolved');
 
         // Check authentication via cached session, and load org contribution settings
         try {
@@ -207,6 +212,8 @@ function HomeMapViewContent() {
           setGeoLayerData((prev) => new Map(prev).set(layerId, layerResult.layer.geojson));
         }
       }
+
+      mark('ttrc:geolayers-resolved');
 
       // Load boundary layer if one is marked as property boundary
       const boundaryLayer = result.layers.find((l) => l.is_property_boundary);
