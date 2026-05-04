@@ -27,4 +27,25 @@ describe('AdminSidebar', () => {
     expect(screen.getByText('AI Context').closest('a')).toBeTruthy();
     expect(screen.getByText('Geo Layers').closest('a')).toBeTruthy();
   });
+
+  it('applies the visible active-state utilities to the link matching pathname', () => {
+    const items = [
+      { label: 'Dashboard', href: '/admin' },
+      { label: 'Properties', href: '/admin/properties' },
+    ];
+
+    render(<AdminSidebar title="Test Org" items={items} />);
+
+    const dashboardLink = screen.getByText('Dashboard').closest('a');
+    expect(dashboardLink).toBeTruthy();
+    expect(dashboardLink!.className).toContain('bg-golden/10');
+    expect(dashboardLink!.className).toContain('border-l-4');
+    expect(dashboardLink!.className).toContain('border-golden');
+    expect(dashboardLink!.className).toContain('font-semibold');
+
+    const propertiesLink = screen.getByText('Properties').closest('a');
+    expect(propertiesLink).toBeTruthy();
+    expect(propertiesLink!.className).not.toContain('bg-golden/10');
+    expect(propertiesLink!.className).not.toContain('border-l-4');
+  });
 });

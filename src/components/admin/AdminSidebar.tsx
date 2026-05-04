@@ -56,7 +56,7 @@ export function AdminSidebar({ title, items, backLink, onNavClick, hideTitle }: 
             href={navItem.href}
             className={`flex items-center justify-between px-4 py-2 text-sm ${
               isActive
-                ? 'bg-sage-light/50 text-forest-dark font-semibold border-l-3 border-golden'
+                ? 'bg-golden/10 text-forest-dark font-semibold border-l-4 border-golden'
                 : 'text-gray-600 hover:bg-sage-light/30'
             }`}
             onClick={onNavClick}
