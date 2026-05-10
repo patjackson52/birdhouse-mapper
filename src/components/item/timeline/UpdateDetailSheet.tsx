@@ -67,11 +67,11 @@ export function UpdateDetailSheet({
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute left-[14px] top-[58px] flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur"
+          className="absolute left-[14px] top-[calc(14px+env(safe-area-inset-top))] flex h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur"
         >
           <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-forest-dark"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        <div className="absolute right-[14px] top-[58px]">
+        <div className="absolute right-[14px] top-[calc(14px+env(safe-area-inset-top))]">
           <button
             type="button"
             aria-label="More"
