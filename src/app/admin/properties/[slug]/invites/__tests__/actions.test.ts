@@ -31,6 +31,21 @@ function chain(terminal?: any) {
 const mockServiceChain = chain();
 const mockUserChain = chain();
 
+// Controls for the cross-org admin-scoping tests (see the last describe block).
+let mockIsPlatformAdmin = true;
+let mockAdminOrgIds: string[] = [];
+// org_id filter captured from the getInvites list query.
+let capturedInvitesOrgId: unknown;
+
+// getInvites queries the service invites table as select().eq('org_id').order().
+// Capture the org filter and make order() terminal so getInvites resolves.
+// createInvite doesn't hit these (it uses the count sub-object + insert).
+mockServiceChain.eq = vi.fn((col: string, val: unknown) => {
+  if (col === 'org_id') capturedInvitesOrgId = val;
+  return mockServiceChain;
+});
+mockServiceChain.order = vi.fn(() => Promise.resolve({ data: [], error: null }));
+
 vi.mock('@/lib/supabase/server', () => ({
   createClient: () => ({
     auth: {
@@ -46,12 +61,45 @@ vi.mock('@/lib/supabase/server', () => ({
             eq: () => ({
               single: () =>
                 Promise.resolve({
-                  data: { is_platform_admin: true },
+                  data: { is_platform_admin: mockIsPlatformAdmin },
                   error: null,
                 }),
             }),
           }),
         };
+      }
+      if (table === 'org_memberships') {
+        // Honour the .eq('org_id', ...) scoping so the mock reflects the real
+        // cross-org check: a row is returned only when the filtered org_id is
+        // one the user actually admins.
+        const filters: Record<string, unknown> = {};
+        const b: any = {
+          select: () => b,
+          eq: (col: string, val: unknown) => {
+            filters[col] = val;
+            return b;
+          },
+          limit: () => {
+            const baseMatch =
+              filters['user_id'] === 'admin-user-id' &&
+              filters['status'] === 'active' &&
+              filters['roles.base_role'] === 'org_admin' &&
+              mockAdminOrgIds.length > 0;
+            // If the query DID scope by org_id, only match when it's an org the
+            // user admins. If it did NOT (the bug), the unscoped query would
+            // return the user's membership in *any* org — so this test fails
+            // loudly if the `.eq('org_id', ...)` fix is ever removed.
+            const orgMatch =
+              filters['org_id'] === undefined
+                ? true
+                : mockAdminOrgIds.includes(filters['org_id'] as string);
+            return Promise.resolve({
+              data: baseMatch && orgMatch ? [{ id: 'm-1' }] : [],
+              error: null,
+            });
+          },
+        };
+        return b;
       }
       return mockUserChain;
     },
@@ -91,7 +139,7 @@ vi.mock('@/lib/invites/tokens', () => ({
 }));
 
 // vi.mock is hoisted by vitest, so regular imports work
-import { createInvite } from '../actions';
+import { createInvite, getInvites } from '../actions';
 
 const validOpts = {
   displayName: 'Test User',
@@ -106,6 +154,8 @@ describe('createInvite', () => {
     insertedTable = '';
     countResponse = 0;
     mockOrgId = 'org-123';
+    mockIsPlatformAdmin = true;
+    mockAdminOrgIds = [];
     vi.clearAllMocks();
   });
 
@@ -151,5 +201,64 @@ describe('createInvite', () => {
     await createInvite({ ...validOpts, displayName: '' });
 
     expect(insertedPayload.display_name).toBeNull();
+  });
+});
+
+describe('createInvite — org-admin scoping (cross-org)', () => {
+  beforeEach(() => {
+    insertedPayload = {};
+    insertedTable = '';
+    countResponse = 0;
+    mockOrgId = 'org-123';
+    mockIsPlatformAdmin = false;
+    mockAdminOrgIds = [];
+    vi.clearAllMocks();
+  });
+
+  it('allows an org_admin of the current org', async () => {
+    mockAdminOrgIds = ['org-123'];
+
+    const result = await createInvite(validOpts);
+
+    expect(result.error).toBeUndefined();
+    expect(result.token).toBe('raw-token-abc');
+    expect(insertedPayload.org_id).toBe('org-123');
+  });
+
+  it('REJECTS an org_admin of a different org', async () => {
+    // Admin of org-999, but the tenant is org-123 → must be denied.
+    mockAdminOrgIds = ['org-999'];
+
+    const result = await createInvite(validOpts);
+
+    expect(result.error).toBe('Admin access required');
+    expect(insertedPayload.org_id).toBeUndefined();
+  });
+
+  it('allows a platform admin regardless of org membership', async () => {
+    mockIsPlatformAdmin = true;
+    mockAdminOrgIds = [];
+
+    const result = await createInvite(validOpts);
+
+    expect(result.error).toBeUndefined();
+    expect(result.token).toBe('raw-token-abc');
+  });
+});
+
+describe('getInvites — org scoping', () => {
+  beforeEach(() => {
+    mockOrgId = 'org-123';
+    mockIsPlatformAdmin = true; // bypass membership; focus on the list query
+    mockAdminOrgIds = [];
+    capturedInvitesOrgId = undefined;
+    vi.clearAllMocks();
+  });
+
+  it('scopes the invites list query to the current org', async () => {
+    await getInvites();
+    // Fails if the `.eq('org_id', tenant.orgId)` on the service-client query
+    // is removed — the list would otherwise leak every org's invites.
+    expect(capturedInvitesOrgId).toBe('org-123');
   });
 });
