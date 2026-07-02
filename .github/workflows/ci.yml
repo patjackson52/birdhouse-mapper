@@ -53,15 +53,19 @@ jobs:
         with:
           version: latest
 
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      # Validate migrations against a throwaway local Postgres — `supabase start`
+      # applies every file in supabase/migrations/ on boot and fails if any of
+      # them errors. This needs NO prod credentials (no access token / project
+      # ref), so it can't break when a token expires, and a bad migration can
+      # never touch production during a PR. Same local-stack approach the E2E
+      # workflow already relies on.
+      - name: Apply all migrations to a local database
+        run: supabase start
 
-      - name: Dry-run migrations against production
-        run: supabase db push --dry-run
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      # Prove a clean-slate re-apply also works (catches ordering / idempotency
+      # issues that a warm DB would hide).
+      - name: Re-apply migrations from scratch
+        run: supabase db reset
 
   migrate:
     name: Apply Migrations
