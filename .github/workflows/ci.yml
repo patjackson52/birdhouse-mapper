@@ -82,12 +82,13 @@ jobs:
         with:
           version: latest
 
-      - name: Link Supabase project
-        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
+      # Push migrations over a direct database connection instead of the
+      # account-level Management API. SUPABASE_DB_URL is the project's pooler
+      # connection string (Project Settings → Database → Connection string).
+      # Its blast radius is this one database — it cannot manage/delete
+      # projects or reach other projects the way SUPABASE_ACCESS_TOKEN can.
+      # No `supabase link` step and no access token required.
       - name: Push migrations to production
-        run: supabase db push
+        run: supabase db push --db-url "$SUPABASE_DB_URL"
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
