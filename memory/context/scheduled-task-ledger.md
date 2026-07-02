@@ -30,5 +30,6 @@
 **Root cause of all `blocked` rows:** scheduled sandbox has a read-only `.git` mount (can't clear locks / commit) and a read-only GitHub integration (`403` on `create_branch`/`push_files`), with no `gh` CLI or token. Fix tracked as P0-1 in `docs/reports/2026-07-02-repo-audit.md`. Until P0-1 lands, scheduled runs cannot deliver — a run that can't push should **abort with a one-line failure report, not emit `.patch` files into the repo.**
 
 ## Open threads needing a human decision
+- **CI Supabase auth is dead (P0).** `supabase link` in `ci.yml` returns `{"message":"Unauthorized"}` → exit 1 on **every** branch (main included). So the `Migration Dry Run` check is red on all PRs regardless of content, and `Apply Migrations` on `main` push fails — **prod migrations have not applied since the token expired.** Fix: rotate `SUPABASE_ACCESS_TOKEN` secret (verify `SUPABASE_PROJECT_REF`). This is why PR #327's "Migration Dry Run failure" was never content-related. Evidence: failed run 28601569471.
 - **#279** — two contradictory designs (remove vs keep geo-layers sync). Needs Patrick to pick before any further attempt. Do NOT re-attempt blind.
-- **PR #327** (#269 photo moderation) — open, failing Migration Dry Run. Fix the check and merge.
+- **PR #327** (#269 photo moderation) — open; its red "Migration Dry Run" is the expired-token issue above, not the patch. Merge once the token is rotated and content re-reviewed.
