@@ -2,6 +2,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { requireOrgAdmin, isAuthFailure } from '@/lib/auth/require-org';
 import type { CommunicationTopic } from './types';
 
 // ---------------------------------------------------------------------------
@@ -15,14 +16,21 @@ export async function createTopic(input: {
   description?: string;
   sort_order?: number;
 }): Promise<{ success: true; topic: CommunicationTopic } | { error: string }> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  const ctx = await requireOrgAdmin();
+  if (isAuthFailure(ctx)) return { error: ctx.error };
+  const { supabase, orgId } = ctx;
+
+  if (input.org_id !== orgId) return { error: 'Cannot create a topic for another org' };
+  if (input.property_id) {
+    const { data: prop } = await supabase
+      .from('properties').select('id').eq('id', input.property_id).eq('org_id', orgId).maybeSingle();
+    if (!prop) return { error: 'Property not found in this org' };
+  }
 
   const { data, error } = await supabase
     .from('communication_topics')
     .insert({
-      org_id: input.org_id,
+      org_id: orgId,
       property_id: input.property_id ?? null,
       name: input.name.trim(),
       description: input.description?.trim() ?? null,
@@ -45,9 +53,9 @@ export async function updateTopic(
     sort_order?: number;
   }
 ): Promise<{ success: true } | { error: string }> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  const ctx = await requireOrgAdmin();
+  if (isAuthFailure(ctx)) return { error: ctx.error };
+  const { supabase, orgId } = ctx;
 
   const payload: Record<string, unknown> = {};
   if (updates.name !== undefined) payload.name = updates.name.trim();
@@ -60,7 +68,8 @@ export async function updateTopic(
   const { error } = await supabase
     .from('communication_topics')
     .update(payload)
-    .eq('id', topicId);
+    .eq('id', topicId)
+    .eq('org_id', orgId);
 
   if (error) return { error: error.message };
   return { success: true };
@@ -176,14 +185,26 @@ export async function sendNotification(input: {
   link?: string;
   channels: ('email' | 'in_app')[];
 }): Promise<{ success: true; sent: { email: number; inApp: number } } | { error: string }> {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: 'Not authenticated' };
+  const ctx = await requireOrgAdmin();
+  if (isAuthFailure(ctx)) return { error: ctx.error };
+  const { supabase, orgId } = ctx;
 
+  if (input.org_id !== orgId) return { error: 'Cannot send notifications for another org' };
   if (input.topic_ids.length === 0) return { error: 'At least one topic is required' };
   if (!input.title.trim()) return { error: 'Title is required' };
   if (!input.body.trim()) return { error: 'Body is required' };
   if (input.channels.length === 0) return { error: 'At least one channel is required' };
+
+  // Every target topic must belong to the caller's org (topic_ids are client-
+  // supplied — otherwise an admin could blast another org's subscribers).
+  const { data: ownedTopics } = await supabase
+    .from('communication_topics')
+    .select('id')
+    .eq('org_id', orgId)
+    .in('id', input.topic_ids);
+  if (!ownedTopics || ownedTopics.length !== input.topic_ids.length) {
+    return { error: 'One or more topics do not belong to this org' };
+  }
 
   // Rate limit: check if a notification was sent to any of these topics in the last hour
   const { data: recentSends } = await supabase
@@ -251,7 +272,7 @@ export async function sendNotification(input: {
       if (prefs.inApp) {
         notificationRows.push({
           user_id: userId,
-          org_id: input.org_id,
+          org_id: orgId,
           property_id: input.property_id ?? null,
           topic_id: prefs.topicId,
           title: input.title.trim(),
@@ -294,7 +315,7 @@ export async function sendNotification(input: {
         try {
           await sendNotificationEmail({
             userId,
-            orgId: input.org_id,
+            orgId,
             topicId: prefs.topicId,
             title: input.title.trim(),
             body: input.body.trim(),
