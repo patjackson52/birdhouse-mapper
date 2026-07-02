@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { safeFetch } from '@/lib/security/ssrf';
 import type {
   AiContextItem,
   AiContextSummary,
@@ -497,7 +498,10 @@ export async function processUrlContext(
 
     let html: string;
     try {
-      const response = await fetch(url, {
+      // safeFetch blocks SSRF: non-http(s) schemes and hosts that resolve to
+      // private / loopback / link-local / cloud-metadata addresses, including
+      // across redirect hops.
+      const response = await safeFetch(url, {
         signal: controller.signal,
         headers: {
           'User-Agent': 'FieldMapper-ContextBot/1.0 (+https://fieldmapper.io)',
