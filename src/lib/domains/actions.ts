@@ -1,6 +1,6 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { requireOrgAdmin, isAuthFailure } from '@/lib/auth/require-org';
 import { addDomainToVercel, removeDomainFromVercel, checkDomainOnVercel } from './vercel';
 
 interface AddDomainResult {
@@ -19,11 +19,26 @@ export async function addCustomDomain(
   domain: string,
   propertyId?: string
 ): Promise<AddDomainResult> {
-  const supabase = await createClient();
+  const ctx = await requireOrgAdmin();
+  if (isAuthFailure(ctx)) return { success: false, error: ctx.error };
+  const { supabase, user, orgId: callerOrgId } = ctx;
 
-  // Validate caller is org admin
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Not authenticated' };
+  // The `orgId` argument is client-supplied — an org admin must not be able to
+  // register a domain against a different org. Pin to the caller's own org.
+  if (orgId !== callerOrgId) {
+    return { success: false, error: 'Cannot add a domain for another org' };
+  }
+
+  // If scoping to a property, it must belong to this org.
+  if (propertyId) {
+    const { data: prop } = await supabase
+      .from('properties')
+      .select('id')
+      .eq('id', propertyId)
+      .eq('org_id', callerOrgId)
+      .maybeSingle();
+    if (!prop) return { success: false, error: 'Property not found in this org' };
+  }
 
   // Register with Vercel
   let vercelResponse;
@@ -41,7 +56,7 @@ export async function addCustomDomain(
   const { data, error } = await supabase
     .from('custom_domains')
     .insert({
-      org_id: orgId,
+      org_id: callerOrgId,
       property_id: propertyId ?? null,
       domain,
       status: vercelResponse.verified ? 'active' : 'verifying',
@@ -73,13 +88,17 @@ export async function addCustomDomain(
  * Removes from Vercel and deletes from database.
  */
 export async function removeCustomDomain(domainId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
+  const ctx = await requireOrgAdmin();
+  if (isAuthFailure(ctx)) return { success: false, error: ctx.error };
+  const { supabase, orgId } = ctx;
 
-  // Fetch the domain
+  // Fetch the domain scoped to the caller's org — prevents removing another
+  // org's domain and avoids leaking whether an id exists.
   const { data: domainRow, error: fetchError } = await supabase
     .from('custom_domains')
     .select('domain')
     .eq('id', domainId)
+    .eq('org_id', orgId)
     .single();
 
   if (fetchError || !domainRow) return { success: false, error: 'Domain not found' };
@@ -95,7 +114,8 @@ export async function removeCustomDomain(domainId: string): Promise<{ success: b
   const { error } = await supabase
     .from('custom_domains')
     .delete()
-    .eq('id', domainId);
+    .eq('id', domainId)
+    .eq('org_id', orgId);
 
   if (error) return { success: false, error: error.message };
 
@@ -112,12 +132,15 @@ export async function checkDomainStatus(domainId: string): Promise<{
   verificationRecords?: { type: string; domain: string; value: string }[];
   error?: string;
 }> {
-  const supabase = await createClient();
+  const ctx = await requireOrgAdmin();
+  if (isAuthFailure(ctx)) return { status: 'unauthorized', verified: false, error: ctx.error };
+  const { supabase, orgId } = ctx;
 
   const { data: domainRow } = await supabase
     .from('custom_domains')
     .select('domain, status')
     .eq('id', domainId)
+    .eq('org_id', orgId)
     .single();
 
   if (!domainRow) return { status: 'not_found', verified: false, error: 'Domain not found' };
