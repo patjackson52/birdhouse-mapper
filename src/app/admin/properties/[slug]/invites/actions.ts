@@ -138,6 +138,9 @@ export async function getInvites() {
       claimed_by, claimed_at, created_at,
       role_id, roles!invites_role_id_fkey ( name )
     `)
+    // Scope to the current org — this query uses the service client (RLS
+    // bypass), so without this filter it returns EVERY org's invites.
+    .eq('org_id', tenant.orgId)
     .order('created_at', { ascending: false });
 
   if (error) return { error: error.message };

@@ -34,6 +34,17 @@ const mockUserChain = chain();
 // Controls for the cross-org admin-scoping tests (see the last describe block).
 let mockIsPlatformAdmin = true;
 let mockAdminOrgIds: string[] = [];
+// org_id filter captured from the getInvites list query.
+let capturedInvitesOrgId: unknown;
+
+// getInvites queries the service invites table as select().eq('org_id').order().
+// Capture the org filter and make order() terminal so getInvites resolves.
+// createInvite doesn't hit these (it uses the count sub-object + insert).
+mockServiceChain.eq = vi.fn((col: string, val: unknown) => {
+  if (col === 'org_id') capturedInvitesOrgId = val;
+  return mockServiceChain;
+});
+mockServiceChain.order = vi.fn(() => Promise.resolve({ data: [], error: null }));
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: () => ({
@@ -128,7 +139,7 @@ vi.mock('@/lib/invites/tokens', () => ({
 }));
 
 // vi.mock is hoisted by vitest, so regular imports work
-import { createInvite } from '../actions';
+import { createInvite, getInvites } from '../actions';
 
 const validOpts = {
   displayName: 'Test User',
@@ -232,5 +243,22 @@ describe('createInvite — org-admin scoping (cross-org)', () => {
 
     expect(result.error).toBeUndefined();
     expect(result.token).toBe('raw-token-abc');
+  });
+});
+
+describe('getInvites — org scoping', () => {
+  beforeEach(() => {
+    mockOrgId = 'org-123';
+    mockIsPlatformAdmin = true; // bypass membership; focus on the list query
+    mockAdminOrgIds = [];
+    capturedInvitesOrgId = undefined;
+    vi.clearAllMocks();
+  });
+
+  it('scopes the invites list query to the current org', async () => {
+    await getInvites();
+    // Fails if the `.eq('org_id', tenant.orgId)` on the service-client query
+    // is removed — the list would otherwise leak every org's invites.
+    expect(capturedInvitesOrgId).toBe('org-123');
   });
 });
