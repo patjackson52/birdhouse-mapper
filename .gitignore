@@ -31,6 +31,25 @@ yarn-error.log*
 .superpowers/
 .worktrees/
 
+# agent / scheduled-run working files (never commit — see docs/playbooks/scheduled-night-run.md)
+*.patch
+SCHEDULED-TASK-REPORT-*.md
+SCHEDULED-*.patch
+triage-report-*.md
+gh-issue-triage-*.md
+*-pr-body.md
+PR-BODY-*.md
+.tmp-*
+
+# claude runtime state
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+
+# serwist build output (generated from src/app/sw.ts each build)
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
+
 # vercel
 .vercel
 
