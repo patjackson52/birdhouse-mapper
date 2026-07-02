@@ -37,7 +37,12 @@ jobs:
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned — `version: latest` silently changed the keys emitted by
+          # `supabase status --output env`, which fed an empty/wrong
+          # SUPABASE_SERVICE_ROLE_KEY into the app → getConfig() hit
+          # "permission denied for table orgs" → `/` 404'd → E2E readiness
+          # failed for weeks. Bump deliberately, not implicitly.
+          version: 2.84.2
 
       - name: Start local Supabase
         run: supabase start
@@ -46,6 +51,19 @@ jobs:
         id: supabase
         run: |
           eval "$(supabase status --output env)"
+          echo "supabase CLI: $(supabase --version)"
+          # Decode the role claim from each JWT (payload is not a secret) so a
+          # key/role mix-up is obvious in the log instead of surfacing as a
+          # runtime "permission denied for table orgs".
+          jwt_role() { echo "${1:-}" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | grep -oE '"role":"[a-z_]+"' || echo '(undecodable / not a legacy JWT)'; }
+          echo "ANON_KEY role:         $(jwt_role "$ANON_KEY")"
+          echo "SERVICE_ROLE_KEY role: $(jwt_role "$SERVICE_ROLE_KEY")"
+          # Fail loudly (not silently 404 at runtime) if extraction came back empty.
+          if [ -z "${ANON_KEY:-}" ] || [ -z "${SERVICE_ROLE_KEY:-}" ]; then
+            echo "::error::Supabase anon/service keys are empty — 'supabase status --output env' output shape likely changed. Full output:"
+            supabase status --output env
+            exit 1
+          fi
           echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
           echo "anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
           echo "service_role_key=${SERVICE_ROLE_KEY}" >> "$GITHUB_OUTPUT"
