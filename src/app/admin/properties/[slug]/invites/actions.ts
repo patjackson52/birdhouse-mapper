@@ -6,7 +6,11 @@ import { generateToken, hashToken } from '@/lib/invites/tokens';
 import { INVITE_LINK_TTL_MS, MAX_ACTIVE_INVITES } from '@/lib/invites/constants';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-async function isOrgAdmin(supabase: SupabaseClient, userId: string): Promise<boolean> {
+async function isOrgAdmin(
+  supabase: SupabaseClient,
+  userId: string,
+  orgId: string
+): Promise<boolean> {
   const { data: userRow } = await supabase
     .from('users')
     .select('is_platform_admin')
@@ -15,10 +19,13 @@ async function isOrgAdmin(supabase: SupabaseClient, userId: string): Promise<boo
 
   if (userRow?.is_platform_admin) return true;
 
+  // Must be org_admin OF THIS org — the `.eq('org_id', orgId)` scoping stops
+  // an admin of any other org from passing (cross-org-admin bug, 2026-07-02 audit).
   const { data } = await supabase
     .from('org_memberships')
     .select('id, roles!inner(base_role)')
     .eq('user_id', userId)
+    .eq('org_id', orgId)
     .eq('status', 'active')
     .eq('roles.base_role', 'org_admin')
     .limit(1);
@@ -60,7 +67,7 @@ export async function createInvite(opts: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  if (!(await isOrgAdmin(supabase, user.id))) {
+  if (!(await isOrgAdmin(supabase, user.id, tenant.orgId))) {
     return { error: 'Admin access required' };
   }
 
@@ -116,7 +123,10 @@ export async function getInvites() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  if (!(await isOrgAdmin(supabase, user.id))) {
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
+  if (!(await isOrgAdmin(supabase, user.id, tenant.orgId))) {
     return { error: 'Admin access required' };
   }
 
@@ -172,7 +182,10 @@ export async function convertAccount(opts: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  if (!(await isOrgAdmin(supabase, user.id))) {
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
+  if (!(await isOrgAdmin(supabase, user.id, tenant.orgId))) {
     return { error: 'Admin access required' };
   }
 
@@ -230,7 +243,10 @@ export async function revokeAccess(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  if (!(await isOrgAdmin(supabase, user.id))) {
+  const tenant = await getTenantContext();
+  if (!tenant.orgId) return { error: 'No org context' };
+
+  if (!(await isOrgAdmin(supabase, user.id, tenant.orgId))) {
     return { error: 'Admin access required' };
   }
 

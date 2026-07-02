@@ -23,6 +23,7 @@ async function requireOrgAdmin() {
       .from('org_memberships')
       .select('id, roles!inner(base_role)')
       .eq('user_id', user.id)
+      .eq('org_id', tenant.orgId)
       .eq('status', 'active')
       .eq('roles.base_role', 'org_admin')
       .limit(1);
