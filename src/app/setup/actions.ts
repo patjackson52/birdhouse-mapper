@@ -3,6 +3,34 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { invalidateConfig } from '@/lib/config/server';
 
+/**
+ * Setup actions run pre-auth with the RLS-bypassing service client (no admin
+ * account exists during first-run setup). That makes them a privilege-
+ * escalation surface once setup is finished: `/setup` stays reachable, so
+ * without this guard any anonymous visitor could re-run setup — including
+ * `setupCreateAdmin` to mint a new admin, or clobber the org config.
+ *
+ * Every setup action must call this first and refuse once `setup_complete`
+ * is true. Fails closed: any lookup error also blocks.
+ */
+async function assertSetupIncomplete(
+  supabase: ReturnType<typeof createServiceClient>
+): Promise<{ error: string } | null> {
+  const { data: org, error } = await supabase
+    .from('orgs')
+    .select('setup_complete')
+    .limit(1)
+    .single();
+
+  if (error || !org) {
+    return { error: `Failed to verify setup state: ${error?.message ?? 'no org found'}` };
+  }
+  if (org.setup_complete === true) {
+    return { error: 'Setup already complete' };
+  }
+  return null;
+}
+
 /** Keys that map to columns on the orgs table */
 const ORG_KEY_TO_COLUMN: Record<string, string> = {
   site_name: 'name',
@@ -30,6 +58,8 @@ const PROPERTY_KEY_TO_COLUMN: Record<string, string> = {
  */
 export async function setupSaveConfig(entries: { key: string; value: unknown }[]) {
   const supabase = createServiceClient();
+  const guard = await assertSetupIncomplete(supabase);
+  if (guard) return guard;
 
   // Get the single org and default property
   const { data: org, error: orgLookupError } = await supabase
@@ -109,6 +139,8 @@ export async function setupSaveConfig(entries: { key: string; value: unknown }[]
  */
 export async function setupCreateAdmin(email: string, password: string, displayName: string) {
   const supabase = createServiceClient();
+  const guard = await assertSetupIncomplete(supabase);
+  if (guard) return guard;
 
   // Check if user already exists
   const { data: existingUsers } = await supabase.auth.admin.listUsers();
@@ -165,6 +197,8 @@ export async function setupCreateAdmin(email: string, password: string, displayN
  */
 export async function setupClearItemTypes() {
   const supabase = createServiceClient();
+  const guard = await assertSetupIncomplete(supabase);
+  if (guard) return;
 
   // Only delete types that have no items (safe for retry)
   // The migrated "Bird Box" type has items pointing to it, so it won't be deleted
@@ -193,6 +227,8 @@ export async function setupCreateItemType(
   sortOrder: number
 ) {
   const supabase = createServiceClient();
+  const guard = await assertSetupIncomplete(supabase);
+  if (guard) return guard;
 
   const { data, error } = await supabase
     .from('item_types')
@@ -219,6 +255,8 @@ export async function setupCreateCustomField(
   sortOrder: number
 ) {
   const supabase = createServiceClient();
+  const guard = await assertSetupIncomplete(supabase);
+  if (guard) return guard;
 
   const { error } = await supabase
     .from('custom_fields')
@@ -243,6 +281,8 @@ export async function setupCreateCustomField(
  */
 export async function setupComplete() {
   const supabase = createServiceClient();
+  const guard = await assertSetupIncomplete(supabase);
+  if (guard) return guard;
 
   const { error } = await supabase
     .from('orgs')

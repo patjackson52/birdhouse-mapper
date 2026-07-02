@@ -122,7 +122,7 @@ export default function SetupPage() {
         { key: 'about_content', value: aboutContent },
         { key: 'custom_map', value: overlayConfig },
       ]);
-      if (configResult.error) throw new Error(configResult.error);
+      if ('error' in configResult && configResult.error) throw new Error(configResult.error);
 
       // 2. Clear any item types from previous attempts, then create new ones
       await setupClearItemTypes();
@@ -130,17 +130,17 @@ export default function SetupPage() {
         const t = itemTypes[i];
         if (t.name.trim()) {
           const result = await setupCreateItemType(t.name, t.icon, t.color, i);
-          if (result.error) throw new Error(`Item type "${t.name}": ${result.error}`);
+          if ('error' in result && result.error) throw new Error(`Item type "${t.name}": ${result.error}`);
         }
       }
 
       // 3. Create admin account
       const adminResult = await setupCreateAdmin(adminEmail, adminPassword, adminName);
-      if (adminResult.error) throw new Error(adminResult.error);
+      if ('error' in adminResult && adminResult.error) throw new Error(adminResult.error);
 
       // 4. Mark setup complete
       const completeResult = await setupComplete();
-      if (completeResult.error) throw new Error(completeResult.error);
+      if ('error' in completeResult && completeResult.error) throw new Error(completeResult.error);
 
       // Redirect to home
       router.push('/');
