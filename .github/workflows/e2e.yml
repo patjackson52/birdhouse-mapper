@@ -121,7 +121,9 @@ jobs:
           # Local dev:e2e uses the same approach.
 
       - name: Start app
-        run: npm start &
+        # Capture server output so a runtime error (e.g. a 500 on `/`) is
+        # visible instead of a silent "App failed to start".
+        run: npm start > /tmp/app-server.log 2>&1 &
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ steps.supabase.outputs.api_url }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.anon_key }}
@@ -129,14 +131,26 @@ jobs:
 
       - name: Wait for app to be ready
         run: |
+          # Readiness = the server accepts requests and routes. Any HTTP
+          # 2xx–4xx means Next has booted (a 404 on `/` in the seeded test
+          # state is expected — tenant/setup isn't complete for the bare root;
+          # the tests navigate to real URLs). Only 5xx or no-response keep us
+          # waiting, and a persistent 5xx dumps the server log for diagnosis.
+          last=000
           for i in $(seq 1 30); do
-            if curl -sf -o /dev/null http://localhost:3000; then
-              echo "App is ready"
+            last=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 || echo 000)
+            if [ "$last" -ge 200 ] && [ "$last" -lt 500 ]; then
+              echo "App is ready (server responding, HTTP $last on /)"
               exit 0
             fi
+            echo "waiting for app... (HTTP $last)"
             sleep 2
           done
-          echo "App failed to start"
+          echo "===== app did not become ready (last HTTP $last) ====="
+          echo "----- server log (/tmp/app-server.log) -----"
+          cat /tmp/app-server.log || true
+          echo "----- verbose request to / -----"
+          curl -sv http://localhost:3000 2>&1 | head -60 || true
           exit 1
 
       - name: Run E2E tests

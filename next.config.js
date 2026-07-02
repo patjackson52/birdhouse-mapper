@@ -6,7 +6,6 @@ const withSerwist = require('@serwist/next').default({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['sharp'],
   images: {
     remotePatterns: [
       {
@@ -20,7 +19,10 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
-    serverComponentsExternalPackages: ['isomorphic-dompurify'],
+    // Next 14 uses experimental.serverComponentsExternalPackages. The Next 15
+    // top-level `serverExternalPackages` key is unrecognized here (logged a
+    // warning on every build/start), so `sharp` belongs in this array.
+    serverComponentsExternalPackages: ['isomorphic-dompurify', 'sharp'],
   },
 };
 
