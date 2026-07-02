@@ -1,3 +1,4 @@
+import type { User } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { getTenantContext } from '@/lib/tenant/server';
 
@@ -22,7 +23,7 @@ type Tenant = Awaited<ReturnType<typeof getTenantContext>>;
 
 export interface OrgContext {
   supabase: SupabaseServerClient;
-  user: { id: string; [key: string]: unknown };
+  user: User;
   tenant: Tenant;
   /** Non-null — narrowed from `tenant.orgId` by the guard above. */
   orgId: string;
@@ -52,7 +53,7 @@ export async function requireOrgContext(): Promise<OrgContext | AuthFailure> {
   } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  return { supabase, user: user as OrgContext['user'], tenant, orgId: tenant.orgId };
+  return { supabase, user, tenant, orgId: tenant.orgId };
 }
 
 /**
