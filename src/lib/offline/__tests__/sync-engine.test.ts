@@ -2,7 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import 'fake-indexeddb/auto';
 import { OfflineDatabase } from '../db';
 import { enqueueMutation } from '../mutations';
+import { storePhotoBlob } from '../photo-store';
 import { processOutboundQueue, syncPropertyData } from '../sync-engine';
+
+// Mocked at module level so the sync engine's import of `moderatePhotoUpload`
+// resolves to the vi.fn() we control per-test.
+vi.mock('../../moderation/actions', () => ({
+  moderatePhotoUpload: vi.fn(),
+}));
+import { moderatePhotoUpload } from '../../moderation/actions';
+const mockedModeratePhotoUpload = vi.mocked(moderatePhotoUpload);
+
+// jsdom's Blob does not implement arrayBuffer(); stub blobToBase64 so tests
+// don't depend on that method. The real conversion is exercised end-to-end
+// in production browsers and in the moderation server-action tests.
+vi.mock('../photo-store', async () => {
+  const actual = await vi.importActual<typeof import('../photo-store')>('../photo-store');
+  return {
+    ...actual,
+    blobToBase64: vi.fn().mockResolvedValue('Zm9v'),
+  };
+});
 
 const mockFrom = vi.fn();
 const mockStorage = { from: vi.fn() };
@@ -108,6 +128,108 @@ describe('Sync Engine — Outbound', () => {
     const result = await processOutboundQueue(db, mockSupabase as any);
     expect(result.processed).toBe(0);
     expect(result.skipped).toBe(1);
+  });
+
+  describe('photo moderation (issue #269)', () => {
+    async function enqueuePhotoMutation() {
+      await enqueueMutation(db, {
+        table: 'items',
+        operation: 'update',
+        record_id: 'item-1',
+        payload: { name: 'item-1' },
+        org_id: 'org-1',
+        property_id: 'prop-1',
+      });
+      const [mutation] = await db.mutation_queue.toArray();
+      const blob = new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image/jpeg' });
+      await storePhotoBlob(db, {
+        mutation_id: mutation.id,
+        blob,
+        filename: 'photo.jpg',
+        item_id: 'item-1',
+        update_id: null,
+        is_primary: false,
+      });
+      return mutation;
+    }
+
+    function mockUploadAndInsertSucceed() {
+      mockStorage.from.mockReturnValue({
+        upload: vi.fn().mockResolvedValue({ data: {}, error: null }),
+      });
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'photos') {
+          return {
+            insert: () => ({
+              select: () => ({
+                single: () => Promise.resolve({ data: { id: 'photo-1', item_id: 'item-1' }, error: null }),
+              }),
+            }),
+          };
+        }
+        return {
+          update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+        };
+      });
+    }
+
+    it('approved photo: uploads, inserts, removes mutation and blob', async () => {
+      mockedModeratePhotoUpload.mockResolvedValue({ ok: true, flagged: false });
+      mockUploadAndInsertSucceed();
+
+      await enqueuePhotoMutation();
+      const result = await processOutboundQueue(db, mockSupabase as any);
+
+      expect(result.processed).toBe(1);
+      expect(result.rejected).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(mockedModeratePhotoUpload).toHaveBeenCalledTimes(1);
+      expect(await db.mutation_queue.toArray()).toHaveLength(0);
+      expect(await db.photo_blobs.toArray()).toHaveLength(0);
+    });
+
+    it('flagged photo: drops mutation + blob, no upload, no insert', async () => {
+      mockedModeratePhotoUpload.mockResolvedValue({
+        ok: true,
+        flagged: true,
+        reason: 'Image rejected',
+      });
+      const uploadSpy = vi.fn().mockResolvedValue({ data: {}, error: null });
+      mockStorage.from.mockReturnValue({ upload: uploadSpy });
+      const insertSpy = vi.fn();
+      mockFrom.mockImplementation(() => ({ insert: insertSpy }));
+
+      await enqueuePhotoMutation();
+      const result = await processOutboundQueue(db, mockSupabase as any);
+
+      expect(result.rejected).toBe(1);
+      expect(result.processed).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(uploadSpy).not.toHaveBeenCalled();
+      expect(insertSpy).not.toHaveBeenCalled();
+      expect(await db.mutation_queue.toArray()).toHaveLength(0);
+      expect(await db.photo_blobs.toArray()).toHaveLength(0);
+    });
+
+    it('transient moderation error: marks failed, retries, blob preserved', async () => {
+      mockedModeratePhotoUpload.mockResolvedValue({ ok: false, error: 'API timeout' });
+      const uploadSpy = vi.fn();
+      mockStorage.from.mockReturnValue({ upload: uploadSpy });
+
+      await enqueuePhotoMutation();
+      const result = await processOutboundQueue(db, mockSupabase as any);
+
+      expect(result.failed).toBe(1);
+      expect(result.processed).toBe(0);
+      expect(result.rejected).toBe(0);
+      expect(uploadSpy).not.toHaveBeenCalled();
+      const remaining = await db.mutation_queue.toArray();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].retry_count).toBe(1);
+      expect(remaining[0].error).toContain('Photo moderation check failed');
+      // Photo blob preserved for retry
+      expect(await db.photo_blobs.toArray()).toHaveLength(1);
+    });
   });
 
   it('should process mutations in FIFO order', async () => {

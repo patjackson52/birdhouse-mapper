@@ -2,14 +2,33 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OfflineDatabase } from './db';
 import type { MutationRecord } from './types';
 import { getPendingMutations, markInFlight, markCompleted, markFailed, removeMutation } from './mutations';
-import { getPhotoBlobs, removePhotoBlobsByMutation } from './photo-store';
+import { blobToBase64, getPhotoBlobs, removePhotoBlobsByMutation } from './photo-store';
+import { moderatePhotoUpload } from '../moderation/actions';
 
 const MAX_RETRIES = 5;
+
+/**
+ * Thrown when a photo attached to a mutation is rejected by the moderation
+ * pipeline (ADR-0001). Terminal: the mutation and its blob(s) are removed
+ * from the queue rather than retried, since the same image will be flagged
+ * on every retry.
+ */
+class ContentRejectedError extends Error {
+  constructor(public reason: string) {
+    super(reason);
+    this.name = 'ContentRejectedError';
+  }
+}
 
 interface SyncResult {
   processed: number;
   failed: number;
   skipped: number;
+  /**
+   * Mutations dropped because attached photos were rejected by content
+   * moderation. Distinct from `failed` — these will not be retried.
+   */
+  rejected: number;
 }
 
 export async function processOutboundQueue(
@@ -17,7 +36,7 @@ export async function processOutboundQueue(
   supabase: SupabaseClient
 ): Promise<SyncResult> {
   const pending = await getPendingMutations(db);
-  const result: SyncResult = { processed: 0, failed: 0, skipped: 0 };
+  const result: SyncResult = { processed: 0, failed: 0, skipped: 0, rejected: 0 };
 
   for (const mutation of pending) {
     if (mutation.retry_count >= MAX_RETRIES) {
@@ -40,6 +59,15 @@ export async function processOutboundQueue(
         result.processed++;
       }
     } catch (err) {
+      if (err instanceof ContentRejectedError) {
+        // Terminal — drop the mutation and the blob(s). Retrying would
+        // moderate the same image and flag it again, wasting API budget
+        // and never resolving.
+        await removePhotoBlobsByMutation(db, mutation.id);
+        await removeMutation(db, mutation.id);
+        result.rejected++;
+        continue;
+      }
       const message = err instanceof Error ? err.message : 'Unknown error';
       await markFailed(db, mutation.id, message);
       result.failed++;
@@ -56,6 +84,27 @@ async function executeMutation(
 ): Promise<string | null> {
   // Handle photo uploads first if this mutation has associated blobs
   const photoBlobs = await getPhotoBlobs(db, mutation.id);
+
+  // Pre-moderate ALL photo blobs before uploading any (ADR-0001 fail-closed).
+  // Done in a separate pass so a flagged photo at index N doesn't leave the
+  // earlier photos already published in vault-public. Issue #269.
+  for (const photoBlob of photoBlobs) {
+    const base64 = await blobToBase64(photoBlob.blob);
+    const mimeType = photoBlob.blob.type || 'image/jpeg';
+    const modResult = await moderatePhotoUpload(base64, mimeType);
+
+    if (!modResult.ok) {
+      // Transient failure — retryable. Photo blob stays in IDB, mutation
+      // marked failed by the caller and retried up to MAX_RETRIES.
+      return `Photo moderation check failed: ${modResult.error}`;
+    }
+    if (modResult.flagged) {
+      // Terminal — propagate to processOutboundQueue, which removes the
+      // mutation and all its blobs.
+      throw new ContentRejectedError(modResult.reason);
+    }
+  }
+
   for (const photoBlob of photoBlobs) {
     // The vault-public bucket RLS (migration 026) requires the first path
     // segment to be an org_id the user has active membership in:
